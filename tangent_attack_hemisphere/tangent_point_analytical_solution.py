@@ -26,7 +26,7 @@ class TangentFinder(object):
         self.ox = self.x - self.o
         self.R = radius
         self.norm = norm
-        self.u = plane_normal_vector # unit normal vector
+        self.u = plane_normal_vector
         self.ord = np.inf if self.norm == "linf" else 2
         # assert self.sin_alpha() ** 2 + self.cos_alpha() ** 2 - 1.0 < 0.00001, "alpha assert error:{}".format(self.sin_alpha() ** 2 + self.cos_alpha() ** 2)
         # assert self.sin_beta() ** 2 + self.cos_beta() ** 2 - 1.0 < 0.00001, "beta assert error:{}".format(self.sin_beta() ** 2 + self.cos_beta() ** 2)

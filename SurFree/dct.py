@@ -97,11 +97,14 @@ def idct(X, norm=None):
 
     #V = torch.cat([V_r.unsqueeze(2), V_i.unsqueeze(2)], dim=2)
     V = torch.complex(V_r, V_i)
-    try:
-        v = torch.fft.ifft(V, dim=1)
-    except:
-        v = torch.fft.ifft(V, dim=1)
-
+    v = torch.fft.ifft(V, dim=1)
+    ''' If we use incorrect classified sample as the original image, the above code will cause the following error:
+        RuntimeError: cuFFT error: CUFFT INVALID SIZE
+        The reason for the above problem is that direction d=(x_adv x)/norm (x_adv x). 
+        Due to initializing the misclassified sample as the original sample at the beginning, the denominator is 0.
+        The direction d is nan, and the new direction cannot be updated until the number of queries exceeds 10000.
+        Then, an empty array indexes will be generated, making the ifft function unable to calculate.
+    '''
     x = v.new_zeros(v.shape)
     x[:, ::2] += v[:, :N - (N // 2)]
     x[:, 1::2] += v.flip([1])[:, :N // 2]

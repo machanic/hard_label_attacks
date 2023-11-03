@@ -53,6 +53,7 @@ class PDAttack(object):
             loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, True)
         self.dataset_loader = loader
         self.total_images = len(self.dataset_loader.dataset)
+        self.load_random_class_image = args.load_random_class_image
 
     def calc_distance(self, x1, x2):
         diff = x1.cuda() - x2.cuda()
@@ -68,28 +69,31 @@ class PDAttack(object):
 
         images = []
         for label in target_labels:  # length of target_labels is 1
-            if dataset_name == "ImageNet":
-                dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-10":
-                dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-100":
-                dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "TinyImageNet":
-                dataset = TinyImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            index = np.random.randint(0, len(dataset))
-            image, true_label = dataset[index]
-            image = image.unsqueeze(0)
-            if dataset_name == "ImageNet" and self.victim_query.net.input_size[-1] != 299:
-                image = F.interpolate(image,
-                                      size=(self.victim_query.net.input_size[-2], self.victim_query.net.input_size[-1]),
-                                      mode='bicubic', align_corners=False)
-            with torch.no_grad():
-                logits = self.victim_query.query(image.cuda(), True, True) # --[debug]
+            if self.load_random_class_image:
+                initial_images = np.load(
+                    "{}/attacked_images/{}/{}_targeted-attack-initial-images.npz".format(PROJECT_PATH, dataset_name,
+                                                                                         dataset_name),
+                    allow_pickle=True)
+                image = torch.from_numpy(initial_images[str(label.item())]).unsqueeze(0)
+                if dataset_name == "ImageNet" and self.victim_query.net.input_size[-1] != 299:
+                    image = F.interpolate(image,
+                                          size=(self.victim_query.net.input_size[-2], self.victim_query.net.input_size[-1]),
+                                          mode='bicubic',
+                                          align_corners=False)
 
-            max_recursive_loop_limit = 100
-            loop_count = 0
-            while not logits.item() and loop_count < max_recursive_loop_limit:
-                loop_count += 1
+                with torch.no_grad():
+                    testlogits = self.victim_query.query(image.cuda(), True, True)# --[debug]
+                    print(testlogits)
+
+            else:
+                if dataset_name == "ImageNet":
+                    dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
+                elif dataset_name == "CIFAR-10":
+                    dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
+                elif dataset_name == "CIFAR-100":
+                    dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
+                elif dataset_name == "TinyImageNet":
+                    dataset = TinyImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
                 index = np.random.randint(0, len(dataset))
                 image, true_label = dataset[index]
                 image = image.unsqueeze(0)
@@ -98,12 +102,26 @@ class PDAttack(object):
                                           size=(self.victim_query.net.input_size[-2], self.victim_query.net.input_size[-1]),
                                           mode='bicubic', align_corners=False)
                 with torch.no_grad():
-                    logits = self.victim_query.query(image.cuda(), True, True)
+                    logits = self.victim_query.query(image.cuda(), True, True)# --[debug]
 
-            if loop_count == max_recursive_loop_limit:
-                # The program cannot find a valid image from the validation set.
-                return None
-            assert true_label == label.item()
+                max_recursive_loop_limit = 100
+                loop_count = 0
+                while not logits.item() and loop_count < max_recursive_loop_limit:
+                    loop_count += 1
+                    index = np.random.randint(0, len(dataset))
+                    image, true_label = dataset[index]
+                    image = image.unsqueeze(0)
+                    if dataset_name == "ImageNet" and self.victim_query.net.input_size[-1] != 299:
+                        image = F.interpolate(image,
+                                              size=(self.victim_query.net.input_size[-2], self.victim_query.net.input_size[-1]),
+                                              mode='bicubic', align_corners=False)
+                    with torch.no_grad():
+                        logits = self.victim_query.query(image.cuda(), True, True)
+
+                if loop_count == max_recursive_loop_limit:
+                    # The program cannot find a valid image from the validation set.
+                    return None
+                assert true_label == label.item()
             images.append(torch.squeeze(image))
 
         return torch.stack(images)  # B,C,H,W
@@ -159,8 +177,8 @@ class PDAttack(object):
                         invalid_target_index = target_labels.cuda().eq(true_labels.cuda())
                         while invalid_target_index.sum().item() > 0:
                             target_labels[invalid_target_index] = torch.randint(low=0, high=CLASS_NUM[self.dataset],
-                                                                size=target_labels[invalid_target_index].size()).long()
-                            invalid_target_index = target_labels.eq(true_labels)
+                                                                size=target_labels[invalid_target_index].cuda().size()).long()
+                            invalid_target_index = target_labels.cuda().eq(true_labels.cuda())
 
                     initialization = self.get_image_of_target_class(self.dataset,target_labels).squeeze()
                     return initialization, 1
@@ -201,6 +219,9 @@ class PDAttack(object):
 
         # Call recursive function.
         low = torch.zeros_like(high)
+        high = high.to(torch.float64)
+        low = low.to(torch.float64)
+        old_mid = high.cuda()
         while ((high - low) / threshold).max().item() > 1:
             # projection to mids.
             mid = (high + low) / 2.0
@@ -210,6 +231,10 @@ class PDAttack(object):
             decision = self.decision_function(victim, mid_image, no_count=no_count)
             high = torch.where(decision.cuda(), mid.cuda(), high.cuda())
             low = torch.where(~decision.cuda(), mid.cuda(), low.cuda())
+            reached_numerical_precision = (old_mid == mid).all()
+            old_mid = mid
+            if reached_numerical_precision:
+                break
 
         return self.project(image, adv_image, high)
 
@@ -285,10 +310,11 @@ class PDAttack(object):
             output_fields = ('grad', 'std')
 
         # make upsampler and downsampler
+
         if args.grad_size != 0:
             # upsampler: grad to image; downsampler: image to grad
-            upsampler = lambda x: F.interpolate(x, size=victim.input_size[-1], mode="bicubic" if args.dataset=="ImageNet" else "bilinear", align_corners=True)
-            downsampler = lambda x: F.interpolate(x, size=args.grad_size, mode="bicubic" if args.dataset=="ImageNet" else "bilinear", align_corners=True)
+            upsampler = lambda x: F.interpolate(x, size=victim.input_size[-1], mode='bicubic' if args.dataset=="ImageNet" else "bilinear", align_corners=True)
+            downsampler = lambda x: F.interpolate(x, size=args.grad_size, mode='bicubic' if args.dataset=="ImageNet" else "bilinear", align_corners=True)
         else:
             # no resize, upsampler = downsampler = identity
             upsampler = downsampler = lambda x: x
@@ -401,9 +427,7 @@ class PDAttack(object):
                 args.num_pre_tune_step, args.pre_tune_th))
             output_fields_ = ('grad', 'adv_logit', 'logit')
             for step_index_ in range(args.num_pre_tune_step):
-
                 output_ = policy(adv_image_, image_, label_, target_, output_fields=output_fields_)
-
                 # logit for adv_image
                 adv_logit_ = output_['adv_logit']
                 lce_ = F.cross_entropy(adv_logit_, label_.view(-1), reduction='none')
@@ -797,6 +821,7 @@ class PDAttack(object):
                         raise NotImplementedError('Unknown norm: {}'.format(args.norm_type))
                 elif args.grad_method in ['policy_distance']:
                     # get mean/std using policy network
+
                     output = policy(adv_image, image, label, target, output_fields=output_fields)
                     mean, std = output['grad'], output['std']
                     if args.dataset != 'debug':
@@ -1340,8 +1365,13 @@ class PDAttack(object):
                         raw_reward[0].item(), collections.Counter(raw_reward.tolist())))
                     log.info(' reward min/med/max: {:.4g} / {:.4g} / {:.4g}'.format(
                         reward.min(), reward.median(), reward.max()))
+
                     output = policy(victim.best_adv_image, image, label, victim.best_adv_label,
                                     output_fields=('grad', 'std'))
+
+                    adv_image = F.interpolate(adv_image,
+                                              size=(299, 299),
+                                              mode='bilinear', align_corners=False)
                     mean, std = output['grad'], output['std']
                     log.info('       |mean| / std: {:.4g} / {:.4g} = {:.4g}'.format(
                         mean.abs().mean(), std.mean(), mean.abs().mean() / std.mean()))
@@ -1674,12 +1704,13 @@ def parse_args():
     parser.add_argument('--target_type', type=str, default='increment',
                         choices=['random', "load_random", 'least_likely', "increment"])
     parser.add_argument('--all-archs', action="store_true")
-    parser.add_argument('--json-config', type=str, default='../configures/PDA.json',
+    parser.add_argument('--json-config', type=str, default='{}/TangentAttack-main/configures/PDA.json'.format(PROJECT_PATH),
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--ssh', action='store_true',
                         help='whether or not we are executing command via ssh.'
                              'If set to True, we will not print anything to screen and only redirect them to log file') # used
-
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -1727,7 +1758,7 @@ if __name__ == '__main__':
 
     # 1. setup output directory
     args = parse_args()
-
+    print(1)
     # if args.num_part > 1, then this experiment is just a part and we should use the same token for all parts
     # to guarantee that, we use sha256sum of config in string format to generate unique token
     assert 0 <= args.part_id < args.num_part <= args.num_image

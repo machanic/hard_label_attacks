@@ -17,7 +17,7 @@ from config import CLASS_NUM, MODELS_TEST_STANDARD, IMAGE_DATA_ROOT, IN_CHANNELS
 from dataset.dataset_loader_maker import DataLoaderMaker
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
-from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10Dataset,TinyImageNetDataset
+from utils.dataset_toolkit import select_random_image_of_target_class
 
 from attack_mask import get_x_hat_in_2d, get_difference, get_orthogonal_1d_in_subspace
 import triangle_attack.torch_dct as torch_dct
@@ -25,7 +25,7 @@ import triangle_attack.torch_dct as torch_dct
 class TriangleAttack(object):
     def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, batch_size, epsilon, norm,
                  dim_num, side_length, max_iter_num_in_2d, plus_learning_rate, minus_learning_rate, half_range, init_alpha,
-                 maximum_queries=10000):
+                 load_random_class_image, maximum_queries=10000):
         self.model = model
         self.batch_size = batch_size
         self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
@@ -46,7 +46,7 @@ class TriangleAttack(object):
         self.minus_learning_rate = minus_learning_rate
         self.half_range = half_range
         self.init_alpha = init_alpha
-
+        self.load_random_class_image = load_random_class_image
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
         self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
@@ -61,56 +61,13 @@ class TriangleAttack(object):
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
         self.linf_distortion_with_max_queries_all = torch.zeros_like(self.query_all)
 
-    def get_image_of_target_class(self, dataset_name, target_labels, target_model):
-
-        images = []
-        for label in target_labels:  # length of target_labels is 1
-            if dataset_name == "ImageNet":
-                dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-10":
-                dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-100":
-                dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "TinyImageNet":
-                dataset = TinyImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            index = np.random.randint(0, len(dataset))
-            image, true_label = dataset[index]
-            image = image.unsqueeze(0)
-            if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                image = F.interpolate(image,
-                                      size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                      align_corners=False)
-            with torch.no_grad():
-                logits = target_model(image.cuda())
-            max_recursive_loop_limit = 100
-            loop_count = 0
-            while logits.max(1)[1].item() != label.item() and loop_count < max_recursive_loop_limit:
-                loop_count += 1
-                index = np.random.randint(0, len(dataset))
-                image, true_label = dataset[index]
-                image = image.unsqueeze(0)
-                if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                    image = F.interpolate(image,
-                                          size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                          align_corners=False)
-                with torch.no_grad():
-                    logits = target_model(image.cuda())
-
-            if loop_count == max_recursive_loop_limit:
-                # The program cannot find a valid image from the validation set.
-                return None
-
-            assert true_label == label.item()
-            images.append(torch.squeeze(image))
-        return torch.stack(images)  # B,C,H,W
-
     def decision_function(self, images, true_labels, target_labels):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max).cuda()
         logits = self.model(images)
         if target_labels is None:
-            return logits.max(1)[1].detach().cpu() != true_labels
+            return logits.max(1)[1].detach().cpu().item() != true_labels[0].item()
         else:
-            return logits.max(1)[1].detach().cpu() == target_labels
+            return logits.max(1)[1].detach().cpu().item() == target_labels[0].item()
 
     def initialize(self, sample, target_images, true_labels, target_labels):
         """
@@ -120,9 +77,10 @@ class TriangleAttack(object):
         num_eval = 0
         if target_images is None:
             while True:
-                random_noise = torch.from_numpy(np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float().cuda()
+                random_noise = torch.from_numpy(
+                    np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float().cuda()
                 # random_noise = torch.FloatTensor(*self.shape).uniform_(self.clip_min, self.clip_max)
-                success = self.decision_function(random_noise[None], true_labels, target_labels)[0].item()
+                success = self.decision_function(random_noise[None], true_labels, target_labels)
                 num_eval += 1
                 if success:
                     break
@@ -130,14 +88,17 @@ class TriangleAttack(object):
                     log.info("Initialization failed! Use a misclassified image as `target_image")
                     if target_labels is None:
                         target_labels = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                      size=true_labels.size()).long()
+                                                      size=true_labels.size()).long().cuda()
                         invalid_target_index = target_labels.eq(true_labels)
                         while invalid_target_index.sum().item() > 0:
-                            target_labels[invalid_target_index] = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                                size=target_labels[invalid_target_index].size()).long()
+                            target_labels[invalid_target_index] = torch.randint(low=0,
+                                                                                high=CLASS_NUM[self.dataset_name],
+                                                                                size=target_labels[
+                                                                                    invalid_target_index].size()).long().cuda()
                             invalid_target_index = target_labels.eq(true_labels)
 
-                    initialization = self.get_image_of_target_class(self.dataset_name,target_labels, self.model).squeeze()
+                    initialization = select_random_image_of_target_class(self.dataset_name, target_labels,
+                                                                          self.model, self.load_random_class_image).squeeze()
                     return initialization, 1
                 # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
             # Binary search to minimize l2 distance to original image.
@@ -145,14 +106,15 @@ class TriangleAttack(object):
             high = 1.0
             while high - low > 0.001:
                 mid = (high + low) / 2.0
-                blended = (1 - mid) * sample + mid * random_noise
-                success = self.decision_function(blended[None], true_labels, target_labels)[0].item()
+                blended = (1 - mid) * sample + mid * random_noise[None]
+                success = self.decision_function(blended, true_labels, target_labels)
                 num_eval += 1
                 if success:
                     high = mid
                 else:
                     low = mid
-            # Sometimes, the found `high` is so tiny that the difference between initialization and sample is very very small, this case will cause inifinity loop
+            # Sometimes, the found `high` is so tiny that the difference between initialization and sample is very
+            # small, this case will cause an infinity loop
             initialization = (1 - high) * sample + high * random_noise
         else:
             initialization = target_images
@@ -161,7 +123,7 @@ class TriangleAttack(object):
     def attack(self, batch_index, images, target_images, true_labels, target_labels):
         batch_size = images.size(0)
         images = images.squeeze().cuda()
-        # true_labels = true_labels.cuda()
+        true_labels = true_labels.cuda()
 
         query = torch.zeros_like(true_labels).float()
         success_stop_queries = query.clone()  # stop query count once the distortion < epsilon
@@ -191,7 +153,7 @@ class TriangleAttack(object):
         get_x_hat_in_2d.clamp = 0
 
         images = images[np.newaxis, :, :, :]
-        original_label = true_labels.reshape(1, ).cuda()
+        original_label = true_labels.reshape(1, )
         # if target_images is not None:
         #     target_images = target_images.squeeze()
         # Initialize. Note that if the original image is already classified incorrectly, the difference between the found initialization and sample is very very small, this case will lead to inifinity loop later.
@@ -215,7 +177,7 @@ class TriangleAttack(object):
             for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
                 self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[inside_batch_index].item()
 
-            log.info('{}-th image, {}: distortion {:.4f}, query: {}'.format(batch_index+1, self.norm, dist.item(), int(query[0].item())))
+            log.info('{}-th image, {}: distortion {:.10f}, query: {}'.format(batch_index+1, self.norm, dist.item(), int(query[0].item())))
             if dist.item() < 1e-4:  # 发现攻击jpeg时候卡住，故意加上这句话
                 break
 
@@ -249,12 +211,11 @@ class TriangleAttack(object):
                     invalid_target_index = target_labels.eq(true_labels)
                     while invalid_target_index.sum().item() > 0:
                         target_labels[invalid_target_index] = torch.randint(low=0, high=logit.shape[1],
-                                                                            size=target_labels[
-                                                                                invalid_target_index].shape).long()
+                                                                            size=target_labels[invalid_target_index].shape).long()
                         invalid_target_index = target_labels.eq(true_labels)
                 elif args.target_type == "load_random":
                     target_labels = loaded_target_labels[selected]
-                    assert target_labels[0].item() != true_labels[0].item()
+                    assert target_labels[0].item()!=true_labels[0].item()
                     # log.info("load random label as {}".format(target_labels))
                 elif args.target_type == 'least_likely':
                     target_labels = logit.argmin(dim=1).detach().cpu()
@@ -263,7 +224,7 @@ class TriangleAttack(object):
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
 
-                target_images = self.get_image_of_target_class(self.dataset_name, target_labels, self.model)
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model, self.load_random_class_image)
                 if target_images is None:
                     log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index + 1))
                     continue
@@ -272,6 +233,7 @@ class TriangleAttack(object):
                 target_images = None
 
             adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, images, target_images, true_labels, target_labels)
+            adv_images = adv_images.detach().cpu()
 
             distortion_with_max_queries = distortion_with_max_queries.detach().cpu()
             linf_distortion_with_max_queries = torch.norm((adv_images - images).contiguous().view(args.batch_size, -1), np.inf, 1).detach().cpu()
@@ -341,7 +303,7 @@ def set_log_file(fname):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu",type=int, required=True)
-    parser.add_argument('--json-config', type=str, default='../configures/TriangleAttack.json',
+    parser.add_argument('--json-config', type=str, default='./configures/TriangleAttack.json',
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--epsilon', type=float, help='the lp perturbation bound')
     parser.add_argument("--norm",type=str, choices=["l2","linf"],required=True)
@@ -352,22 +314,24 @@ if __name__ == "__main__":
     parser.add_argument('--all-archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
     parser.add_argument('--target-type',type=str, default='increment', choices=['random', "load_random", 'least_likely',"increment"])
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
-    parser.add_argument('--attack-defense',action="store_true")
-    parser.add_argument('--defense-model',type=str, default=None)
-    parser.add_argument('--defense-norm',type=str,choices=["l2","linf"],default='linf')
-    parser.add_argument('--defense-eps',type=str,default="")
+    parser.add_argument('--attack_defense',action="store_true")
+    parser.add_argument('--defense_model',type=str, default=None)
+    parser.add_argument('--defense_norm',type=str,choices=["l2","linf"],default='linf')
+    parser.add_argument('--defense_eps',type=str,default="")
     parser.add_argument('--max-queries',type=int, default=10000)
     # parser.add_argument('--save-linf-norm', action="store_true")
 
-    parser.add_argument('--dim-num', type=int, default=1, help='the number of picked dimensions')
-    parser.add_argument('--ratio-mask',type=float,default=0.1,help='ratio of mask')
+    parser.add_argument('--dim-num', type=int, default=3, help='the number of picked dimensions')
+    parser.add_argument('--ratio-mask',type=float)
     parser.add_argument('--max-iter-num-in-2d',type=int,default=2,help='the maximum iteration number of attack algorithm in 2d subspace')
     parser.add_argument('--init-theta',type=int,default=2,help='the initial angle of a subspace=init_theta*np.pi/32')
     parser.add_argument('--init-alpha',type=float,default=np.pi / 2,help='the initial angle of alpha')
-    parser.add_argument('--plus-learning-rate',type=float,default=0.1,help='plus learning_rate when success')
-    parser.add_argument('--minus-learning-rate',type=float,default=0.005,help='minus learning_rate when fail')
+    parser.add_argument('--plus-learning-rate',type=float,default=0.01,help='plus learning_rate when success')
+    parser.add_argument('--minus-learning-rate',type=float,default=0.0005,help='minus learning_rate when fail')
     parser.add_argument('--half-range',type=float,default=0.1,help='half range of alpha from pi/2')
 
     args = parser.parse_args()
@@ -475,8 +439,10 @@ if __name__ == "__main__":
         model.cuda()
         model.eval()
         args.side_length = model.input_size[-1]
-        attacker = TriangleAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset], args.batch_size, args.epsilon, args.norm,
+        attacker = TriangleAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
+                                  args.batch_size, args.epsilon, args.norm,
                                   args.dim_num, args.side_length, args.max_iter_num_in_2d, args.plus_learning_rate,
-                                  args.minus_learning_rate, args.half_range, args.init_alpha, maximum_queries=args.max_queries)
+                                  args.minus_learning_rate, args.half_range, args.init_alpha, args.load_random_class_image,
+                                  maximum_queries=args.max_queries)
         attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()

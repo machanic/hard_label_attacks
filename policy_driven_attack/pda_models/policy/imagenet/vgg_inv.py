@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 from policy_driven_attack.pda_models.policy.common import normalization, inv_forward
+import torch.nn.functional as F
 
 __all__ = ['vgg11_inv', 'vgg13_inv', 'vgg16_inv', 'vgg19_inv']
 
@@ -16,7 +17,7 @@ cfg = {
 
 class VGGInv(nn.Module):
     def __init__(self, vgg_name, use_tanh=True, calibrate=True,
-                 normalization_type='none', input_size=224, init_std=1/224.):
+                 normalization_type='none', input_size=299, init_std=1/299.):#--[debug] 224
         super(VGGInv, self).__init__()
         # save arguments
         self.input_size = input_size
@@ -28,7 +29,7 @@ class VGGInv(nn.Module):
         # main body of vgg inverse
         self.features = self._make_layers(cfg[vgg_name])
         self.classifier = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 4096),
+            nn.Linear(512 * 9 * 9, 4096),#--[debug] 512 7 7(224)512 9 9(299)
             nn.ReLU(True),
             nn.Linear(4096, 4096),
             nn.ReLU(True),

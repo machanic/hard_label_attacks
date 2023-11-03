@@ -21,13 +21,13 @@ from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10
 from utils.dataset_toolkit import select_random_image_of_target_class
 from tangent_attack_semiellipsoid.tangent_point_analytical_solution import TangentFinder as EllipsoidTangentFinder
 from tangent_attack_hemisphere.tangent_point_analytical_solution import TangentFinder as HemisphereTangentFinder
-
+from sklearn.svm import LinearSVC
 
 class EllipsoidTangentAttack(object):
     def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon, radius_ratio,load_random_class_image,
                  iterations=40, gamma=1.0, stepsize_search='geometric_progression',
                  max_num_evals=1e4, init_num_evals=100, maximum_queries=10000, batch_size=1,
-                 verify_tangent_point=False, best_radius=False):
+                 verify_tangent_point=False, best_radius=False,c_p=0.6):
         """
         :param clip_min: lower bound of the image.
         :param clip_max: upper bound of the image.
@@ -76,7 +76,7 @@ class EllipsoidTangentAttack(object):
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
         self.best_radius = best_radius
         self.load_random_class_image = load_random_class_image
-
+        self.c_p=c_p
 
     def decision_function(self, images, true_labels, target_labels):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max).cuda()
@@ -216,9 +216,8 @@ class EllipsoidTangentAttack(object):
                 delta = self.dim * self.theta * dist_post_update
         return delta
 
-    def approximate_gradient(self, sample, true_labels, target_labels, num_evals, delta):
+    def svm_gradient(self, sample, true_labels, target_labels, num_evals, delta):
         clip_max, clip_min = self.clip_max, self.clip_min
-
         # Generate random vectors.
         noise_shape = [num_evals] + list(self.shape)
         if self.norm == 'l2':
@@ -226,11 +225,12 @@ class EllipsoidTangentAttack(object):
         elif self.norm == 'linf':
             rv = torch.from_numpy(np.random.uniform(low=-1, high=1, size=noise_shape)).float()
             # rv = torch.FloatTensor(*noise_shape).uniform_(-1, 1)
-        rv = rv / torch.sqrt(torch.sum(torch.mul(rv,rv), dim=(1,2,3),keepdim=True))
-        perturbed = sample + delta * rv
+        rv = rv / torch.sqrt(torch.sum(torch.mul(rv, rv), dim=(1, 2, 3), keepdim=True))
+        rv = rv.cuda()
+        perturbed = sample.cuda() + delta * rv
+        # rv = torch.clamp(rv, clip_min, clip_max)
         perturbed = torch.clamp(perturbed, clip_min, clip_max)
-        rv = (perturbed - sample) / delta
-
+        # rv = (perturbed - sample.cuda()) / delta
         # query the model.
         # if self.dataset_name=="ImageNet" and perturbed.size(0) >= 4:  # FIXME save GPU memory
         #     decisions_1 = self.decision_function(perturbed[:perturbed.size(0)//4], true_labels, target_labels)
@@ -241,22 +241,35 @@ class EllipsoidTangentAttack(object):
         #                                          true_labels, target_labels)
         #     decisions = torch.cat([decisions_1, decisions_2,decisions_3,decisions_4],0)
         # else:
+
         decisions = self.decision_function(perturbed, true_labels, target_labels)
         decision_shape = [decisions.size(0)] + [1] * len(self.shape)
         fval = 2 * decisions.float().view(decision_shape) - 1.0
+        svm_model = LinearSVC(C=self.c_p)  # c=0.45loss='hinge',0.55
+        # 训练模型
 
-        # Baseline subtraction (when fval differs)
-        if torch.mean(fval).item() == 1.0:  # label changes.
-            gradf = torch.mean(rv, dim=0)
-        elif torch.mean(fval).item() == -1.0:  # label not change.
-            gradf = -torch.mean(rv, dim=0)
-        else:
-            fval -= torch.mean(fval)
-            gradf = torch.mean(fval * rv, dim=0)
+        y_train = decisions.int().cpu().numpy()
+        x_train = rv.view(num_evals, -1).cpu().numpy()
 
-        # Get the gradient direction.
-        gradf = gradf / torch.norm(gradf,p=2)
+        #######################choose delta##########################
+        all_same = np.all(y_train == y_train[0])
+        if all_same and y_train[0] == 0:
+            tv = (self.theta / 2 * rv).view(num_evals, -1).cpu().numpy()
+            new_array = np.ones_like(y_train)
+            y_train = np.concatenate((y_train, new_array), axis=0)
+            x_train = np.concatenate((x_train, tv), axis=0)
+        if all_same and y_train[0] == 1:
+            tv = (delta * 2 * rv).view(num_evals, -1).cpu().numpy()
+            new_array = np.zeros_like(y_train)
+            y_train = np.concatenate((y_train, new_array), axis=0)
+            x_train = np.concatenate((x_train, tv), axis=0)
+        ##############################################################
 
+        svm_model.fit(x_train, y_train)
+        # print(svm_model.predict(x_train))
+        normal_vector = svm_model.coef_[0]
+        gradf = torch.tensor(normal_vector.reshape(self.shape))
+        gradf = gradf / torch.norm(gradf, p=2)
         return gradf
 
     def geometric_progression_for_HSJA(self, x, true_labels, target_labels, update, dist, cur_iter):
@@ -362,7 +375,7 @@ class EllipsoidTangentAttack(object):
             num_evals = int(self.init_num_evals * np.sqrt(j+1))
             num_evals = int(min([num_evals, self.max_num_evals]))
             # approximate gradient
-            gradf = self.approximate_gradient(perturbed, true_labels, target_labels, num_evals, delta)
+            gradf = self.svm_gradient(perturbed, true_labels, target_labels, num_evals, delta).to(torch.float32)
             if self.norm == "linf":
                 gradf = torch.sign(gradf)
             query += num_evals
@@ -526,9 +539,9 @@ class EllipsoidTangentAttack(object):
 def get_exp_dir_name(dataset,  norm, targeted, target_type, args):
     target_str = "untargeted" if not targeted else "targeted_{}".format(target_type)
     if args.attack_defense:
-        dirname = 'ellipsoid_tangent_attack_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
+        dirname = 'svm-ellipsoid_tangent_attack_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
     else:
-        dirname = 'ellipsoid_tangent_attack-{}-{}-{}'.format(dataset, norm, target_str)
+        dirname = 'svm-ellipsoid_tangent_attack-{}-{}-{}'.format(dataset, norm, target_str)
     return dirname
 
 def print_args(args):
@@ -577,6 +590,8 @@ if __name__ == "__main__":
     parser.add_argument('--t', type=float)
     parser.add_argument('--load-random-class-image', action='store_true',
                         help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
+    parser.add_argument('--t', type=float)
+
     args = parser.parse_args()
     assert args.batch_size == 1, "Tangent attack only supports mini-batch size equals 1!"
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -665,6 +680,7 @@ if __name__ == "__main__":
                                           args.norm, args.epsilon, args.radius_ratio, args.load_random_class_image,args.num_iterations, gamma=args.gamma, stepsize_search = args.stepsize_search,
                                           max_num_evals=1e4,
                                           init_num_evals=args.init_num_eval_grad, maximum_queries=args.max_queries,
-                                          verify_tangent_point=args.verify_tangent)
+                                          verify_tangent_point=args.verify_tangent,
+                                          c_p=args.t)
         attacker.attack_all_images(args, arch,  save_result_path)
         model.cpu()

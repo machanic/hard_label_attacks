@@ -5,29 +5,25 @@ import random
 import sys
 sys.path.append(os.getcwd())
 from collections import defaultdict, OrderedDict
-
+import math
 import json
 from types import SimpleNamespace
 import os.path as osp
 import torch
 import numpy as np
+from scipy.optimize import minimize_scalar
 import glog as log
 from torch.nn import functional as F
-from config import CLASS_NUM, MODELS_TEST_STANDARD, IN_CHANNELS, IMAGE_DATA_ROOT
+from config import CLASS_NUM, MODELS_TEST_STANDARD, IN_CHANNELS
 from dataset.dataset_loader_maker import DataLoaderMaker
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
-from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10Dataset,TinyImageNetDataset
 from utils.dataset_toolkit import select_random_image_of_target_class
-from tangent_attack_semiellipsoid.tangent_point_analytical_solution import TangentFinder as EllipsoidTangentFinder
-from tangent_attack_hemisphere.tangent_point_analytical_solution import TangentFinder as HemisphereTangentFinder
 
-
-class EllipsoidTangentAttack(object):
-    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon, radius_ratio,load_random_class_image,
-                 iterations=40, gamma=1.0, stepsize_search='geometric_progression',
-                 max_num_evals=1e4, init_num_evals=100, maximum_queries=10000, batch_size=1,
-                 verify_tangent_point=False, best_radius=False):
+class AngleSkipJumpAttack(object):
+    def __init__(self, model, dataset,  clip_min, clip_max, height, width, channels, norm, load_random_class_image, epsilon,
+                 iterations=40, gamma=1.0,
+                 max_num_evals=1e4, init_num_evals=100,maximum_queries=10000,batch_size=1,random_direction=False):
         """
         :param clip_min: lower bound of the image.
         :param clip_max: upper bound of the image.
@@ -35,7 +31,6 @@ class EllipsoidTangentAttack(object):
         :param iterations: number of iterations.
         :param gamma: used to set binary search threshold theta. The binary search
                      threshold theta is gamma / d^{3/2} for l2 attack and gamma / d^2 for linf attack.
-        :param stepsize_search: choose between 'geometric_progression', 'grid_search'.
         :param max_num_evals: maximum number of evaluations for estimating gradient.
         :param init_num_evals: initial number of evaluations for estimating gradient.
         """
@@ -50,7 +45,7 @@ class EllipsoidTangentAttack(object):
         self.width = width
         self.channels = channels
         self.shape = (channels, height, width)
-        self.radius_ratio = radius_ratio
+        self.load_random_class_image = load_random_class_image
         if self.norm == "l2":
             self.theta = gamma / (np.sqrt(self.dim) * self.dim)
         else:
@@ -59,24 +54,21 @@ class EllipsoidTangentAttack(object):
         self.max_num_evals = max_num_evals
         self.num_iterations = iterations
         self.gamma = gamma
-        self.stepsize_search = stepsize_search
-        self.verify_tangent_point = verify_tangent_point
 
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
         self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
-        self.query_all = torch.zeros(self.total_images)
+        self.query_all = torch.zeros(self.total_images) # 查询次数
         self.distortion_all = defaultdict(OrderedDict)  # key is image index, value is {query: distortion}
         self.correct_all = torch.zeros_like(self.query_all)  # number of images
         self.not_done_all = torch.zeros_like(self.query_all)  # always set to 0 if the original image is misclassified
         self.success_all = torch.zeros_like(self.query_all)
         self.success_query_all = torch.zeros_like(self.query_all)
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
-        self.best_radius = best_radius
-        self.load_random_class_image = load_random_class_image
-
+        self.random_direction = random_direction
+        self.brent_query = 0
 
     def decision_function(self, images, true_labels, target_labels):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max).cuda()
@@ -86,6 +78,7 @@ class EllipsoidTangentAttack(object):
         else:
             return logits.max(1)[1].detach().cpu() == target_labels
 
+
     def initialize(self, sample, target_images, true_labels, target_labels):
         """
         sample: the shape of sample is [C,H,W] without batch-size
@@ -94,8 +87,7 @@ class EllipsoidTangentAttack(object):
         num_eval = 0
         if target_images is None:
             while True:
-                random_noise = torch.from_numpy(
-                    np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float()
+                random_noise = torch.from_numpy(np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float()
                 # random_noise = torch.FloatTensor(*self.shape).uniform_(self.clip_min, self.clip_max)
                 success = self.decision_function(random_noise[None], true_labels, target_labels)[0].item()
                 num_eval += 1
@@ -108,10 +100,8 @@ class EllipsoidTangentAttack(object):
                                                       size=true_labels.size()).long()
                         invalid_target_index = target_labels.eq(true_labels)
                         while invalid_target_index.sum().item() > 0:
-                            target_labels[invalid_target_index] = torch.randint(low=0,
-                                                                                high=CLASS_NUM[self.dataset_name],
-                                                                                size=target_labels[
-                                                                                    invalid_target_index].size()).long()
+                            target_labels[invalid_target_index] = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
+                                                                size=target_labels[invalid_target_index].size()).long()
                             invalid_target_index = target_labels.eq(true_labels)
 
                     initialization = select_random_image_of_target_class(self.dataset_name, [target_labels], self.model,
@@ -182,11 +172,11 @@ class EllipsoidTangentAttack(object):
             decisions = decisions.int()
             lows = torch.where(decisions == 0, mids, lows)  # lows:攻击失败的用mids，攻击成功的用low
             highs = torch.where(decisions == 1, mids, highs)  # highs: 攻击成功的用mids，攻击失败的用high, 不理解的可以去看论文Algorithm 1
+            # log.info("decision: {} low: {}, high: {}".format(decisions.detach().cpu().numpy(),lows.detach().cpu().numpy(), highs.detach().cpu().numpy()))
             reached_numerical_precision = (old_mid == mids).all()
             old_mid = mids
             if reached_numerical_precision:
                 break
-            # log.info("decision: {} low: {}, high: {}".format(decisions.detach().cpu().numpy(),lows.detach().cpu().numpy(), highs.detach().cpu().numpy()))
         out_images = self.project(original_image, perturbed_images, highs)  # high表示classification boundary偏攻击成功一点的线
         # Compute distance of the output image to select the best choice.
         # (only used when stepsize_search is grid_search.)
@@ -216,7 +206,7 @@ class EllipsoidTangentAttack(object):
                 delta = self.dim * self.theta * dist_post_update
         return delta
 
-    def approximate_gradient(self, sample, true_labels, target_labels, num_evals, delta):
+    def approximate_hyperplane_gradient(self, sample, true_labels, target_labels, num_evals, delta):
         clip_max, clip_min = self.clip_max, self.clip_min
 
         # Generate random vectors.
@@ -259,60 +249,44 @@ class EllipsoidTangentAttack(object):
 
         return gradf
 
-    def geometric_progression_for_HSJA(self, x, true_labels, target_labels, update, dist, cur_iter):
+    def approximate_sign_opt_gradient(self, image, boundary_image, true_labels, target_labels, num_samples, sigma):
         """
-        Geometric progression to search for stepsize.
-        Keep decreasing stepsize by half until reaching
-        the desired side of the boundary,
+        Evaluate the sign of gradient by formulat
+        sign(g) = 1/Q [ \sum_{q=1}^Q sign( g(theta+h*u_i) - g(theta) )u_i$ ]
         """
-        epsilon = dist.item() / np.sqrt(cur_iter)
-        num_evals = np.zeros(1)
-        def phi(epsilon, num_evals):
-            new = x + epsilon * update
-            success = self.decision_function(new[None], true_labels,target_labels)
-            num_evals += 1
-            return bool(success[0].item())
-
-        while not phi(epsilon, num_evals):  # 只要没有成功，就缩小epsilon
-            epsilon /= 2.0
-        perturbed = torch.clamp(x + epsilon * update, self.clip_min, self.clip_max)
-        return perturbed
-
-
-    def geometric_progression_for_tangent_point(self, x_original, x_boundary, normal_vector, true_labels, target_labels,
-                                                 dist, cur_iter):
-        """
-        Geometric progression to search for stepsize.
-        Keep decreasing stepsize by half until reaching
-        the desired side of the boundary,
-        """
-        long_radius = dist.item() / np.sqrt(cur_iter)
-        short_radius = long_radius / self.radius_ratio
-        num_evals = 0
-
-        while True:
-            tangent_finder = EllipsoidTangentFinder(x_original.view(-1), x_boundary.view(-1), short_radius, long_radius, normal_vector.view(-1),
-                                           norm="l2")
-            tangent_point = tangent_finder.compute_tangent_point()
-            tangent_point = tangent_point.view_as(x_original).type(x_original.dtype)
-
-            # # FIXME compare with the Tangent Attack(hemisphere version)
-            # tangent_finder_hemi = HemisphereTangentFinder(x_original.view(-1), x_boundary.view(-1), short_radius,
-            #                                         normal_vector.view(-1),
-            #                                         norm="l2")
-            # tangent_point = tangent_finder_hemi.compute_tangent_point()
-            # tangent_point_hemi = tangent_point.view_as(x_original).type(x_original.dtype)  # FIXME
-            # diff = (tangent_point_semi - tangent_point_hemi).max().item()
-            # log.info(diff) # FIXME compare the difference with the Tangent Attack(hemisphere version)
-            # tangent_point = tangent_point_semi
-            success = self.decision_function(tangent_point[None], true_labels, target_labels)
-            num_evals += 1
-            if bool(success[0].item()):
-               break
-            long_radius /= 2.0
-            short_radius = long_radius / self.radius_ratio
-        tangent_point = torch.clamp(tangent_point, self.clip_min, self.clip_max)
-        return tangent_point, num_evals
+        ray = boundary_image - image
+        initial_lbd = torch.norm(ray.view(-1), p=self.ord)
+        ray /= initial_lbd
+        queries = 0
+        images_batch = []
+        u_batch = []
+        for _ in range(num_samples):  # for each u
+            u = torch.randn_like(ray)
+            u /= torch.norm(u.flatten(), p=self.ord)
+            new_theta = ray + sigma * u
+            new_theta /= torch.norm(new_theta.flatten(), p=self.ord)
+            u_batch.append(u)
+            images_batch.append(image + initial_lbd * new_theta)
+            queries += 1
+        images_batch = torch.stack(images_batch, 0)
+        u_batch = torch.stack(u_batch, 0)  # B,C,H,W
+        assert u_batch.dim() == 4
+        sign = torch.ones(num_samples, device='cuda')
+        if target_labels is not None:
+            target_labels = target_labels.repeat(num_samples).cuda()
+            predict_labels = self.model(images_batch.cuda()).max(1)[1]
+            sign[predict_labels == target_labels] = -1
+        else:
+            true_labels = true_labels.repeat(num_samples).cuda()
+            predict_labels = self.model(images_batch.cuda()).max(1)[1]
+            sign[predict_labels != true_labels] = -1
+        sign = sign.cpu()
+        sign_grad = torch.sum(u_batch * sign.view(num_samples, 1, 1, 1), dim=0, keepdim=True)
+        sign_grad = sign_grad / num_samples
+        sign_grad = sign_grad.squeeze()
+        # compute the projection of the ray onto the -sign_grad
+        grad = ray - torch.sum(ray * sign_grad) * sign_grad / torch.norm(sign_grad.view(-1),p=2) ** 2
+        return grad, queries
 
     def compute_distance(self, x_ori, x_pert, norm='l2'):
         # Compute the distance between two images.
@@ -321,17 +295,199 @@ class EllipsoidTangentAttack(object):
         elif norm == 'linf':
             return torch.max(torch.abs(x_ori - x_pert)).item()
 
+    def project_point_from_2D(self, image, boundary_image, grad, point_coordinate):
+        x, y = point_coordinate[0].item(), point_coordinate[1].item()
+        ox = image - boundary_image
+        x_basis = ox - torch.sum(ox * grad) * grad / torch.norm(grad.view(-1), p=2) ** 2
+        x_basis = x_basis / torch.norm(x_basis.view(-1),p=2)
+        y_basis = grad / torch.norm(grad.view(-1),p=2)
+        return math.fabs(x) * x_basis + y * y_basis + boundary_image
+
+    def project_angle_from_2D(self, image, boundary_image, grad, theta, lp_distance):
+        ox = image - boundary_image
+        bb = torch.sum(ox *(-grad))/(torch.norm(ox.view(-1), p=2) * torch.norm(grad.view(-1), p=2))
+        bb = torch.clamp(bb, -1,1)
+        alpha = torch.acos(bb)
+        x_norm = torch.norm(ox.view(-1), p=2)
+        x_0, y_0 = x_norm * torch.sin(alpha), -x_norm * torch.cos(alpha)
+        radius = torch.norm(ox.view(-1),p=2)
+
+        x,y = x_0 - radius * torch.cos(torch.tensor(theta)), y_0 + radius * torch.sin(torch.tensor(theta))  # FIXME 注意x坐标轴向左，下一版代码改成向右，就能用标准的圆参数方程
+        end_point_2d = torch.tensor([x,y],dtype=torch.float32)
+        # 先把ray的向量翻译成高维的向量
+        end_point_nd = self.project_point_from_2D(image, boundary_image, grad, end_point_2d)
+        ray_vec_ndim = end_point_nd - image
+        ray_vec_ndim /= torch.norm(ray_vec_ndim.view(-1), p=self.ord)
+        ray_end_point = image + lp_distance * ray_vec_ndim
+        return ray_end_point
+
+    def translate_2D_angle_to_high_dim(self, image, boundary_image, grad, theta, lp_distance):
+        ray_end_point_high_dim = self.project_angle_from_2D(image, boundary_image, grad, theta, lp_distance)
+        ray_vec = ray_end_point_high_dim - image
+        ray_vec /= torch.norm(ray_vec.view(-1), p=self.ord)
+        return ray_vec
+
+    def binary_search_angle_adv_region(self, image, boundary_image, grad, theta_start, theta_end, lp_distance,
+                                       true_labels, target_labels, tol=0.01):
+        # reduce angle search range
+        query = 0
+        theta_interval_ends = torch.linspace(theta_start, theta_end,11)[1:]
+        for theta_interval_end in theta_interval_ends:
+            theta_interval_end = theta_interval_end.item()
+            theta_interval_end_image = self.project_angle_from_2D(image, boundary_image, grad, theta_interval_end, lp_distance)
+            decision = self.decision_function(theta_interval_end_image, true_labels, target_labels).int()
+            query += 1
+            if decision.item() != 1:
+                theta_end = theta_interval_end
+                break
+        # perform binary search
+        low = theta_start
+        high = theta_end
+        num_evals = 0
+        while (high - low) > tol:
+            mid = (high + low) / 2.0
+            mid_image = self.project_angle_from_2D(image, boundary_image, grad, mid, lp_distance)
+            # Update highs and lows based on model decisions.
+            decision = self.decision_function(mid_image, true_labels, target_labels).int()
+            query += 1
+            num_evals += 1
+            if decision.item() == 1: # 攻击成功
+                low = mid
+            else:
+                high = mid
+        out_image = self.project_angle_from_2D(image, boundary_image, grad, low, lp_distance)
+        return low, out_image, query
+
+
+    def fine_grained_binary_search_local(self, x0, y0, theta, initial_lbd=1.0, tol=0.1):
+        nquery = 1
+        lbd = initial_lbd
+
+
+        # Choose upper thresholds in binary searchs based on constraint.
+        if self.norm == "linf":
+            # Stopping criteria.
+            thresholds = torch.clamp_max(initial_lbd * self.theta, max=self.theta)
+        else:
+            thresholds = self.theta
+
+
+        # still inside boundary
+        if self.model((x0 + lbd * theta).cuda()).max(1)[1].item() == y0:
+            lbd_lo = lbd
+            lbd_hi = lbd * 1.1
+            nquery += 1
+            while self.model((x0 + lbd_hi * theta).cuda()).max(1)[1].item() == y0:
+                lbd_hi = lbd_hi * 1.1
+                nquery += 1
+                if lbd_hi > 20:
+                    return float('inf'), nquery
+        else:
+            lbd_hi = lbd
+            lbd_lo = lbd * 0.9
+            nquery += 1
+            while self.model((x0 + lbd_lo * theta).cuda()).max(1)[1].item() != y0:
+                lbd_lo = lbd_lo * 0.9
+                nquery += 1
+        tot_count = 0
+        while (lbd_hi - lbd_lo) > tol:
+            tot_count+=1
+            lbd_mid = (lbd_lo + lbd_hi) / 2.0
+            nquery += 1
+            if self.model((x0 + lbd_mid * theta).cuda()).max(1)[1].item() != y0:
+                lbd_hi = lbd_mid
+            else:
+                lbd_lo = lbd_mid
+            if tot_count>200:
+                log.info("reach max while limit, maybe dead loop in binary search function, break!")
+                break
+        return lbd_hi, nquery
+
+    def fine_grained_binary_search_local_targeted(self, x0, t, theta, initial_lbd=1.0, tol=0.1):
+        nquery = 1
+        lbd = initial_lbd
+
+        if self.model((x0 + lbd * theta).cuda()).max(1)[1].item() != t:
+            lbd_lo = lbd
+            lbd_hi = lbd * 1.01
+            nquery += 1
+            while self.model((x0 + lbd_hi * theta).cuda()).max(1)[1].item() != t:
+                lbd_hi = lbd_hi * 1.01
+                nquery += 1
+                if lbd_hi > 100:
+                    return float('inf'), nquery
+        else:
+            lbd_hi = lbd
+            lbd_lo = lbd * 0.99
+            nquery += 1
+            while self.model((x0 + lbd_lo * theta).cuda()).max(1)[1].item() == t:
+                lbd_lo = lbd_lo * 0.99
+                nquery += 1
+        tot_count = 0
+        while (lbd_hi - lbd_lo) > tol:
+            tot_count += 1
+            lbd_mid = (lbd_lo + lbd_hi) / 2.0
+            nquery += 1
+            if self.model((x0 + lbd_mid * theta).cuda()).max(1)[1].item() == t:
+                lbd_hi = lbd_mid
+            else:
+                lbd_lo = lbd_mid
+            if tot_count>200:
+                log.info("reach max while limit, dead loop in binary search function, break!")
+                break
+        return lbd_hi, nquery
+
+    def g_theta(self, image, boundary_image, grad, theta, initial_lbd, true_label, target_label, tol=0.1):
+        lp_distance = torch.norm((image - boundary_image).view(-1), p=self.ord)
+        theta_ndim = self.translate_2D_angle_to_high_dim(image, boundary_image, grad, theta, lp_distance)
+        if target_label is not None:
+            bound_dist, bs_query = self.fine_grained_binary_search_local_targeted(image.unsqueeze(0), target_label,
+                                                                                  theta_ndim.unsqueeze(0),initial_lbd,0.1)
+        else:
+            bound_dist, bs_query = self.fine_grained_binary_search_local(image.unsqueeze(0), true_label, theta_ndim.unsqueeze(0),
+                                                                         initial_lbd, 0.1)
+        self.brent_query += bs_query
+        return bound_dist
+
+    def find_min_distance_theta(self, image, boundary_image, grad, theta_start, theta_end, true_labels, target_labels, tol=0.1):
+        self.brent_query = 0
+        initial_lbd = torch.norm(boundary_image.view(-1) - image.view(-1), p=self.ord).item()
+        true_label = None
+        target_label = None
+        if true_labels is not None:
+            assert true_labels.size(0) == 1
+            true_label = true_labels[0].item()
+        if target_labels is not None:
+            assert target_labels.size(0) == 1
+            target_label = target_labels[0].item()
+        # 特别注意这里的theta传入的是一个浮点数的标量，表示2D平面的角度
+        f = lambda theta: self.g_theta(image, boundary_image, grad, theta, initial_lbd, true_label, target_label, tol)
+
+        # 使用minimize_scalar寻找最小值
+        res = minimize_scalar(f, bounds=(theta_start, theta_end), method='brent', options={"maxiter": 50, },tol=tol,)
+        min_theta = res.x
+        min_dist = res.fun
+        query = self.brent_query
+        self.brent_query = 0
+
+        theta_ndim = self.translate_2D_angle_to_high_dim(image, boundary_image, grad, min_theta, min_dist)
+
+        new_perturbed = image + min_dist * theta_ndim
+        dist = torch.norm((min_dist * theta_ndim).view(-1), p=self.ord)
+        return new_perturbed, dist, query
+
     def attack(self, batch_index, images, target_images, true_labels, target_labels):
         query = torch.zeros_like(true_labels).float()
         success_stop_queries = query.clone()  # stop query count once the distortion < epsilon
         batch_image_positions = np.arange(batch_index * self.batch_size,
                                           min((batch_index + 1)*self.batch_size, self.total_images)).tolist()
+
         assert images.size(0) == 1
         batch_size = images.size(0)
         images = images.squeeze()
         if target_images is not None:
             target_images = target_images.squeeze()
-        # Initialize.
+        # Initialize. Note that if the original image is already classified incorrectly, the difference between the found initialization and sample is very very small, this case will lead to inifinity loop later.
         perturbed, num_eval = self.initialize(images, target_images, true_labels, target_labels)
         # log.info("after initialize")
         query += num_eval
@@ -343,7 +499,7 @@ class EllipsoidTangentAttack(object):
 
         # Project the initialization to the boundary.
         # log.info("before first binary_search_batch")
-        perturbed, dist_post_update, num_eval = self.binary_search_batch(images, perturbed[None], true_labels,target_labels)
+        perturbed, dist_post_update, num_eval = self.binary_search_batch(images, perturbed[None], true_labels, target_labels)
         # log.info("after first binary_search_batch")
         dist =  torch.norm((perturbed - images).view(batch_size, -1), self.ord, 1)
         working_ind = torch.nonzero(dist > self.epsilon).view(-1)
@@ -353,94 +509,60 @@ class EllipsoidTangentAttack(object):
         cur_iter = 0
         for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
             self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[inside_batch_index].item()
+
         # init variables
         for j in range(self.num_iterations):
             cur_iter += 1
             # Choose delta.
             delta = self.select_delta(cur_iter, dist_post_update)
+
             # Choose number of evaluations.
-            num_evals = int(self.init_num_evals * np.sqrt(j+1))
-            num_evals = int(min([num_evals, self.max_num_evals]))
-            # approximate gradient
-            gradf = self.approximate_gradient(perturbed, true_labels, target_labels, num_evals, delta)
-            if self.norm == "linf":
-                gradf = torch.sign(gradf)
+            # num_evals = int(self.init_num_evals * np.sqrt(j+1))
+            # num_evals = int(min([num_evals, self.max_num_evals]))
+            # grad = self.approximate_hyperplane_gradient(perturbed, true_labels, target_labels, num_evals, delta)
+            grad, num_evals = self.approximate_sign_opt_gradient(images, perturbed, true_labels, target_labels, 100, 0.1)
             query += num_evals
-            # search step size.
-            if self.stepsize_search == 'geometric_progression':
-                # find step size.
-                # if not args.ablation_study:
-                perturbed_Tagent, num_evals = self.geometric_progression_for_tangent_point(images, perturbed, gradf,
-                                                                                       true_labels, target_labels,
-                                                                                       dist, cur_iter)
-                # else:
-                #     if args.fixed_radius:
-                #         perturbed_Tagent, success = self.fixed_radius_for_tangent_point(images, perturbed, gradf, true_labels,
-                #                                                                                    target_labels, fixed_radius)
-                #         num_evals = torch.zeros_like(query)
-                #     elif args.binary_search_radius:
-                #         perturbed_Tagent, num_evals = self.binary_search_for_radius_and_tangent_point(images, perturbed, gradf,
-                #                                                                                       true_labels, target_labels, dist)
-                query += num_evals
-                # perturbed_HSJA = self.geometric_progression_for_HSJA(perturbed, true_labels, target_labels, gradf, dist, cur_iter)
-                # dist_tangent = torch.norm((perturbed_Tagent - images).view(batch_size, -1), self.ord, 1).item()
-                # dist_HSJA = torch.norm((perturbed_HSJA - images).view(batch_size, -1), self.ord, 1).item()
-                # log.info("dist of tangent: {:.4f}, dist of HSJA:{:.4f}, tangent < HSJA: {}".format(dist_tangent, dist_HSJA, dist_tangent < dist_HSJA))
-                perturbed = perturbed_Tagent
-                # Binary search to return to the boundary.
-                # log.info("before geometric_progression binary_search_batch")
-                perturbed, dist_post_update, num_eval = self.binary_search_batch(images, perturbed[None], true_labels, target_labels)
-                # log.info("after geometric_progression binary_search_batch")
-                query += num_eval
-                dist =  torch.norm((perturbed - images).view(batch_size, -1), self.ord, 1)
-                working_ind = torch.nonzero(dist > self.epsilon).view(-1)
-                success_stop_queries[working_ind] = query[working_ind]
-                for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
-                    self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[
-                        inside_batch_index].item()
-            elif self.stepsize_search == "grid_search":
-                # Grid search for stepsize.
-                if self.norm == "linf":
-                    update = torch.sign(gradf)
-                else:
-                    update = gradf
-                epsilons = torch.logspace(-4, 0, steps=20) * dist
-                epsilons_shape = [20] + len(self.shape) * [1]
-                perturbeds = perturbed + epsilons.view(epsilons_shape) * update
-                perturbeds = torch.clamp(perturbeds, self.clip_min, self.clip_max)
-                idx_perturbed = self.decision_function(perturbeds, true_labels, target_labels)
-                query += perturbeds.size(0)
-                for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
-                    self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[
-                        inside_batch_index].item()
-                if idx_perturbed.int().sum().item() > 0:
-                    # Select the perturbation that yields the minimum distance # after binary search.
-                    perturbed, dist_post_update, num_eval = self.binary_search_batch(images, perturbeds[idx_perturbed], true_labels, target_labels)
-                    query += num_eval
-                    dist = torch.norm((perturbed - images).view(batch_size, -1), self.ord, 1)
-                    working_ind = torch.nonzero(dist > self.epsilon).view(-1)
-                    success_stop_queries[working_ind] = query[working_ind]
-                    for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
-                        self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[
-                            inside_batch_index].item()
+            # begin angle search
+            ox = images - perturbed
+            x_basis = ox - torch.sum(ox * grad) * grad / torch.norm(grad.view(-1), p=2) ** 2
+            x_basis = x_basis / torch.norm(x_basis.view(-1), p=2)
+            b = torch.sum(ox * x_basis) / (torch.norm(ox.view(-1), p=2) * torch.norm(x_basis.view(-1), p=2))
+            b = torch.clamp(b,-1,1)
+            theta_start = torch.acos(b).item()
+            theta_end = theta_start + math.pi
+            lp_distance = torch.norm(ox.view(-1), p=self.ord)
+            # perform 1st binary search on adversarial region
+            theta_end, end_edge_images, bs_angle_count = self.binary_search_angle_adv_region(images, perturbed, grad, theta_start, theta_end,
+                                                                        lp_distance, true_labels, target_labels, tol=0.01)
+            query += bs_angle_count
+            # perform a minimization optimization for finding the shortest distance from x to the decision boundary
+            perturbed, dist_post_update, bs_min_dist_count = self.find_min_distance_theta(images, perturbed, grad, theta_start + 0.1, theta_end, true_labels, target_labels, tol=0.1)
+            dist_post_update = lp_distance
+            query += bs_min_dist_count
+            assert self.decision_function(perturbed, true_labels, target_labels).int() == 1, "GOD, my method failed to find adversarial example"
+
+            dist = torch.norm((perturbed - images).view(batch_size, -1), self.ord, 1)
+            working_ind = torch.nonzero(dist > self.epsilon).view(-1)
+            success_stop_queries[working_ind] = query[working_ind]
+            for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
+                self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[
+                    inside_batch_index].item()
+
             if torch.sum(query >= self.maximum_queries).item() == true_labels.size(0):
                 break
-            # if not success:
-            #     break
             # compute new distance.
-            dist =  torch.norm((perturbed - images).view(batch_size, -1), self.ord, 1)
+            dist = torch.norm((perturbed - images).view(batch_size, -1), self.ord, 1)
             log.info('{}-th image, iteration: {}, {}: distortion {:.4f}, query: {}'.format(batch_index+1, j + 1, self.norm, dist.item(), int(query[0].item())))
             if dist.item() < 1e-4:  # 发现攻击jpeg时候卡住，故意加上这句话
                 break
         success_stop_queries = torch.clamp(success_stop_queries, 0, self.maximum_queries)
         return perturbed, query, success_stop_queries, dist, (dist <= self.epsilon)
 
-    def attack_all_images(self, args, arch_name,  result_dump_path):
+    def attack_all_images(self, args, arch_name, result_dump_path):
         if args.targeted and args.target_type == "load_random":
             loaded_target_labels = np.load("./target_class_labels/{}/label.npy".format(args.dataset))
             loaded_target_labels = torch.from_numpy(loaded_target_labels).long()
         for batch_index, (images, true_labels) in enumerate(self.dataset_loader):
-
             if args.dataset == "ImageNet" and self.model.input_size[-1] != 299:
                 images = F.interpolate(images,
                                        size=(self.model.input_size[-2], self.model.input_size[-1]), mode='bilinear',
@@ -465,6 +587,7 @@ class EllipsoidTangentAttack(object):
                 elif args.target_type == "load_random":
                     target_labels = loaded_target_labels[selected]
                     assert target_labels[0].item()!=true_labels[0].item()
+                    # log.info("load random label as {}".format(target_labels))
                 elif args.target_type == 'least_likely':
                     target_labels = logit.argmin(dim=1).detach().cpu()
                 elif args.target_type == "increment":
@@ -472,8 +595,7 @@ class EllipsoidTangentAttack(object):
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
 
-                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model,
-                                                                    self.load_random_class_image)
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model, self.load_random_class_image)
                 if target_images is None:
                     log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index+1))
                     continue
@@ -482,7 +604,6 @@ class EllipsoidTangentAttack(object):
                 target_images = None
 
             adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, images, target_images, true_labels, target_labels)
-
             distortion_with_max_queries = distortion_with_max_queries.detach().cpu()
             with torch.no_grad():
                 if adv_images.dim() == 3:
@@ -495,7 +616,7 @@ class EllipsoidTangentAttack(object):
                 not_done = not_done * (1 - adv_pred.eq(target_labels.cuda()).float()).float()  # not_done初始化为 correct, shape = (batch_size,)
             else:
                 not_done = not_done * adv_pred.eq(true_labels.cuda()).float()  #
-            success = (1 - not_done.detach().cpu()) * correct.detach().cpu() * success_epsilon.float() *(success_query <= self.maximum_queries).float()
+            success = (1 - not_done.detach().cpu()) * correct.detach().cpu() * success_epsilon.float() * (success_query <= self.maximum_queries).float()
 
             for key in ['query', 'correct', 'not_done',
                         'success', 'success_query', "distortion_with_max_queries"]:
@@ -523,12 +644,26 @@ class EllipsoidTangentAttack(object):
         log.info("done, write stats info to {}".format(result_dump_path))
 
 
-def get_exp_dir_name(dataset,  norm, targeted, target_type, args):
+def get_exp_dir_name(dataset,  norm, targeted, target_type, random_direction, args):
+    if target_type == "load_random":
+        target_type = "random"
     target_str = "untargeted" if not targeted else "targeted_{}".format(target_type)
-    if args.attack_defense:
-        dirname = 'ellipsoid_tangent_attack_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
+    if args.init_num_eval_grad!=100:
+        if args.attack_defense:
+            dirname = 'ASJA@{}_on_defensive_model-{}-{}-{}'.format(args.init_num_eval_grad, dataset, norm, target_str)
+        else:
+            dirname = 'ASJA@{}-{}-{}-{}'.format(args.init_num_eval_grad, dataset, norm, target_str)
     else:
-        dirname = 'ellipsoid_tangent_attack-{}-{}-{}'.format(dataset, norm, target_str)
+        if random_direction:
+            if args.attack_defense:
+                dirname = 'ASJARandom_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
+            else:
+                dirname = 'ASJARandom-{}-{}-{}'.format(dataset, norm, target_str)
+        else:
+            if args.attack_defense:
+                dirname = 'ASJA_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
+            else:
+                dirname = 'ASJA-{}-{}-{}'.format(dataset, norm, target_str)
     return dirname
 
 def print_args(args):
@@ -547,7 +682,7 @@ def set_log_file(fname):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu",type=int, required=True)
-    parser.add_argument('--json-config', type=str, default='./configures/HSJA.json',
+    parser.add_argument('--json-config', type=str, default='../configures/HSJA.json',
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--epsilon', type=float, help='the lp perturbation bound')
     parser.add_argument("--norm",type=str, choices=["l2","linf"],required=True)
@@ -555,30 +690,25 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', type=str, required=True,
                choices=['CIFAR-10', 'CIFAR-100', 'ImageNet', "FashionMNIST", "MNIST", "TinyImageNet"], help='which dataset to use')
     parser.add_argument('--arch', default=None, type=str, help='network architecture')
-    parser.add_argument('--verify-tangent',action='store_true')
-
-    # ablation study of the radius of the hemi-sphere
-    parser.add_argument('--ablation-study',action='store_true')
-    parser.add_argument('--radius_ratio',type=float,default=1.1)
     parser.add_argument('--all_archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
-    parser.add_argument('--target_type',type=str, default='increment', choices=['random', 'load_random', 'least_likely',"increment"])
+    parser.add_argument('--target_type',type=str, default='increment', choices=['random', "load_random", 'least_likely',"increment"])
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
     parser.add_argument('--attack_defense',action="store_true")
-    parser.add_argument("--num_iterations",type=int,default=10000)
-    parser.add_argument('--stepsize_search', type=str, choices=['geometric_progression', 'grid_search'],default='geometric_progression')
+    parser.add_argument("--num_iterations",type=int,default=64)
     parser.add_argument('--defense_model',type=str, default=None)
-    parser.add_argument('--defense_norm', type=str, choices=["l2", "linf"], default='linf')
-    parser.add_argument('--defense_eps', type=str,default="")
-    parser.add_argument('--max_queries',type=int, default=10000)
-    parser.add_argument('--init_num_eval_grad',type=int,default=100)
+    parser.add_argument('--defense_norm',type=str,choices=["l2","linf"],default='linf')
+    parser.add_argument('--defense_eps',type=str,default="")
+    parser.add_argument('--random_direction',action="store_true")
+    parser.add_argument('--max-queries',type=int, default=10000)
+    parser.add_argument('--init-num-eval-grad', type=int, default=100)
     parser.add_argument('--gamma',default=1,type=float)
-    parser.add_argument('--t', type=float)
-    parser.add_argument('--load-random-class-image', action='store_true',
-                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
+
     args = parser.parse_args()
-    assert args.batch_size == 1, "Tangent attack only supports mini-batch size equals 1!"
+    assert args.batch_size == 1, "HSJA only supports mini-batch size equals 1!"
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     args_dict = None
@@ -593,12 +723,13 @@ if __name__ == "__main__":
         defaults.update(arg_vars)
         args = SimpleNamespace(**defaults)
         args_dict = defaults
-    if args.targeted and args.dataset == "ImageNet":
-        args.max_queries = 20000
+    if args.targeted:
+        if args.dataset == "ImageNet":
+            args.max_queries = 20000
     if args.attack_defense and args.defense_model == "adv_train_on_ImageNet":
         args.max_queries = 20000
     args.exp_dir = osp.join(args.exp_dir,
-                            get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  # 随机产生一个目录用于实验
+                            get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args.random_direction, args))  # 随机产生一个目录用于实验
     os.makedirs(args.exp_dir, exist_ok=True)
 
     if args.all_archs:
@@ -611,14 +742,12 @@ if __name__ == "__main__":
             if args.defense_model == "adv_train_on_ImageNet":
                 log_file_path = osp.join(args.exp_dir,
                                          "run_defense_{}_{}_{}_{}.log".format(args.arch, args.defense_model,
-                                                                      args.defense_norm, args.defense_eps))
+                                                                              args.defense_norm,
+                                                                              args.defense_eps))
             else:
                 log_file_path = osp.join(args.exp_dir, 'run_defense_{}_{}.log'.format(args.arch, args.defense_model))
-        elif args.ablation_study:
-            log_file_path = osp.join(args.exp_dir, 'run_radius_ratio_r_{}.log'.format(args.radius_ratio))
         else:
             log_file_path = osp.join(args.exp_dir, 'run_{}.log'.format(args.arch))
-
     set_log_file(log_file_path)
     if args.attack_defense:
         assert args.defense_model is not None
@@ -627,11 +756,33 @@ if __name__ == "__main__":
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
-
     if args.all_archs:
         archs = MODELS_TEST_STANDARD[args.dataset]
+        # if args.dataset == "CIFAR-10" or args.dataset == "CIFAR-100":
+        #     for arch in MODELS_TEST_STANDARD[args.dataset]:
+        #         test_model_path = "{}/train_pytorch_model/real_image_model/{}-pretrained/{}/checkpoint.pth.tar".format(
+        #             PROJECT_PATH,
+        #             args.dataset, arch)
+        #         if os.path.exists(test_model_path):
+        #             archs.append(arch)
+        #         else:
+        #             log.info(test_model_path + " does not exists!")
+        # elif args.dataset == "TinyImageNet":
+        #     for arch in MODELS_TEST_STANDARD[args.dataset]:
+        #         test_model_list_path = "{root}/train_pytorch_model/real_image_model/{dataset}@{arch}*.pth.tar".format(
+        #             root=PROJECT_PATH, dataset=args.dataset, arch=arch)
+        #         test_model_path = list(glob.glob(test_model_list_path))
+        #         if test_model_path and os.path.exists(test_model_path[0]):
+        #             archs.append(arch)
+        # else:
+        #     for arch in MODELS_TEST_STANDARD[args.dataset]:
+        #         test_model_list_path = "{}/train_pytorch_model/real_image_model/{}-pretrained/checkpoints/{}*.pth".format(
+        #             PROJECT_PATH,
+        #             args.dataset, arch)
+        #         test_model_list_path = list(glob.glob(test_model_list_path))
+        #         if len(test_model_list_path) == 0:  # this arch does not exists in args.dataset
+        #             continue
+        #         archs.append(arch)
     else:
         assert args.arch is not None
         archs = [args.arch]
@@ -640,31 +791,28 @@ if __name__ == "__main__":
     log.info("Log file is written in {}".format(log_file_path))
     log.info('Called with args:')
     print_args(args)
-
     for arch in archs:
         if args.attack_defense:
             if args.defense_model == "adv_train_on_ImageNet":
                 save_result_path = args.exp_dir + "/{}_{}_{}_{}_result.json".format(arch, args.defense_model,
-                                                                                    args.defense_norm, args.defense_eps)
+                                                                                    args.defense_norm,args.defense_eps)
             else:
                 save_result_path = args.exp_dir + "/{}_{}_result.json".format(arch, args.defense_model)
-        elif args.ablation_study:
-            save_result_path = args.exp_dir + "/{}_radius_ratio_r_{}.json".format(arch, args.radius_ratio)
         else:
             save_result_path = args.exp_dir + "/{}_result.json".format(arch)
         if os.path.exists(save_result_path):
             continue
         log.info("Begin attack {} on {}, result will be saved to {}".format(arch, args.dataset, save_result_path))
         if args.attack_defense:
-            model = DefensiveModel(args.dataset, arch, no_grad=True, defense_model=args.defense_model,norm=args.defense_norm, eps=args.defense_eps)
+            model = DefensiveModel(args.dataset, arch, no_grad=True, defense_model=args.defense_model,
+                                   norm=args.defense_norm, eps=args.defense_eps)
         else:
             model = StandardModel(args.dataset, arch, no_grad=True)
         model.cuda()
         model.eval()
-        attacker = EllipsoidTangentAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                                          args.norm, args.epsilon, args.radius_ratio, args.load_random_class_image,args.num_iterations, gamma=args.gamma, stepsize_search = args.stepsize_search,
-                                          max_num_evals=1e4,
-                                          init_num_evals=args.init_num_eval_grad, maximum_queries=args.max_queries,
-                                          verify_tangent_point=args.verify_tangent)
-        attacker.attack_all_images(args, arch,  save_result_path)
+        attacker = AngleSkipJumpAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
+                                       args.norm, args.load_random_class_image, args.epsilon, args.num_iterations, gamma=args.gamma,
+                                       max_num_evals=1e4, init_num_evals=args.init_num_eval_grad,
+                                       maximum_queries=args.max_queries, random_direction=args.random_direction)
+        attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()

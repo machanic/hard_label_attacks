@@ -7,7 +7,7 @@ CLASS_NUM = {"MNIST":10,"FashionMNIST":10, "CIFAR-10":10, "CIFAR-100":100, "Imag
 # PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 # HOME_ROOT = os.path.dirname(PROJECT_PATH)
 
-PROJECT_PATH = "/public/ch/xxj/attack/"
+PROJECT_PATH = "/public/machen/hard_label_attacks"
 HOME_ROOT = os.path.dirname(PROJECT_PATH)
 
 IMAGE_DATA_ROOT = {"CIFAR-10":"{}/dataset/CIFAR-10".format(HOME_ROOT), "CIFAR-100":"{}/dataset/CIFAR-100".format(HOME_ROOT),

@@ -3,6 +3,7 @@ from __future__ import division
 import os
 import sys
 sys.path.insert(0, os.getcwd())
+sys.path.append(os.getcwd())
 import argparse
 import json
 import random
@@ -14,9 +15,9 @@ from types import SimpleNamespace
 import glog as log
 import os.path as osp
 
-from QEBATangentAttack.adversarial import Adversarial
-from QEBATangentAttack.rv_generator import load_pgen
-from QEBATangentAttack.utils import Misclassification, MSE, TargetClass
+from QEBA.adversarial import Adversarial
+from QEBA.rv_generator import load_pgen
+from QEBA.utils import Misclassification, MSE, TargetClass
 import math
 import torch
 from torch.nn import functional as F
@@ -27,9 +28,10 @@ from dataset.target_class_dataset import ImageNetDataset, CIFAR10Dataset, CIFAR1
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
 from config import IN_CHANNELS, CLASS_NUM, IMAGE_DATA_ROOT
-from QEBATangentAttack.tangent_point_analytical_solution import TangentFinder
+from utils.dataset_toolkit import select_random_image_of_target_class
 
-class QEBATangentAttack(object):
+
+class QEBA(object):
     """A powerful adversarial attack that requires neither gradients
     nor probabilities.
     Notes
@@ -44,7 +46,7 @@ class QEBATangentAttack(object):
     * ability to specify the batch size
     """
 
-    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon,
+    def __init__(self, model,  dataset, clip_min, clip_max, height, width, channels, norm, load_random_class_image, epsilon,
                  iterations=64,
                  initial_num_evals=100,
                  max_num_evals=10000,
@@ -108,6 +110,7 @@ class QEBATangentAttack(object):
         self.clip_min = clip_min
         self.clip_max = clip_max
         self.norm = norm
+        self.load_random_class_image = load_random_class_image
         self.epsilon = epsilon
         self.ord = np.inf if self.norm == "linf" else 2
         self.initial_num_evals = initial_num_evals
@@ -127,7 +130,7 @@ class QEBATangentAttack(object):
         self._default_threshold = threshold
         self._default_distance = distance
 
-        self.iterations = iterations
+        # self.iterations = iterations
         self.atk_level = atk_level  # int type
 
         self.shape = [channels, height, width]
@@ -137,8 +140,8 @@ class QEBATangentAttack(object):
             self.loss_mask = 1 - mask
         else:
             self.use_mask = False
-            self.pert_mask = torch.ones(self.shape).float()
-            self.loss_mask = torch.ones(self.shape).float()
+            self.pert_mask = torch.ones(self.shape).float().cuda()
+            self.loss_mask = torch.ones(self.shape).float().cuda()
         self.__mask_succeed = 0
 
         # Set binary search threshold.
@@ -275,7 +278,6 @@ class QEBATangentAttack(object):
         step = 0
         old_perturbed = perturbed
         while a._total_prediction_calls < self.maximum_queries:
-
             step += 1
             # ===========================================================
             # Gradient direction estimation.
@@ -306,9 +308,11 @@ class QEBATangentAttack(object):
             # Update, and binary search back to the boundary.
             # ===========================================================
             if self.stepsize_search == 'geometric_progression':
-                # find tangent point
-                perturbed = self.geometric_progression_for_tangent_point(decision_function, original, perturbed, update,
-                                                                         dist, step)
+                # find step size.
+                epsilon, num_evals = self.geometric_progression_for_stepsize(perturbed, update, dist, decision_function, step)
+                # query += num_evals
+                # Update the sample.
+                perturbed = torch.clamp(perturbed + (epsilon * update).type(self.internal_dtype), self.clip_min, self.clip_max)
                 c2 = a._total_prediction_calls
                 # Binary search to return to the boundary.
                 perturbed, dist_post_update, mask_succeed, num_evals = self.binary_search_batch(original, perturbed[None], decision_function)
@@ -348,7 +352,7 @@ class QEBATangentAttack(object):
             #               aux_info=(gradf, grad_gt, dist_dir, rho))
             if self.stepsize_search == 'geometric_progression':
                 self.printv("Call in grad approx / geo progress / binary search: {}/{}/{}".format(c1 - c0, c2 - c1, c3 - c2))
-            a.__best_adversarial = perturbed
+            a._best_adversarial = perturbed
 
             if mask_succeed > 0:
                 self.__mask_succeed = 1
@@ -365,7 +369,7 @@ class QEBATangentAttack(object):
     def initialize_starting_point(self, a):
         starting_point = self._starting_point
         num_evals = 0
-        a.__best_adversarial = starting_point.clone()  # FIXME 我自己添加的
+        a._best_adversarial = starting_point.clone()  # FIXME 我自己添加的
         if a.perturbed is not None:
             log.info('Attack is applied to a previously found adversarial.'
                 ' Continuing search for better adversarials.')
@@ -412,9 +416,9 @@ class QEBATangentAttack(object):
     def compute_distance(self, x_ori, x_pert, norm='l2'):
         # Compute the distance between two images.
         if norm == 'l2':
-            return torch.norm((x_ori - x_pert)*self.loss_mask, p=2).item()
+            return torch.norm((x_ori - x_pert)*self.loss_mask, p=2)
         elif norm == 'linf':
-            return torch.max(torch.abs(x_ori - x_pert)).item()
+            return torch.max(torch.abs(x_ori - x_pert))
 
     def clip_image(self, image, clip_min, clip_max):
         # Clip an image, or an image batch, with upper and lower threshold.
@@ -423,10 +427,10 @@ class QEBATangentAttack(object):
     def project(self, unperturbed, perturbed_inputs, alphas):
         """ Projection onto given l2 / linf balls in a batch. """
         alphas_shape = [alphas.size(0)] + [1] * len(self.shape)
-        alphas = alphas.view(*alphas_shape)
+        alphas = alphas.view(*alphas_shape).to(unperturbed.device)
         if self.norm == 'l2':
             projected = self.loss_mask * ((1 - alphas) * unperturbed + alphas * perturbed_inputs) + (
-                        torch.ones_like(self.loss_mask) - self.loss_mask) * perturbed_inputs
+                        torch.ones_like(self.loss_mask) - self.loss_mask).to(unperturbed.device) * perturbed_inputs
         elif self.norm == 'linf':
             projected = self.clip_image(perturbed_inputs, unperturbed - alphas, unperturbed + alphas)
         return projected
@@ -455,32 +459,24 @@ class QEBATangentAttack(object):
             _mask = torch.tensor([self.pert_mask] * perturbed_inputs.size(0))
             masked = perturbed_inputs * _mask + unperturbed * (torch.ones_like(_mask) - _mask)
             masked_decisions = decision_function(masked)
-            masked_decisions = masked_decisions.int()
             num_evals += masked.size(0)
             highs[masked_decisions == 1] = 0
             succeed = torch.sum(masked_decisions).item() > 0
         else:
             succeed = False
         # Call recursive function.
-        success = bool(decision_function(perturbed_inputs)[0].item())
-        assert success
-
         while torch.max((highs - lows) / thresholds).item() > 1:
             # projection to mids.
-
             mids = (highs + lows) / 2.0
             mid_inputs = self.project(unperturbed, perturbed_inputs, mids)
             # Update highs and lows based on model decisions.
             decisions = decision_function(mid_inputs)
             num_evals += mid_inputs.size(0)
-            decisions = decisions.int()
             lows = torch.where(decisions == 0, mids, lows)
             highs = torch.where(decisions == 1, mids, highs)
 
         out_inputs = self.project(unperturbed, perturbed_inputs, highs)
-        assert out_inputs.size(0) == 1
-        success = bool(decision_function(out_inputs)[0].item())
-        assert success
+
         # Compute distance of the output to select the best choice.
         # (only used when stepsize_search is grid_search.)
         dists = torch.tensor([self.compute_distance(unperturbed, out, self.norm) for out in out_inputs])
@@ -504,15 +500,15 @@ class QEBATangentAttack(object):
         return delta
 
     def approximate_gradient(self, decision_function, sample,
-                             num_evals, delta,  atk_level=None):
+                             num_evals, delta, atk_level=None):
         """ Gradient direction estimation """
         # import time
         # t0 = time.time()
         dims = tuple(range(1, 1 + len(self.shape)))
 
-        rv_raw = self.gen_custom_basis(num_evals, sample=sample.detach().cpu().numpy(),  atk_level=atk_level)
+        rv_raw = self.gen_custom_basis(num_evals, sample=sample.detach().cpu().numpy(), atk_level=atk_level).to(sample.device)
 
-        _mask = torch.stack([self.pert_mask] * num_evals)
+        _mask = torch.stack([self.pert_mask] * num_evals).to(sample.device)
         rv = rv_raw * _mask
         rv = rv / torch.sqrt(torch.sum(torch.mul(rv,rv),dim=dims,keepdim=True))
         perturbed = sample + delta * rv
@@ -524,9 +520,9 @@ class QEBATangentAttack(object):
         decisions = decision_function(perturbed)
         # t4 = time.time()
         decision_shape = [decisions.size(0)] + [1] * len(self.shape)
-        fval = 2 * decisions.type(self.internal_dtype).view(decision_shape) - 1.0
+        fval = 2 * decisions.type(self.internal_dtype).view(decision_shape).to(sample.device) - 1.0
         # Baseline subtraction (when fval differs)
-        vals = fval if torch.abs(torch.mean(fval)).item() == 1.0 else fval - torch.mean(fval).item()
+        vals = fval if torch.abs(torch.mean(fval)).item() == 1.0 else fval - torch.mean(fval)
         # vals = fval
         gradf = torch.mean(vals * rv, dim=0)
         # Get the gradient direction.
@@ -557,39 +553,6 @@ class QEBATangentAttack(object):
             else:
                 epsilon = epsilon / 2.0  # pragma: no cover
         return epsilon, num_evals
-
-    def geometric_progression_for_tangent_point(self, decision_function, x_original, x_boundary, normal_vector,
-                                                 dist, cur_iter):
-        """
-        Geometric progression to search for stepsize.
-        Keep decreasing stepsize by half until reaching
-        the desired side of the boundary,
-        """
-        radius = dist.item() / np.sqrt(cur_iter)
-        num_evals = 0
-        success = bool(decision_function(x_boundary[None])[0].item())
-        assert success
-
-        while True:
-            # x_projection = calculate_projection_of_x_original(x_original.view(-1),x_boundary.view(-1),normal_vector.view(-1))
-            # if torch.norm(x_projection.view(-1) - x_original.view(-1),p=self.ord).item() <= radius:
-            #     log.info("projection point lies inside ball! reduce radius from {:.3f} to {:.3f}".format(radius, radius/2.0))
-            #     radius /= 2.0
-            #     continue
-            # else:
-            tangent_finder = TangentFinder(x_original.view(-1), x_boundary.view(-1), radius, normal_vector.view(-1),
-                                           norm="l2")
-            tangent_point = tangent_finder.compute_tangent_point()
-            tangent_point = tangent_point.view_as(x_original).type(x_original.dtype)
-            tangent_point = torch.clamp(tangent_point, self.clip_min, self.clip_max)
-            success = bool(decision_function(tangent_point[None])[0].item())
-            num_evals += 1
-            if success:
-               break
-            radius /= 2.0
-
-        return tangent_point
-
 
     def log_step(self, step, distance, message='', always=False, a=None, perturbed=None, update=None, aux_info=None):
         def cos_sim(x1, x2):
@@ -647,42 +610,7 @@ class QEBATangentAttack(object):
         if self.verbose:
             log.info(*args, **kwargs)
 
-    def get_image_of_target_class(self,dataset_name, target_labels, target_model):
-
-        images = []
-        for label in target_labels:  # length of target_labels is 1
-            if dataset_name == "ImageNet":
-                dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name],label.item(), "validation")
-            elif dataset_name == "CIFAR-10":
-                dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name=="CIFAR-100":
-                dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-
-            index = np.random.randint(0, len(dataset))
-            image, true_label = dataset[index]
-            image = image.unsqueeze(0)
-            if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                image = F.interpolate(image,
-                                       size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                       align_corners=False)
-            with torch.no_grad():
-                logits = target_model(image.cuda())
-            while logits.max(1)[1].item() != label.item():
-                index = np.random.randint(0, len(dataset))
-                image, true_label = dataset[index]
-                image = image.unsqueeze(0)
-                if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                    image = F.interpolate(image,
-                                       size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                       align_corners=False)
-                with torch.no_grad():
-                    logits = target_model(image.cuda())
-            assert true_label == label.item()
-            images.append(torch.squeeze(image))
-        return torch.stack(images) # B,C,H,W
-
-
-    def initialize(self, sample, decision_function, target_images, true_labels, target_labels):
+    def initialize(self, model, sample, decision_function, target_images, true_labels, target_labels):
         """
         sample: the shape of sample is [C,H,W] without batch-size
         Efficient Implementation of BlendedUniformNoiseAttack in Foolbox.
@@ -690,7 +618,7 @@ class QEBATangentAttack(object):
         num_eval = 0
         if target_images is None:
             while True:
-                random_noise = torch.from_numpy(np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float()
+                random_noise = torch.from_numpy(np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float().cuda()
                 # random_noise = torch.FloatTensor(*self.shape).uniform_(self.clip_min, self.clip_max)
                 success = decision_function(random_noise[None])[0].item()
                 num_eval += 1
@@ -700,14 +628,15 @@ class QEBATangentAttack(object):
                     log.info("Initialization failed! Use a misclassified image as `target_image")
                     if target_labels is None:
                         target_labels = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                      size=true_labels.size()).long()
+                                                      size=true_labels.size()).long().cuda()
                         invalid_target_index = target_labels.eq(true_labels)
                         while invalid_target_index.sum().item() > 0:
                             target_labels[invalid_target_index] = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                                size=target_labels[invalid_target_index].size()).long()
+                                                                size=target_labels[invalid_target_index].size()).long().cuda()
                             invalid_target_index = target_labels.eq(true_labels)
 
-                    initialization = self.get_image_of_target_class(self.dataset_name,target_labels, self.model).squeeze()
+                    initialization = select_random_image_of_target_class(self.dataset_name, [target_labels], self.model,
+                                                                         self.load_random_class_image).squeeze().cuda()
                     return initialization, 1
                 # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
             # Binary search to minimize l2 distance to original image.
@@ -734,18 +663,19 @@ class QEBATangentAttack(object):
             loaded_target_labels = np.load("./target_class_labels/{}/label.npy".format(args.dataset))
             loaded_target_labels = torch.from_numpy(loaded_target_labels).long()
         for batch_index, (images, true_labels) in enumerate(self.dataset_loader):
+            images = images.cuda()
+            true_labels = true_labels.cuda()
             if args.dataset == "ImageNet" and target_model.input_size[-1] != 299:
                 images = F.interpolate(images,
                                        size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
                                        align_corners=False)
-            logit = target_model(images.cuda())
+            logit = target_model(images)
             pred = logit.argmax(dim=1)
-            correct = pred.eq(true_labels.cuda()).float()  # shape = (batch_size,)
+            correct = pred.eq(true_labels).float()  # shape = (batch_size,)
             if correct.int().item() == 0: # we must skip any image that is classified incorrectly before attacking, otherwise this will cause infinity loop in later procedure
                 log.info("{}-th original image is classified incorrectly, skip!".format(batch_index+1))
                 continue
             selected = torch.arange(batch_index * args.batch_size, min((batch_index + 1) * args.batch_size, self.total_images))
-
             if args.targeted:
                 if args.target_type == 'random':
                     target_labels = torch.randint(low=0, high=CLASS_NUM[args.dataset],
@@ -759,29 +689,29 @@ class QEBATangentAttack(object):
                     target_labels = loaded_target_labels[selected]
                     assert target_labels[0].item()!=true_labels[0].item()
                 elif args.target_type == 'least_likely':
-                    target_labels = logit.argmin(dim=1).detach().cpu()
+                    target_labels = logit.argmin(dim=1)
                 elif args.target_type == "increment":
                     target_labels = torch.fmod(true_labels + 1, CLASS_NUM[args.dataset])
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
 
-                target_images = self.get_image_of_target_class(self.dataset_name,target_labels, target_model)
-                self._default_criterion = TargetClass(target_labels[0].item())  # FIXME bug??
-                a = Adversarial(model, self._default_criterion, images, true_labels[0].item(),
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model,
+                                                                    self.load_random_class_image)[0].to(images.device)
+                self._default_criterion = TargetClass(target_labels[0])
+                a = Adversarial(target_model, self._default_criterion, images, true_labels[0],
                                 distance=self._default_distance, threshold=self._default_threshold,
                                 targeted_attack=args.targeted)
             else:
                 target_labels = None
-                self._default_criterion = Misclassification()  # FIXME bug??
-                a = Adversarial(model, self._default_criterion, images, true_labels[0].item(),
+                self._default_criterion = Misclassification()
+                a = Adversarial(target_model, self._default_criterion, images, true_labels[0].item(),
                                 distance=self._default_distance, threshold=self._default_threshold,
                                 targeted_attack=args.targeted)
                 self.external_dtype = a.unperturbed.dtype
                 def decision_function(x):
                     out = a.forward(x, strict=False)[1]  # forward function returns pr
                     return out
-                target_images = self.initialize(images.squeeze(0),decision_function,None,true_labels,target_labels)
-
+                target_images, num_calls = self.initialize(target_model, images.squeeze(0),decision_function,None,true_labels, target_labels)
 
             if model is None or self._default_criterion is None:
                 raise ValueError('The attack needs to be initialized'
@@ -801,10 +731,12 @@ class QEBATangentAttack(object):
             #     rho = p_gen.calc_rho(grad_gt, images).item()
             # self.rho_ref = rho
 
-            self._starting_point = target_images[0] # Adversarial input to use as a starting point, required for targeted attacks.
+            self._starting_point = target_images # Adversarial input to use as a starting point
 
-            adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index,a)
+            adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, a)
             distortion_with_max_queries = distortion_with_max_queries.detach().cpu()
+            if adv_images.dim() == 3:
+                adv_images = adv_images.unsqueeze(0)
             with torch.no_grad():
                 adv_logit = target_model(adv_images.cuda())
             adv_pred = adv_logit.argmax(dim=1)
@@ -814,7 +746,7 @@ class QEBATangentAttack(object):
                 not_done = not_done * (1 - adv_pred.eq(target_labels.cuda()).float()).float()  # not_done初始化为 correct, shape = (batch_size,)
             else:
                 not_done = not_done * adv_pred.eq(true_labels.cuda()).float()  #
-            success = (1 - not_done.detach().cpu()) * correct.detach().cpu() * success_epsilon.float() *(success_query <= self.maximum_queries).float()
+            success = (1 - not_done.detach().cpu()) * correct.detach().cpu() * success_epsilon.detach().cpu().float() *(success_query.detach().cpu() <= self.maximum_queries).float()
 
             for key in ['query', 'correct', 'not_done',
                         'success', 'success_query', "distortion_with_max_queries"]:
@@ -867,9 +799,9 @@ def get_exp_dir_name(dataset, norm, targeted, target_type, args):
         target_type = "random"
     target_str = "untargeted" if not targeted else "targeted_{}".format(target_type)
     if args.attack_defense:
-        dirname = 'QEBATangentAttack_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
+        dirname = 'QEBA_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
     else:
-        dirname = 'QEBATangentAttack-{}-{}-{}'.format(dataset, norm, target_str)
+        dirname = 'QEBA-{}-{}-{}'.format(dataset, norm, target_str)
     return dirname
 
 def print_args(args):
@@ -899,11 +831,15 @@ if __name__ == "__main__":
     parser.add_argument('--all_archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
     parser.add_argument('--target_type',type=str, default='increment', choices=['random', 'load_random', 'least_likely',"increment"])
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
     parser.add_argument('--attack_discretize', action="store_true")
     parser.add_argument('--atk_level', type=int, default=999)
     parser.add_argument('--attack_defense',action="store_true")
+    parser.add_argument('--defense_norm',type=str,choices=["l2","linf"],default='linf')
+    parser.add_argument('--defense_eps',type=str,default="")
     parser.add_argument("--num_iterations",type=int,default=64)
     parser.add_argument('--stepsize_search', type=str, choices=['geometric_progression', 'grid_search'],default='geometric_progression')
     parser.add_argument('--defense_model',type=str, default=None)
@@ -912,10 +848,9 @@ if __name__ == "__main__":
     parser.add_argument('--max_num_evals', type=int,default=100)
     parser.add_argument('--pgen',type=str,choices=['naive',"resize","DCT9408","DCT192"],required=True)
     args = parser.parse_args()
-    assert args.batch_size == 1, "HSJA only supports mini-batch size equals 1!"
+    assert args.batch_size == 1, "QEBA only supports mini-batch size equals 1!"
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-    os.environ["TORCH_HOME"] = "/home1/machen/.cache/torch/pretrainedmodels"
     args_dict = None
     if not args.json_config:
         # If there is no json file, all of the args must be given
@@ -928,9 +863,11 @@ if __name__ == "__main__":
         defaults.update(arg_vars)
         args = SimpleNamespace(**defaults)
         args_dict = defaults
-    # if args.targeted:
-    #     if args.dataset == "ImageNet":
-    #         args.max_queries = 20000
+    if args.targeted:
+        if args.dataset == "ImageNet":
+            args.max_queries = 20000
+    if args.attack_defense and args.defense_model == "adv_train_on_ImageNet":
+        args.max_queries = 20000
     args.exp_dir = osp.join(args.exp_dir,
                             get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  # 随机产生一个目录用于实验
     os.makedirs(args.exp_dir, exist_ok=True)
@@ -942,9 +879,16 @@ if __name__ == "__main__":
             log_file_path = osp.join(args.exp_dir, 'run_pgen_{}.log'.format(args.pgen))
     elif args.arch is not None:
         if args.attack_defense:
-            log_file_path = osp.join(args.exp_dir, 'run_pgen_{}_defense_{}_{}.log'.format(args.pgen,args.arch, args.defense_model))
+            if args.defense_model == "adv_train_on_ImageNet":
+                log_file_path = osp.join(args.exp_dir,
+                                         "run_pgen_{}_defense_{}_{}_{}_{}.log".format(args.pgen,args.arch, args.defense_model,
+                                                                              args.defense_norm,
+                                                                              args.defense_eps))
+            else:
+                log_file_path = osp.join(args.exp_dir, 'run_pgen_{}_defense_{}_{}.log'.format(args.pgen,args.arch, args.defense_model))
         else:
             log_file_path = osp.join(args.exp_dir, 'run_pgen_{}_{}.log'.format(args.pgen,args.arch))
+
     set_log_file(log_file_path)
     if args.attack_defense:
         assert args.defense_model is not None
@@ -1001,11 +945,16 @@ if __name__ == "__main__":
     initN = 100
     for arch in archs:
         if args.attack_defense:
-            save_result_path = args.exp_dir + "/{}_{}_pgen_{}_result.json".format(arch, args.defense_model,args.pgen)
+            if args.defense_model == "adv_train_on_ImageNet":
+                save_result_path = args.exp_dir + "/{}_{}_{}_{}_pgen_{}_result.json".format(arch, args.defense_model,
+                                                                                    args.defense_norm,args.defense_eps,args.pgen)
+            else:
+                save_result_path = args.exp_dir + "/{}_{}_pgen_{}_result.json".format(arch, args.defense_model,args.pgen)
         else:
             save_result_path = args.exp_dir + "/{}_pgen_{}_result.json".format(arch,args.pgen)
-        # if os.path.exists(save_result_path):
-        #     continue
+
+        if os.path.exists(save_result_path):
+            continue
         log.info("Begin attack {} on {}, result will be saved to {}".format(arch, args.dataset, save_result_path))
         if args.attack_defense:
             model = DefensiveModel(args.dataset, arch, no_grad=True, defense_model=args.defense_model)
@@ -1013,10 +962,10 @@ if __name__ == "__main__":
             model = StandardModel(args.dataset, arch, no_grad=True)
         model.cuda()
         model.eval()
-        attacker = QEBATangentAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                                     args.norm, args.epsilon, iterations=ITER, initial_num_evals=initN, max_num_evals=maxN,
-                                     internal_dtype=torch.float32, rv_generator=p_gen, atk_level=args.atk_level, mask=None,
-                                     gamma=args.gamma, batch_size=256, stepsize_search = args.stepsize_search,
-                                     log_every_n_steps=1, suffix=PGEN, verbose=False, maximum_queries=args.max_queries)
+        attacker = QEBA(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
+                        args.norm, args.load_random_class_image, args.epsilon, iterations=ITER, initial_num_evals=initN,
+                        max_num_evals=maxN, internal_dtype=torch.float32,rv_generator=p_gen, atk_level=args.atk_level,
+                        mask=None, gamma=args.gamma, batch_size=100, stepsize_search = args.stepsize_search,
+                        log_every_n_steps=1, suffix=PGEN, verbose=False, maximum_queries=args.max_queries)
         attacker.attack_all_images(args, arch, model, save_result_path)
         model.cpu()

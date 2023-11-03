@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 import os
 import sys
+sys.path.insert(0, os.getcwd())
 sys.path.append(os.getcwd())
 import argparse
 import json
@@ -27,6 +28,7 @@ from dataset.target_class_dataset import ImageNetDataset, CIFAR10Dataset, CIFAR1
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
 from config import IN_CHANNELS, CLASS_NUM, IMAGE_DATA_ROOT
+from utils.dataset_toolkit import select_random_image_of_target_class
 
 
 class QEBA(object):
@@ -44,7 +46,7 @@ class QEBA(object):
     * ability to specify the batch size
     """
 
-    def __init__(self, model,  dataset, clip_min, clip_max, height, width, channels, norm, epsilon,
+    def __init__(self, model,  dataset, clip_min, clip_max, height, width, channels, norm, load_random_class_image, epsilon,
                  iterations=64,
                  initial_num_evals=100,
                  max_num_evals=10000,
@@ -108,6 +110,7 @@ class QEBA(object):
         self.clip_min = clip_min
         self.clip_max = clip_max
         self.norm = norm
+        self.load_random_class_image = load_random_class_image
         self.epsilon = epsilon
         self.ord = np.inf if self.norm == "linf" else 2
         self.initial_num_evals = initial_num_evals
@@ -529,7 +532,8 @@ class QEBA(object):
     def geometric_progression_for_stepsize(self, x, update, dist,
                                            decision_function,
                                            current_iteration):
-        """ Geometric progression to search for stepsize.
+        """
+          Geometric progression to search for stepsize.
           Keep decreasing stepsize by half until reaching
           the desired side of the boundary.
         """
@@ -607,41 +611,6 @@ class QEBA(object):
         if self.verbose:
             log.info(*args, **kwargs)
 
-    def get_image_of_target_class(self,dataset_name, target_labels, target_model):
-
-        images = []
-        for label in target_labels:  # length of target_labels is 1
-            if dataset_name == "ImageNet":
-                dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name],label.item(), "validation")
-            elif dataset_name == "CIFAR-10":
-                dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name=="CIFAR-100":
-                dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-
-            index = np.random.randint(0, len(dataset))
-            image, true_label = dataset[index]
-            image = image.unsqueeze(0)
-            if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                image = F.interpolate(image,
-                                       size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                       align_corners=False)
-            with torch.no_grad():
-                logits = target_model(image.cuda())
-            while logits.max(1)[1].item() != label.item():
-                index = np.random.randint(0, len(dataset))
-                image, true_label = dataset[index]
-                image = image.unsqueeze(0)
-                if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                    image = F.interpolate(image,
-                                       size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                       align_corners=False)
-                with torch.no_grad():
-                    logits = target_model(image.cuda())
-            assert true_label == label.item()
-            images.append(torch.squeeze(image))
-        return torch.stack(images) # B,C,H,W
-
-
     def initialize(self, model, sample, decision_function, target_images, true_labels, target_labels):
         """
         sample: the shape of sample is [C,H,W] without batch-size
@@ -667,7 +636,8 @@ class QEBA(object):
                                                                 size=target_labels[invalid_target_index].size()).long()
                             invalid_target_index = target_labels.eq(true_labels)
 
-                    initialization = self.get_image_of_target_class(self.dataset_name,target_labels, model).squeeze()
+                    initialization = select_random_image_of_target_class(self.dataset_name, [target_labels], self.model,
+                                                                         self.load_random_class_image).squeeze()
                     return initialization, 1
                 # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
             # Binary search to minimize l2 distance to original image.
@@ -722,7 +692,8 @@ class QEBA(object):
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
 
-                target_images = self.get_image_of_target_class(self.dataset_name,target_labels, target_model)[0]
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model,
+                                                                    self.load_random_class_image)[0]
                 self._default_criterion = TargetClass(target_labels[0].item())
                 a = Adversarial(target_model, self._default_criterion, images, true_labels[0].item(),
                                 distance=self._default_distance, threshold=self._default_threshold,
@@ -737,7 +708,7 @@ class QEBA(object):
                 def decision_function(x):
                     out = a.forward(x, strict=False)[1]  # forward function returns pr
                     return out
-                target_images,num_calls = self.initialize(target_model, images.squeeze(0),decision_function,None,true_labels,target_labels)
+                target_images, num_calls = self.initialize(target_model, images.squeeze(0),decision_function,None,true_labels,target_labels)
 
 
             if model is None or self._default_criterion is None:
@@ -760,7 +731,7 @@ class QEBA(object):
 
             self._starting_point = target_images # Adversarial input to use as a starting point
 
-            adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index,a)
+            adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, a)
             distortion_with_max_queries = distortion_with_max_queries.detach().cpu()
             with torch.no_grad():
                 adv_logit = target_model(adv_images.cuda())
@@ -856,6 +827,8 @@ if __name__ == "__main__":
     parser.add_argument('--all_archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
     parser.add_argument('--target_type',type=str, default='increment', choices=['random', 'load_random', 'least_likely',"increment"])
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
     parser.add_argument('--attack_discretize', action="store_true")
@@ -869,10 +842,9 @@ if __name__ == "__main__":
     parser.add_argument('--max_num_evals', type=int,default=100)
     parser.add_argument('--pgen',type=str,choices=['naive',"resize","DCT9408","DCT192"],required=True)
     args = parser.parse_args()
-    assert args.batch_size == 1, "HSJA only supports mini-batch size equals 1!"
+    assert args.batch_size == 1, "QEBA only supports mini-batch size equals 1!"
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-    os.environ["TORCH_HOME"] = "/home1/machen/.cache/torch/pretrainedmodels"
     args_dict = None
     if not args.json_config:
         # If there is no json file, all of the args must be given
@@ -885,9 +857,9 @@ if __name__ == "__main__":
         defaults.update(arg_vars)
         args = SimpleNamespace(**defaults)
         args_dict = defaults
-    # if args.targeted:
-    #     if args.dataset == "ImageNet":
-    #         args.max_queries = 20000
+    if args.targeted:
+        if args.dataset == "ImageNet":
+            args.max_queries = 20000
     args.exp_dir = osp.join(args.exp_dir,
                             get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  # 随机产生一个目录用于实验
     os.makedirs(args.exp_dir, exist_ok=True)
@@ -971,9 +943,9 @@ if __name__ == "__main__":
         model.cuda()
         model.eval()
         attacker = QEBA(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                        args.norm, args.epsilon, iterations=ITER, initial_num_evals=initN, max_num_evals=maxN,
-                       internal_dtype=torch.float32,rv_generator=p_gen, atk_level=args.atk_level, mask=None,
-                        gamma=args.gamma, batch_size=100, stepsize_search = args.stepsize_search,
+                        args.norm, args.load_random_class_image, args.epsilon, iterations=ITER, initial_num_evals=initN,
+                        max_num_evals=maxN, internal_dtype=torch.float32,rv_generator=p_gen, atk_level=args.atk_level,
+                        mask=None, gamma=args.gamma, batch_size=100, stepsize_search = args.stepsize_search,
                         log_every_n_steps=1, suffix=PGEN, verbose=False, maximum_queries=args.max_queries)
         attacker.attack_all_images(args, arch, model, save_result_path)
         model.cpu()

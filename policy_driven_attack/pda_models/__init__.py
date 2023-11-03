@@ -153,7 +153,7 @@ def make_policy_model(dataset, arch, input_size=0, **kwargs):
         model.input_size = [3, 32, 32]
     elif dataset == 'ImageNet':
         if input_size == 0:
-            input_size = 224
+            input_size = 299
         if arch == 'empty':
             model = policy.imagenet.empty(input_size=input_size, **kwargs)
         elif arch == 'vgg11_inv':

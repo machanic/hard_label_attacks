@@ -2,7 +2,7 @@ import math
 import torch
 import torch.nn as nn
 from policy_driven_attack.pda_models.policy.common import normalization, inv_forward
-
+import torch.nn.functional as F
 __all__ = ['vgg11_inv', 'vgg13_inv', 'vgg16_inv', 'vgg19_inv']
 
 
@@ -89,12 +89,14 @@ class VGGInv(nn.Module):
         return out
 
     def forward(self, adv_image, image, label, target, output_fields):
+
         output = inv_forward(
             adv_image=adv_image, image=image, label=label, target=target, get_logit=self.get_logit,
             normal_mean=self.normal_mean, empty_coeff=self.empty_coeff, empty_normal_mean=self.empty_normal_mean,
             training=self.training, calibrate=self.calibrate, output_fields=output_fields)
         if 'std' in output_fields:
             output['std'] = self.normal_logstd.exp()
+
         return output
 
     def rescale(self, scale):

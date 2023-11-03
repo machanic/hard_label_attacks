@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 from policy_driven_attack.pda_models.policy.common import normalization, inv_forward
+import torch.nn.functional as F
 
 __all__ = ['vgg11_inv', 'vgg13_inv', 'vgg16_inv', 'vgg19_inv']
 

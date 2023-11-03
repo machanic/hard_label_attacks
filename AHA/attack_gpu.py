@@ -20,10 +20,11 @@ from models.defensive_model import DefensiveModel
 from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10Dataset,TinyImageNetDataset
 from PIL import Image
 from scipy.fftpack import dct, idct
+from utils.dataset_toolkit import select_random_image_of_target_class
 
 class AHA(object):
     def __init__(self, model, dataset,  clip_min, clip_max, height, width, channels, batch_size, norm, epsilon,
-                 maximum_queries=10000):
+                 load_random_class_image, maximum_queries=10000):
         self.model = model
         self.norm = norm
         self.ord = np.inf if self.norm == "linf" else 2
@@ -44,50 +45,7 @@ class AHA(object):
         self.success_all = torch.zeros_like(self.query_all)
         self.success_query_all = torch.zeros_like(self.query_all)
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
-        # self.random_direction = random_direction
-
-    def get_image_of_target_class(self, dataset_name, target_labels, target_model):
-
-        images = []
-        for label in target_labels:  # length of target_labels is 1
-            if dataset_name == "ImageNet":
-                dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-10":
-                dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-100":
-                dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "TinyImageNet":
-                dataset = TinyImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            index = np.random.randint(0, len(dataset))
-            image, true_label = dataset[index]
-            image = image.unsqueeze(0)
-            if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                image = F.interpolate(image,
-                                      size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                      align_corners=False)
-            with torch.no_grad():
-                logits = target_model(image.cuda())
-            max_recursive_loop_limit = 100
-            loop_count = 0
-            while logits.max(1)[1].item() != label.item() and loop_count < max_recursive_loop_limit:
-                loop_count += 1
-                index = np.random.randint(0, len(dataset))
-                image, true_label = dataset[index]
-                image = image.unsqueeze(0)
-                if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                    image = F.interpolate(image,
-                                          size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                          align_corners=False)
-                with torch.no_grad():
-                    logits = target_model(image.cuda())
-
-            if loop_count == max_recursive_loop_limit:
-                # The program cannot find a valid image from the validation set.
-                return None
-
-            assert true_label == label.item()
-            images.append(torch.squeeze(image))
-        return torch.stack(images)  # B,C,H,W
+        self.load_random_class_image = load_random_class_image
 
     def decision_function(self, images, true_labels, target_labels):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max)
@@ -105,9 +63,10 @@ class AHA(object):
         num_eval = 0
         if target_images is None:
             while True:
-                random_noise = torch.from_numpy(np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float().cuda()
+                random_noise = torch.from_numpy(
+                    np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float().cuda()
                 # random_noise = torch.FloatTensor(*self.shape).uniform_(self.clip_min, self.clip_max)
-                success = self.decision_function(random_noise[None], true_labels, target_labels)[0].item()
+                success = self.decision_function(random_noise[None], true_labels, target_labels)
                 num_eval += 1
                 if success:
                     break
@@ -119,10 +78,11 @@ class AHA(object):
                         invalid_target_index = target_labels.eq(true_labels)
                         while invalid_target_index.sum().item() > 0:
                             target_labels[invalid_target_index] = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                                size=target_labels[invalid_target_index].size()).long()
+                                                                size=target_labels[invalid_target_index].size()).long().cuda()
                             invalid_target_index = target_labels.eq(true_labels)
 
-                    initialization = self.get_image_of_target_class(self.dataset_name, [target_labels], self.model).squeeze()
+                    initialization = select_random_image_of_target_class(self.dataset_name, [target_labels],
+                                                                          self.model, self.load_random_class_image).squeeze()
                     return initialization, 1
                 # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
             # Binary search to minimize l2 distance to original image.
@@ -131,13 +91,13 @@ class AHA(object):
             while high - low > 0.001:
                 mid = (high + low) / 2.0
                 blended = (1 - mid) * sample + mid * random_noise
-                success = self.decision_function(blended, true_labels, target_labels)[0].item()
+                success = self.decision_function(blended[None], true_labels, target_labels)
                 num_eval += 1
                 if success:
                     high = mid
                 else:
                     low = mid
-            # Sometimes, the found `high` is so tiny that the difference between initialization and sample is very very small, this case will cause inifinity loop
+            # Sometimes, the found `high` is so tiny that the difference between initialization and sample is very small, this case will cause an infinity loop
             initialization = (1 - high) * sample + high * random_noise
         else:
             initialization = target_images
@@ -156,7 +116,8 @@ class AHA(object):
                 if target_images is None:
                     initialization[i], num_evals[i] = self.initialize(samples[i], None, true_labels[i], None)
                 else:
-                    initialization[i], num_evals[i] = self.initialize(samples[i], target_images[i], true_labels[i], target_labels[i])
+                    initialization[i], num_evals[i] = self.initialize(samples[i], target_images[i], true_labels[i],
+                                                                      target_labels[i])
 
         return initialization, num_evals
 
@@ -300,7 +261,7 @@ class AHA(object):
                 alpha[alpha < 1e-9] = 1e-2
 
             log.info('Attacking image {} - {} / {}, distortion {}, query {}'.format(
-                batch_index * args.batch_size, (batch_index + 1) * args.batch_size, self.total_images, best_dist, query))
+                batch_index * args.batch_size, (batch_index + 1) * args.batch_size, self.total_images, best_dist, query[0]))
             # if dist.item() < 1e-4:  #
             #     break
 
@@ -337,7 +298,7 @@ class AHA(object):
                         invalid_target_index = target_labels.eq(true_labels)
                 elif args.target_type == "load_random":
                     target_labels = loaded_target_labels[selected]
-                    assert target_labels[0].item()!=true_labels[0].item()
+                    assert target_labels[0].item() != true_labels[0].item()
                     # log.info("load random label as {}".format(target_labels))
                 elif args.target_type == 'least_likely':
                     target_labels = logit.argmin(dim=1).detach().cpu()
@@ -346,9 +307,9 @@ class AHA(object):
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
 
-                target_images = self.get_image_of_target_class(self.dataset_name, target_labels, self.model)
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model, self.load_random_class_image)
                 if target_images is None:
-                    log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index+1))
+                    log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index + 1))
                     continue
             else:
                 target_labels = None
@@ -359,14 +320,14 @@ class AHA(object):
             with torch.no_grad():
                 if adv_images.dim() == 3:
                     adv_images = adv_images.unsqueeze(0)
-                adv_logit = self.model(adv_images.cuda())
+                adv_logit = self.model(adv_images)
             adv_pred = adv_logit.argmax(dim=1)
             ## Continue query count
             not_done = correct.clone()
             if args.targeted:
-                not_done = not_done * (1 - adv_pred.eq(target_labels).float()).float()  #
+                not_done = not_done * (1 - adv_pred.eq(target_labels.cuda()).float()).float()
             else:
-                not_done = not_done * adv_pred.eq(true_labels).float()  #
+                not_done = not_done * adv_pred.eq(true_labels.cuda()).float()
             success = (1 - not_done.detach().cpu()) * correct.detach().cpu() * success_epsilon.detach().cpu() * (
                     success_query.detach().cpu() <= self.maximum_queries).float()
 
@@ -422,23 +383,25 @@ def set_log_file(fname):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu",type=int, required=True)
-    parser.add_argument('--json-config', type=str, default='./configures/AHA.json',
+    parser.add_argument('--json-config', type=str, default='../configures/AHA.json',
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--epsilon', type=float, help='the lp perturbation bound')
     parser.add_argument("--norm", type=str, choices=["l2", "linf"], required=True)
-    parser.add_argument('--batch-size', type=int, default=10)
+    parser.add_argument('--batch-size', type=int, default=100)
     parser.add_argument('--dataset', type=str, required=True,
                choices=['CIFAR-10', 'CIFAR-100', 'ImageNet', "FashionMNIST", "MNIST", "TinyImageNet"], help='which dataset to use')
     parser.add_argument('--arch', default=None, type=str, help='network architecture')
     parser.add_argument('--all-archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
     parser.add_argument('--target-type',type=str, default='increment', choices=['random', "load_random", 'least_likely',"increment"])
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
-    parser.add_argument('--attack-defense',action="store_true")
-    parser.add_argument('--defense-model',type=str, default=None)
-    parser.add_argument('--defense-norm',type=str,choices=["l2","linf"],default='linf')
-    parser.add_argument('--defense-eps',type=str,default="")
+    parser.add_argument('--attack_defense',action="store_true")
+    parser.add_argument('--defense_model',type=str, default=None)
+    parser.add_argument('--defense_norm',type=str,choices=["l2","linf"],default='linf')
+    parser.add_argument('--defense_eps',type=str,default="")
     parser.add_argument('--max-queries',type=int, default=10000)
 
     args = parser.parse_args()
@@ -463,7 +426,7 @@ if __name__ == "__main__":
     if args.attack_defense and args.defense_model == "adv_train_on_ImageNet":
         args.max_queries = 20000
     args.exp_dir = osp.join(args.exp_dir,
-                            get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))
+                            get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  #
     os.makedirs(args.exp_dir, exist_ok=True)
 
     if args.all_archs:
@@ -545,7 +508,7 @@ if __name__ == "__main__":
         model.cuda()
         model.eval()
         attacker = AHA(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                       args.batch_size, args.norm, args.epsilon, args.max_queries)
+                       args.batch_size, args.norm, args.epsilon, args.load_random_class_image, args.max_queries)
         attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()
 

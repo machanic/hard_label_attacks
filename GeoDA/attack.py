@@ -24,8 +24,8 @@ from config import CLASS_NUM, MODELS_TEST_STANDARD, IN_CHANNELS, PROJECT_PATH, I
 from dataset.dataset_loader_maker import DataLoaderMaker
 from models.defensive_model import DefensiveModel
 from models.standard_model import StandardModel
-from utils import get_label
-from utils import valid_bounds, clip_image_values
+from GeoDA.utils import get_label
+from GeoDA.utils import valid_bounds, clip_image_values
 from PIL import Image
 from torch.autograd import Variable
 from numpy import linalg
@@ -236,30 +236,6 @@ class GeoDA(object):
         grad_f = torch.tensor(grad)[None, :, :, :]
 
         return grad_f, sum(z), num_calls
-
-    # FIXME not work, you can delete this code
-    def geometric_progression_for_stepsize(self, x_adv, true_label, target_label, grad, dist, cur_iter):
-        """
-        Geometric progression to search for stepsize.
-        Keep decreasing stepsize by half until reaching
-        the desired side of the boundary,
-        """
-        epsilon = dist.item() / np.sqrt(cur_iter)
-        num_evals = np.zeros(1)
-        if self.norm == 'l1' or self.norm == 'l2':
-            grads = grad
-        if self.norm == 'linf':
-            grads = torch.sign(grad) / torch.norm(grad)
-        def phi(epsilon, num_evals):
-            new = x_adv + epsilon * grads
-            success = self.is_adversarial(new, true_label,target_label)
-            num_evals += 1
-            return success
-
-        while not phi(epsilon, num_evals):  # 只要没有成功，就缩小epsilon
-            epsilon /= 2.0
-        perturbed = torch.clamp(x_adv + epsilon * grads, self.clip_min, self.clip_max)
-        return perturbed, num_evals.item()
 
 
     def go_to_boundary(self, x_0, true_label, target_label, grad):

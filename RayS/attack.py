@@ -296,7 +296,9 @@ if __name__ == "__main__":
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
     parser.add_argument('--attack_defense',action="store_true")
-    parser.add_argument('--defense_model',type=str, default=None)
+    parser.add_argument('--defense_model', type=str, default=None)
+    parser.add_argument('--defense_norm', type=str, choices=["l2", "linf"], default='linf')
+    parser.add_argument('--defense_eps', type=str, default="")
     parser.add_argument('--max_queries',type=int,default=10000)
 
     args = parser.parse_args()
@@ -384,7 +386,8 @@ if __name__ == "__main__":
             continue
         log.info("Begin attack {} on {}, result will be saved to {} and {}".format(arch, args.dataset, save_result_path_l2_norm, save_result_path_linf_norm))
         if args.attack_defense:
-            model = DefensiveModel(args.dataset, arch, no_grad=True, defense_model=args.defense_model)
+            model = DefensiveModel(args.dataset, arch, no_grad=True, defense_model=args.defense_model,
+                                   norm=args.defense_norm, eps=args.defense_eps)
         else:
             model = StandardModel(args.dataset, arch, no_grad=True)
         model.cuda()

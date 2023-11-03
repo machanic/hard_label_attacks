@@ -485,7 +485,7 @@ class TargetClass(Criterion):
         return '{}-{}'.format(self.__class__.__name__, self.target_class())
 
     def is_adversarial(self, predictions, label=None):
-        top1 = torch.argmax(predictions,dim=-1).item()
+        top1 = torch.argmax(predictions, dim=-1).item()
         return top1 == self.target_class()  # target class 其实是true label
 
 

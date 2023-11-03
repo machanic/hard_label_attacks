@@ -67,7 +67,7 @@ class Adversarial(object):
 
         self.verbose = verbose
 
-        self.__best_adversarial = None
+        self._best_adversarial = None
         self.__best_distance = distance(value=np.inf)
         self.__best_adversarial_output = None
 
@@ -103,7 +103,7 @@ class Adversarial(object):
             assert self.distance.value == 0.
 
     def _reset(self):
-        self.__best_adversarial = None
+        self._best_adversarial = None
         self.__best_distance = self.__distance(value=np.inf)
         self.__best_adversarial_output = None
 
@@ -115,7 +115,7 @@ class Adversarial(object):
     @property
     def perturbed(self):
         """The best adversarial example found so far."""
-        return self.__best_adversarial
+        return self._best_adversarial
 
     @property
     def output(self):
@@ -205,7 +205,7 @@ class Adversarial(object):
             if self.verbose:
                 log.info('new best adversarial: {}'.format(distance))
 
-            self.__best_adversarial = x
+            self._best_adversarial = x
             self.__best_distance = distance
             self.__best_adversarial_output = predictions
 
@@ -239,7 +239,8 @@ class Adversarial(object):
             is_adversarial = self.__criterion.is_adversarial(
                 predictions)
         assert isinstance(is_adversarial, bool) or \
-            isinstance(is_adversarial, np.bool_)
+            isinstance(is_adversarial, np.bool_) or \
+            isinstance(is_adversarial, torch.cuda.BoolTensor)
         if is_adversarial:  # 与true label 一致时
             is_best, distance = self.__new_adversarial(
                 x, predictions, in_bounds)
@@ -299,6 +300,8 @@ class Adversarial(object):
         assert not strict or in_bounds
 
         self._total_prediction_calls += 1
+        if x.dim() == 3:
+            x = x.unsqueeze(0)
         predictions = self.__model.forward(x.cuda()).squeeze(0)
         is_adversarial, is_best, distance = self.__is_adversarial(
             x, predictions, in_bounds)

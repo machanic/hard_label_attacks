@@ -1,34 +1,42 @@
 
 {"CIFAR-10": {
       "l2":{
-          "epsilon": 1.0
+          "epsilon": 1.0,
+        "ratio_mask": 0.3
         },
       "linf": {
-          "epsilon": 0.031372
+          "epsilon": 0.031372,
+        "ratio_mask": 0.3
       }
   },
     "CIFAR-100": {
       "l2":{
-          "epsilon": 1.0
+          "epsilon": 1.0,
+        "ratio_mask": 0.3
         },
       "linf": {
-          "epsilon": 0.031372
+          "epsilon": 0.031372,
+        "ratio_mask": 0.3
       }
   },
   "TinyImageNet": {
       "l2":{
-          "epsilon": 2.0
+          "epsilon": 2.0,
+        "ratio_mask": 0.1
         },
       "linf": {
-          "epsilon": 0.031372
+          "epsilon": 0.031372,
+        "ratio_mask": 0.1
       }
   },
     "ImageNet": {
         "l2":{
-            "epsilon": 10.0
+            "epsilon": 10.0,
+          "ratio_mask": 0.1
         },
         "linf": {
-            "epsilon": 0.05
+            "epsilon": 0.05,
+          "ratio_mask": 0.1
         }
     }
 }

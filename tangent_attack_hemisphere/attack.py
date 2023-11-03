@@ -20,9 +20,9 @@ from models.defensive_model import DefensiveModel
 from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10Dataset,TinyImageNetDataset
 from tangent_attack_hemisphere.scipy_find_tangent_point import solve_tangent_point
 from tangent_attack_hemisphere.tangent_point_analytical_solution import TangentFinder
-
+from utils.dataset_toolkit import select_random_image_of_target_class
 class TangentAttack(object):
-    def __init__(self, model, dataset,  clip_min, clip_max, height, width, channels, norm, epsilon, iterations=40, gamma=1.0,
+    def __init__(self, model, dataset,  clip_min, clip_max, height, width, channels, load_random_class_image, norm, epsilon, iterations=40, gamma=1.0,
                  stepsize_search='geometric_progression',
                  max_num_evals=1e4, init_num_evals=100, maximum_queries=10000, batch_size=1,
                  verify_tangent_point=False,best_radius=False):
@@ -72,48 +72,7 @@ class TangentAttack(object):
         self.success_query_all = torch.zeros_like(self.query_all)
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
         self.best_radius = best_radius
-
-    def get_image_of_target_class(self, dataset_name, target_labels):
-
-        images = []
-        for label in target_labels:  # length of target_labels is 1
-            if dataset_name == "ImageNet":
-                dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-10":
-                dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-100":
-                dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "TinyImageNet":
-                dataset = TinyImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            index = np.random.randint(0, len(dataset))
-            image, true_label = dataset[index]
-            image = image.unsqueeze(0)
-            if dataset_name == "ImageNet" and self.model.input_size[-1] != 299:
-                image = F.interpolate(image,
-                                      size=(self.model.input_size[-2], self.model.input_size[-1]), mode='bilinear',
-                                      align_corners=False)
-            with torch.no_grad():
-                logits = self.model(image.cuda())
-            max_recursive_loop_limit = 100
-            loop_count = 0
-            while logits.max(1)[1].item() != label.item() and loop_count < max_recursive_loop_limit:
-                loop_count += 1
-                index = np.random.randint(0, len(dataset))
-                image, true_label = dataset[index]
-                image = image.unsqueeze(0)
-                if dataset_name == "ImageNet" and self.model.input_size[-1] != 299:
-                    image = F.interpolate(image,
-                                          size=(self.model.input_size[-2], self.model.input_size[-1]), mode='bilinear',
-                                          align_corners=False)
-                with torch.no_grad():
-                    logits = self.model(image.cuda())
-
-            if loop_count == max_recursive_loop_limit:
-               return None
-
-            assert true_label == label.item()
-            images.append(torch.squeeze(image))
-        return torch.stack(images)  # B,C,H,W
+        self.load_random_class_image = load_random_class_image
 
     def decision_function(self, images, true_labels, target_labels):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max).cuda()
@@ -123,7 +82,6 @@ class TangentAttack(object):
         else:
             return logits.max(1)[1].detach().cpu() == target_labels
 
-
     def initialize(self, sample, target_images, true_labels, target_labels):
         """
         sample: the shape of sample is [C,H,W] without batch-size
@@ -132,7 +90,8 @@ class TangentAttack(object):
         num_eval = 0
         if target_images is None:
             while True:
-                random_noise = torch.from_numpy(np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float()
+                random_noise = torch.from_numpy(
+                    np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float()
                 # random_noise = torch.FloatTensor(*self.shape).uniform_(self.clip_min, self.clip_max)
                 success = self.decision_function(random_noise[None], true_labels, target_labels)[0].item()
                 num_eval += 1
@@ -149,7 +108,8 @@ class TangentAttack(object):
                                                                 size=target_labels[invalid_target_index].size()).long()
                             invalid_target_index = target_labels.eq(true_labels)
 
-                    initialization = self.get_image_of_target_class(self.dataset_name,target_labels).squeeze()
+                    initialization = select_random_image_of_target_class(self.dataset_name, [target_labels], self.model,
+                                                                         self.load_random_class_image).squeeze()
                     return initialization, 1
                 # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
             # Binary search to minimize l2 distance to original image.
@@ -164,6 +124,7 @@ class TangentAttack(object):
                     high = mid
                 else:
                     low = mid
+            # Sometimes, the found `high` is so tiny that the difference between initialization and sample is very very small, this case will cause inifinity loop
             initialization = (1 - high) * sample + high * random_noise
         else:
             initialization = target_images
@@ -194,29 +155,36 @@ class TangentAttack(object):
             ) for perturbed_image in perturbed_images])
         # Choose upper thresholds in binary searchs based on constraint.
         if self.norm == "linf":
-            highs = dists_post_update # Stopping criteria.
+            highs = dists_post_update
+            # Stopping criteria.
             thresholds = torch.clamp_max(dists_post_update * self.theta, max=self.theta)
         else:
             highs = torch.ones(perturbed_images.size(0))
             thresholds = self.theta
         lows = torch.zeros(perturbed_images.size(0))
         # Call recursive function.
-
+        highs = highs.to(torch.float64)
+        lows = lows.to(torch.float64)
+        old_mid = highs
         while torch.max((highs - lows) / thresholds).item() > 1:
             # log.info("max in binary search func: {}, highs:{}, lows:{}, highs-lows: {} , threshold {}, (highs - lows) / thresholds: {}".format(torch.max((highs - lows) / thresholds).item(),highs, lows, highs-lows, thresholds, (highs - lows) / thresholds))
             # projection to mids.
             mids = (highs + lows) / 2.0
-            mid_images = self.project(original_image, perturbed_images, mids)
+            mid_images = self.project(original_image, perturbed_images, mids).to(torch.float32)
             # Update highs and lows based on model decisions.
             decisions = self.decision_function(mid_images, true_labels, target_labels)
             num_evals += mid_images.size(0)
             decisions = decisions.int()
-            # 攻击成功时候high用mid，攻击失败的时候low用mid
             lows = torch.where(decisions == 0, mids, lows)  # lows:攻击失败的用mids，攻击成功的用low
             highs = torch.where(decisions == 1, mids, highs)  # highs: 攻击成功的用mids，攻击失败的用high, 不理解的可以去看论文Algorithm 1
+            reached_numerical_precision = (old_mid == mids).all()
+            old_mid = mids
+            if reached_numerical_precision:
+                break
             # log.info("decision: {} low: {}, high: {}".format(decisions.detach().cpu().numpy(),lows.detach().cpu().numpy(), highs.detach().cpu().numpy()))
         out_images = self.project(original_image, perturbed_images, highs)  # high表示classification boundary偏攻击成功一点的线
-        # Compute distance of the output image to select the best choice. (only used when stepsize_search is grid_search.)
+        # Compute distance of the output image to select the best choice.
+        # (only used when stepsize_search is grid_search.)
         dists = torch.tensor([
             self.compute_distance(
                 original_image,
@@ -225,7 +193,7 @@ class TangentAttack(object):
             ) for out_image in out_images])
         idx = torch.argmin(dists)
         dist = dists_post_update[idx]
-        out_image = out_images[idx]
+        out_image = out_images[idx].to(torch.float32)
         return out_image, dist, num_evals
 
     def select_delta(self, cur_iter, dist_post_update):
@@ -539,8 +507,7 @@ class TangentAttack(object):
                     target_labels = torch.fmod(true_labels + 1, CLASS_NUM[args.dataset])
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
-
-                target_images = self.get_image_of_target_class(self.dataset_name,target_labels)
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model, self.load_random_class_image)
                 if target_images is None:
                     log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index+1))
                     continue
@@ -655,9 +622,11 @@ if __name__ == "__main__":
     parser.add_argument('--defense_model',type=str, default=None)
     parser.add_argument('--defense_norm', type=str, choices=["l2", "linf"], default='linf')
     parser.add_argument('--defense_eps', type=str,default="")
-    parser.add_argument('--max_queries',type=int, default=10000)
-    parser.add_argument('--init_num_eval_grad',type=int,default=100)
-    parser.add_argument('--gamma',type=float)
+    parser.add_argument('--max_queries', type=int, default=10000)
+    parser.add_argument('--init_num_eval_grad', type=int, default=100)
+    parser.add_argument('--gamma', default=1, type=float)
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
 
     args = parser.parse_args()
     assert args.batch_size == 1, "Tangent attack only supports mini-batch size equals 1!"
@@ -752,7 +721,7 @@ if __name__ == "__main__":
             model = StandardModel(args.dataset, arch, no_grad=True)
         model.cuda()
         model.eval()
-        attacker = TangentAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
+        attacker = TangentAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],args.load_random_class_image,
                                      args.norm, args.epsilon, args.num_iterations, gamma=args.gamma, stepsize_search = args.stepsize_search,
                                      max_num_evals=1e4,
                                      init_num_evals=args.init_num_eval_grad, maximum_queries=args.max_queries,

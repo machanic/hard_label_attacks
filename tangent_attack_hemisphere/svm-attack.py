@@ -5,7 +5,7 @@ import random
 import sys
 sys.path.append(os.getcwd())
 from collections import defaultdict, OrderedDict
-
+from sklearn.svm import LinearSVC
 import json
 from types import SimpleNamespace
 import os.path as osp
@@ -18,16 +18,14 @@ from dataset.dataset_loader_maker import DataLoaderMaker
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
 from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10Dataset,TinyImageNetDataset
+from tangent_attack_hemisphere.scipy_find_tangent_point import solve_tangent_point
+from tangent_attack_hemisphere.tangent_point_analytical_solution import TangentFinder
 from utils.dataset_toolkit import select_random_image_of_target_class
-from tangent_attack_semiellipsoid.tangent_point_analytical_solution import TangentFinder as EllipsoidTangentFinder
-from tangent_attack_hemisphere.tangent_point_analytical_solution import TangentFinder as HemisphereTangentFinder
-
-
-class EllipsoidTangentAttack(object):
-    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon, radius_ratio,load_random_class_image,
-                 iterations=40, gamma=1.0, stepsize_search='geometric_progression',
+class TangentAttack(object):
+    def __init__(self, model, dataset,  clip_min, clip_max, height, width, channels, load_random_class_image, norm, epsilon, iterations=40, gamma=1.0,
+                 stepsize_search='geometric_progression',
                  max_num_evals=1e4, init_num_evals=100, maximum_queries=10000, batch_size=1,
-                 verify_tangent_point=False, best_radius=False):
+                 verify_tangent_point=False,best_radius=False,c_p=0.6):
         """
         :param clip_min: lower bound of the image.
         :param clip_max: upper bound of the image.
@@ -50,7 +48,6 @@ class EllipsoidTangentAttack(object):
         self.width = width
         self.channels = channels
         self.shape = (channels, height, width)
-        self.radius_ratio = radius_ratio
         if self.norm == "l2":
             self.theta = gamma / (np.sqrt(self.dim) * self.dim)
         else:
@@ -76,7 +73,7 @@ class EllipsoidTangentAttack(object):
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
         self.best_radius = best_radius
         self.load_random_class_image = load_random_class_image
-
+        self.c_p=c_p
 
     def decision_function(self, images, true_labels, target_labels):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max).cuda()
@@ -140,6 +137,7 @@ class EllipsoidTangentAttack(object):
         # Clip an image, or an image batch, with upper and lower threshold.
         return torch.min(torch.max(image, clip_min), clip_max)
 
+
     def project(self, original_image, perturbed_images, alphas):
         alphas_shape = [alphas.size(0)] + [1] * len(self.shape)
         alphas = alphas.view(*alphas_shape)
@@ -201,6 +199,62 @@ class EllipsoidTangentAttack(object):
         out_image = out_images[idx].to(torch.float32)
         return out_image, dist, num_evals
 
+    def svm_gradient(self, sample, true_labels, target_labels, num_evals, delta):
+        clip_max, clip_min = self.clip_max, self.clip_min
+        # Generate random vectors.
+        noise_shape = [num_evals] + list(self.shape)
+        if self.norm == 'l2':
+            rv = torch.randn(*noise_shape)
+        elif self.norm == 'linf':
+            rv = torch.from_numpy(np.random.uniform(low=-1, high=1, size=noise_shape)).float()
+            # rv = torch.FloatTensor(*noise_shape).uniform_(-1, 1)
+        rv = rv / torch.sqrt(torch.sum(torch.mul(rv,rv), dim=(1,2,3),keepdim=True))
+        rv = rv.cuda()
+        perturbed = sample.cuda() + delta * rv
+        #rv = torch.clamp(rv, clip_min, clip_max)
+        perturbed = torch.clamp(perturbed, clip_min, clip_max)
+        #rv = (perturbed - sample.cuda()) / delta
+        # query the model.
+        # if self.dataset_name=="ImageNet" and perturbed.size(0) >= 4:  # FIXME save GPU memory
+        #     decisions_1 = self.decision_function(perturbed[:perturbed.size(0)//4], true_labels, target_labels)
+        #     decisions_2 = self.decision_function(perturbed[perturbed.size(0) // 4: perturbed.size(0) * 2 // 4], true_labels, target_labels)
+        #     decisions_3 = self.decision_function(perturbed[perturbed.size(0)*2 // 4:perturbed.size(0) * 3 // 4],
+        #                                          true_labels, target_labels)
+        #     decisions_4 = self.decision_function(perturbed[perturbed.size(0) * 3 // 4:],
+        #                                          true_labels, target_labels)
+        #     decisions = torch.cat([decisions_1, decisions_2,decisions_3,decisions_4],0)
+        # else:
+
+        decisions = self.decision_function(perturbed, true_labels, target_labels)
+        decision_shape = [decisions.size(0)] + [1] * len(self.shape)
+        fval = 2 * decisions.float().view(decision_shape) - 1.0
+        svm_model = LinearSVC(C=self.c_p)#c=0.45loss='hinge',0.55
+        # 训练模型
+
+        y_train = decisions.int().cpu().numpy()
+        x_train = rv.view(num_evals, -1).cpu().numpy()
+
+        #######################choose delta##########################
+        all_same = np.all(y_train == y_train[0])
+        if all_same and y_train[0] == 0:
+            tv = (self.theta/2 * rv).view(num_evals, -1).cpu().numpy()
+            new_array = np.ones_like(y_train)
+            y_train = np.concatenate((y_train, new_array), axis=0)
+            x_train = np.concatenate((x_train, tv), axis=0)
+        if all_same and y_train[0] == 1:
+            tv = (delta*2 * rv).view(num_evals, -1).cpu().numpy()
+            new_array = np.zeros_like(y_train)
+            y_train = np.concatenate((y_train, new_array), axis=0)
+            x_train = np.concatenate((x_train, tv), axis=0)
+        ##############################################################
+
+        svm_model.fit(x_train, y_train)
+        #print(svm_model.predict(x_train))
+        normal_vector = svm_model.coef_[0]
+        gradf = torch.tensor(normal_vector.reshape(self.shape))
+        gradf = gradf/torch.norm(gradf,p=2)
+        return gradf
+
     def select_delta(self, cur_iter, dist_post_update):
         """
         Choose the delta at the scale of distance
@@ -216,48 +270,6 @@ class EllipsoidTangentAttack(object):
                 delta = self.dim * self.theta * dist_post_update
         return delta
 
-    def approximate_gradient(self, sample, true_labels, target_labels, num_evals, delta):
-        clip_max, clip_min = self.clip_max, self.clip_min
-
-        # Generate random vectors.
-        noise_shape = [num_evals] + list(self.shape)
-        if self.norm == 'l2':
-            rv = torch.randn(*noise_shape)
-        elif self.norm == 'linf':
-            rv = torch.from_numpy(np.random.uniform(low=-1, high=1, size=noise_shape)).float()
-            # rv = torch.FloatTensor(*noise_shape).uniform_(-1, 1)
-        rv = rv / torch.sqrt(torch.sum(torch.mul(rv,rv), dim=(1,2,3),keepdim=True))
-        perturbed = sample + delta * rv
-        perturbed = torch.clamp(perturbed, clip_min, clip_max)
-        rv = (perturbed - sample) / delta
-
-        # query the model.
-        # if self.dataset_name=="ImageNet" and perturbed.size(0) >= 4:  # FIXME save GPU memory
-        #     decisions_1 = self.decision_function(perturbed[:perturbed.size(0)//4], true_labels, target_labels)
-        #     decisions_2 = self.decision_function(perturbed[perturbed.size(0) // 4: perturbed.size(0) * 2 // 4], true_labels, target_labels)
-        #     decisions_3 = self.decision_function(perturbed[perturbed.size(0)*2 // 4:perturbed.size(0) * 3 // 4],
-        #                                          true_labels, target_labels)
-        #     decisions_4 = self.decision_function(perturbed[perturbed.size(0) * 3 // 4:],
-        #                                          true_labels, target_labels)
-        #     decisions = torch.cat([decisions_1, decisions_2,decisions_3,decisions_4],0)
-        # else:
-        decisions = self.decision_function(perturbed, true_labels, target_labels)
-        decision_shape = [decisions.size(0)] + [1] * len(self.shape)
-        fval = 2 * decisions.float().view(decision_shape) - 1.0
-
-        # Baseline subtraction (when fval differs)
-        if torch.mean(fval).item() == 1.0:  # label changes.
-            gradf = torch.mean(rv, dim=0)
-        elif torch.mean(fval).item() == -1.0:  # label not change.
-            gradf = -torch.mean(rv, dim=0)
-        else:
-            fval -= torch.mean(fval)
-            gradf = torch.mean(fval * rv, dim=0)
-
-        # Get the gradient direction.
-        gradf = gradf / torch.norm(gradf,p=2)
-
-        return gradf
 
     def geometric_progression_for_HSJA(self, x, true_labels, target_labels, update, dist, cur_iter):
         """
@@ -286,31 +298,73 @@ class EllipsoidTangentAttack(object):
         Keep decreasing stepsize by half until reaching
         the desired side of the boundary,
         """
-        long_radius = dist.item() / np.sqrt(cur_iter)
-        short_radius = long_radius / self.radius_ratio
+        radius = dist.item() / np.sqrt(cur_iter)
         num_evals = 0
-
         while True:
-            tangent_finder = EllipsoidTangentFinder(x_original.view(-1), x_boundary.view(-1), short_radius, long_radius, normal_vector.view(-1),
+            tangent_finder = TangentFinder(x_original.view(-1), x_boundary.view(-1), radius, normal_vector.view(-1),
                                            norm="l2")
             tangent_point = tangent_finder.compute_tangent_point()
+            if self.verify_tangent_point:
+                log.info("verifying tagent point")
+                another_tangent_point = solve_tangent_point(x_original.view(-1).detach().cpu().numpy(), x_boundary.view(-1).detach().cpu().numpy(),
+                                    normal_vector.view(-1).detach().cpu().numpy(), radius, clip_min=self.clip_min,clip_max=self.clip_max)
+                if isinstance(another_tangent_point, np.ndarray):
+                    another_tangent_point = torch.from_numpy(another_tangent_point).type_as(tangent_point).to(tangent_point.device)
+                difference = tangent_point - another_tangent_point
+                log.info("Difference max: {:.4f} mean: {:.4f} sum: {:.4f} L2 norm: {:.4f}".format(difference.max().item(),
+                                                                                                  difference.mean().item(),
+                                                                                                  difference.sum().item(),
+                                                                                                  torch.norm(difference)))
             tangent_point = tangent_point.view_as(x_original).type(x_original.dtype)
-
-            # # FIXME compare with the Tangent Attack(hemisphere version)
-            # tangent_finder_hemi = HemisphereTangentFinder(x_original.view(-1), x_boundary.view(-1), short_radius,
-            #                                         normal_vector.view(-1),
-            #                                         norm="l2")
-            # tangent_point = tangent_finder_hemi.compute_tangent_point()
-            # tangent_point_hemi = tangent_point.view_as(x_original).type(x_original.dtype)  # FIXME
-            # diff = (tangent_point_semi - tangent_point_hemi).max().item()
-            # log.info(diff) # FIXME compare the difference with the Tangent Attack(hemisphere version)
-            # tangent_point = tangent_point_semi
             success = self.decision_function(tangent_point[None], true_labels, target_labels)
             num_evals += 1
             if bool(success[0].item()):
                break
-            long_radius /= 2.0
-            short_radius = long_radius / self.radius_ratio
+            radius /= 2.0
+        tangent_point = torch.clamp(tangent_point, self.clip_min, self.clip_max)
+        return tangent_point, num_evals
+
+
+    def fixed_radius_for_tangent_point(self, x_original, x_boundary, normal_vector, true_labels, target_labels, radius):
+        """
+        Geometric progression to search for stepsize.
+        Keep decreasing stepsize by half until reaching
+        the desired side of the boundary,
+        """
+
+        tangent_finder = TangentFinder(x_original.view(-1), x_boundary.view(-1), radius, normal_vector.view(-1), norm="l2")
+        tangent_point = tangent_finder.compute_tangent_point()
+        tangent_point = tangent_point.view_as(x_original).type(x_original.dtype)
+        tangent_point = torch.clamp(tangent_point, self.clip_min, self.clip_max)
+        success = self.decision_function(tangent_point[None], true_labels, target_labels)
+        return tangent_point, bool(success[0].item())
+
+    def binary_search_for_radius_and_tangent_point(self, x_original, x_boundary, normal_vector, true_labels, target_labels,
+                                                   dist):
+        """
+        Geometric progression to search for stepsize.
+        Keep decreasing stepsize by half until reaching
+        the desired side of the boundary,
+        """
+        num_evals = 0
+        low = 0
+        high = dist.item()
+        while high - low > 0.1:
+            mid = (high + low) / 2.0
+            tangent_finder = TangentFinder(x_original.view(-1), x_boundary.view(-1), mid, normal_vector.view(-1),
+                                           norm="l2")
+            tangent_point = tangent_finder.compute_tangent_point()
+            tangent_point = tangent_point.view_as(x_original).type(x_original.dtype)
+            success = self.decision_function(tangent_point[None], true_labels, target_labels)[0].item()
+            num_evals += 1
+            if success:
+                high = mid
+            else:
+                low = mid
+        tangent_finder = TangentFinder(x_original.view(-1), x_boundary.view(-1), high, normal_vector.view(-1),
+                                       norm="l2")
+        tangent_point = tangent_finder.compute_tangent_point()
+        tangent_point = tangent_point.view_as(x_original).type(x_original.dtype)
         tangent_point = torch.clamp(tangent_point, self.clip_min, self.clip_max)
         return tangent_point, num_evals
 
@@ -353,6 +407,7 @@ class EllipsoidTangentAttack(object):
         cur_iter = 0
         for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
             self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[inside_batch_index].item()
+        fixed_radius = dist.item() / np.sqrt(self.num_iterations)
         # init variables
         for j in range(self.num_iterations):
             cur_iter += 1
@@ -362,25 +417,26 @@ class EllipsoidTangentAttack(object):
             num_evals = int(self.init_num_evals * np.sqrt(j+1))
             num_evals = int(min([num_evals, self.max_num_evals]))
             # approximate gradient
-            gradf = self.approximate_gradient(perturbed, true_labels, target_labels, num_evals, delta)
+            gradf = self.svm_gradient(perturbed, true_labels, target_labels, num_evals, delta).to(torch.float32)
             if self.norm == "linf":
                 gradf = torch.sign(gradf)
+
             query += num_evals
             # search step size.
             if self.stepsize_search == 'geometric_progression':
                 # find step size.
-                # if not args.ablation_study:
-                perturbed_Tagent, num_evals = self.geometric_progression_for_tangent_point(images, perturbed, gradf,
+                if not args.ablation_study: # FIXME
+                    perturbed_Tagent, num_evals = self.geometric_progression_for_tangent_point(images, perturbed, gradf,
                                                                                        true_labels, target_labels,
                                                                                        dist, cur_iter)
-                # else:
-                #     if args.fixed_radius:
-                #         perturbed_Tagent, success = self.fixed_radius_for_tangent_point(images, perturbed, gradf, true_labels,
-                #                                                                                    target_labels, fixed_radius)
-                #         num_evals = torch.zeros_like(query)
-                #     elif args.binary_search_radius:
-                #         perturbed_Tagent, num_evals = self.binary_search_for_radius_and_tangent_point(images, perturbed, gradf,
-                #                                                                                       true_labels, target_labels, dist)
+                else:
+                    if args.fixed_radius:
+                        perturbed_Tagent, success = self.fixed_radius_for_tangent_point(images, perturbed, gradf, true_labels,
+                                                                                                   target_labels, fixed_radius)
+                        num_evals = torch.zeros_like(query)
+                    elif args.binary_search_radius:
+                        perturbed_Tagent, num_evals = self.binary_search_for_radius_and_tangent_point(images, perturbed, gradf,
+                                                                                                      true_labels, target_labels, dist)
                 query += num_evals
                 # perturbed_HSJA = self.geometric_progression_for_HSJA(perturbed, true_labels, target_labels, gradf, dist, cur_iter)
                 # dist_tangent = torch.norm((perturbed_Tagent - images).view(batch_size, -1), self.ord, 1).item()
@@ -400,10 +456,8 @@ class EllipsoidTangentAttack(object):
                         inside_batch_index].item()
             elif self.stepsize_search == "grid_search":
                 # Grid search for stepsize.
-                if self.norm == "linf":
-                    update = torch.sign(gradf)
-                else:
-                    update = gradf
+
+                update = gradf
                 epsilons = torch.logspace(-4, 0, steps=20) * dist
                 epsilons_shape = [20] + len(self.shape) * [1]
                 perturbeds = perturbed + epsilons.view(epsilons_shape) * update
@@ -440,7 +494,6 @@ class EllipsoidTangentAttack(object):
             loaded_target_labels = np.load("./target_class_labels/{}/label.npy".format(args.dataset))
             loaded_target_labels = torch.from_numpy(loaded_target_labels).long()
         for batch_index, (images, true_labels) in enumerate(self.dataset_loader):
-
             if args.dataset == "ImageNet" and self.model.input_size[-1] != 299:
                 images = F.interpolate(images,
                                        size=(self.model.input_size[-2], self.model.input_size[-1]), mode='bilinear',
@@ -471,9 +524,7 @@ class EllipsoidTangentAttack(object):
                     target_labels = torch.fmod(true_labels + 1, CLASS_NUM[args.dataset])
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
-
-                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model,
-                                                                    self.load_random_class_image)
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model, self.load_random_class_image)
                 if target_images is None:
                     log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index+1))
                     continue
@@ -482,7 +533,6 @@ class EllipsoidTangentAttack(object):
                 target_images = None
 
             adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, images, target_images, true_labels, target_labels)
-
             distortion_with_max_queries = distortion_with_max_queries.detach().cpu()
             with torch.no_grad():
                 if adv_images.dim() == 3:
@@ -524,11 +574,26 @@ class EllipsoidTangentAttack(object):
 
 
 def get_exp_dir_name(dataset,  norm, targeted, target_type, args):
+    if target_type == "load_random":
+        target_type = "random"
     target_str = "untargeted" if not targeted else "targeted_{}".format(target_type)
-    if args.attack_defense:
-        dirname = 'ellipsoid_tangent_attack_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
+    if args.ablation_study:
+        if args.attack_defense:
+            dirname = 'svm-tangent_attack_ablation_study_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
+        else:
+            dirname = 'svm-tangent_attack_ablation_study-{}-{}-{}'.format(dataset, norm, target_str)
+        return dirname
+    if args.init_num_eval_grad != 100:
+        if args.attack_defense:
+            dirname = 'svm-tangent_attack@{}_on_defensive_model-{}-{}-{}'.format(args.init_num_eval_grad, dataset, norm, target_str)
+        else:
+            dirname = 'svm-tangent_attack@{}-{}-{}-{}'.format(args.init_num_eval_grad, dataset, norm, target_str)
     else:
-        dirname = 'ellipsoid_tangent_attack-{}-{}-{}'.format(dataset, norm, target_str)
+        if args.attack_defense:
+            dirname = 'svm-tangent_attack_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
+        else:
+            dirname = 'svm-tangent_attack-{}-{}-{}'.format(dataset, norm, target_str)
+
     return dirname
 
 def print_args(args):
@@ -559,10 +624,13 @@ if __name__ == "__main__":
 
     # ablation study of the radius of the hemi-sphere
     parser.add_argument('--ablation-study',action='store_true')
-    parser.add_argument('--radius_ratio',type=float,default=1.1)
+    parser.add_argument('--binary-search-radius',action='store_true')
+    parser.add_argument('--fixed-radius',action='store_true')
+    parser.add_argument('--log2-radius', action='store_true')
+
     parser.add_argument('--all_archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
-    parser.add_argument('--target_type',type=str, default='increment', choices=['random', 'load_random', 'least_likely',"increment"])
+    parser.add_argument('--target_type',type=str, default='increment', choices=['random','load_random', 'least_likely',"increment"])
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
     parser.add_argument('--attack_defense',action="store_true")
@@ -574,9 +642,10 @@ if __name__ == "__main__":
     parser.add_argument('--max_queries',type=int, default=10000)
     parser.add_argument('--init_num_eval_grad',type=int,default=100)
     parser.add_argument('--gamma',default=1,type=float)
-    parser.add_argument('--t', type=float)
     parser.add_argument('--load-random-class-image', action='store_true',
                         help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
+    parser.add_argument('--t', type=float)
+
     args = parser.parse_args()
     assert args.batch_size == 1, "Tangent attack only supports mini-batch size equals 1!"
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -593,8 +662,9 @@ if __name__ == "__main__":
         defaults.update(arg_vars)
         args = SimpleNamespace(**defaults)
         args_dict = defaults
-    if args.targeted and args.dataset == "ImageNet":
-        args.max_queries = 20000
+    if args.targeted:
+        if args.dataset == "ImageNet":
+            args.max_queries = 20000
     if args.attack_defense and args.defense_model == "adv_train_on_ImageNet":
         args.max_queries = 20000
     args.exp_dir = osp.join(args.exp_dir,
@@ -611,11 +681,15 @@ if __name__ == "__main__":
             if args.defense_model == "adv_train_on_ImageNet":
                 log_file_path = osp.join(args.exp_dir,
                                          "run_defense_{}_{}_{}_{}.log".format(args.arch, args.defense_model,
-                                                                      args.defense_norm, args.defense_eps))
+                                                                               args.defense_norm,
+                                                                               args.defense_eps))
             else:
                 log_file_path = osp.join(args.exp_dir, 'run_defense_{}_{}.log'.format(args.arch, args.defense_model))
         elif args.ablation_study:
-            log_file_path = osp.join(args.exp_dir, 'run_radius_ratio_r_{}.log'.format(args.radius_ratio))
+            if args.binary_search_radius:
+                log_file_path = args.exp_dir + "/run_{}_binary_search_radius.log".format(args.arch)
+            elif args.fixed_radius:
+                log_file_path = args.exp_dir + "/run_{}_fixed_radius.log".format(args.arch)
         else:
             log_file_path = osp.join(args.exp_dir, 'run_{}.log'.format(args.arch))
 
@@ -642,6 +716,7 @@ if __name__ == "__main__":
     print_args(args)
 
     for arch in archs:
+
         if args.attack_defense:
             if args.defense_model == "adv_train_on_ImageNet":
                 save_result_path = args.exp_dir + "/{}_{}_{}_{}_result.json".format(arch, args.defense_model,
@@ -649,7 +724,10 @@ if __name__ == "__main__":
             else:
                 save_result_path = args.exp_dir + "/{}_{}_result.json".format(arch, args.defense_model)
         elif args.ablation_study:
-            save_result_path = args.exp_dir + "/{}_radius_ratio_r_{}.json".format(arch, args.radius_ratio)
+            if args.binary_search_radius:
+                save_result_path = args.exp_dir + "/{}_binary_search_radius_result.json".format(arch)
+            elif args.fixed_radius:
+                save_result_path = args.exp_dir + "/{}_fixed_radius_result.json".format(arch)
         else:
             save_result_path = args.exp_dir + "/{}_result.json".format(arch)
         if os.path.exists(save_result_path):
@@ -661,10 +739,11 @@ if __name__ == "__main__":
             model = StandardModel(args.dataset, arch, no_grad=True)
         model.cuda()
         model.eval()
-        attacker = EllipsoidTangentAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                                          args.norm, args.epsilon, args.radius_ratio, args.load_random_class_image,args.num_iterations, gamma=args.gamma, stepsize_search = args.stepsize_search,
-                                          max_num_evals=1e4,
-                                          init_num_evals=args.init_num_eval_grad, maximum_queries=args.max_queries,
-                                          verify_tangent_point=args.verify_tangent)
+        attacker = TangentAttack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],args.load_random_class_image,
+                                     args.norm, args.epsilon, args.num_iterations, gamma=args.gamma, stepsize_search = args.stepsize_search,
+                                     max_num_evals=1e4,
+                                     init_num_evals=args.init_num_eval_grad, maximum_queries=args.max_queries,
+                                     verify_tangent_point=args.verify_tangent,
+                                     c_p=args.t)
         attacker.attack_all_images(args, arch,  save_result_path)
         model.cpu()

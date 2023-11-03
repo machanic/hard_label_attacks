@@ -1,0 +1,72 @@
+{
+  "CIFAR-10": {
+    "l2": {
+      "untargeted": {
+        "epsilon": 1.0,
+        "clip_grad_max_norm": 0.1
+      },
+      "targeted": {
+        "epsilon": 1.0,
+        "clip_grad_max_norm": 0.1
+      }
+    },
+    "linf": {
+      "untargeted": {
+        "epsilon": 0.031372,
+        "clip_grad_max_norm": 0.1
+      },
+      "targeted": {
+        "epsilon": 0.031372,
+        "clip_grad_max_norm": 1.0
+      }
+    }
+  },
+  "CIFAR-100": {
+    "l2": {
+      "untargeted": {
+        "epsilon": 1.0,
+        "clip_grad_max_norm": 0.1
+      },
+      "targeted": {
+        "epsilon": 1.0,
+        "clip_grad_max_norm": 0.1
+      }
+    },
+    "linf": {
+      "untargeted": {
+        "epsilon": 0.031372,
+        "clip_grad_max_norm": 0.1
+      },
+      "targeted": {
+        "epsilon": 0.031372,
+        "clip_grad_max_norm": 1.0
+      }
+    }
+  },
+  "ImageNet": {
+    "l2": {
+      "untargeted": {
+        "epsilon": 10.0,
+        "clip_grad_max_norm": 1.0,
+        "tol": 1e-4
+      },
+      "targeted": {
+        "epsilon": 10.0,
+        "clip_grad_max_norm": 1.0,
+        "tol": 1e-4
+      }
+    },
+    "linf": {
+      "untargeted": {
+        "epsilon": 0.05,
+        "clip_grad_max_norm": 1.0,
+        "tol": 1e-4
+      },
+      "targeted": {
+        "epsilon": 0.05,
+        "clip_grad_max_norm": 0.1,
+        "tol": 1e-4
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@
 import sys
 import os
 import os.path as osp
+sys.path.append(os.getcwd())
 import socket
 import functools
 import getpass
@@ -246,6 +247,10 @@ def test(model_file_dir, train_image_ids, stage1_image_ids, loader, model, polic
             # move inputs to device
             image = image.cuda(gpu)
             label = label.cuda(gpu)
+            if args.dataset == "ImageNet" and model.input_size[-1] != 299:
+                #print(1)
+                image = F.interpolate(image, size=(model.input_size[-2], model.input_size[-1]),
+                                      mode='bicubic', align_corners=False)
             # temporarily allows gradient calculation to get logit and true grad
             with torch.enable_grad():
                 image.requires_grad = True
@@ -566,9 +571,9 @@ def main_worker(gpu, num_gpu_per_node, args):
 
     # make loader
     kwargs = dict()
-    if args.dataset == 'imagenet':
+    if args.dataset == 'ImageNet':
         kwargs['size'] = input_size[-1]
-    loader = DataLoaderMaker.get_test_attacked_data("CIFAR-10", 1, True)
+    loader = DataLoaderMaker.get_test_attacked_data(args.dataset, 1, True)
     # load image_ids from args.grad_dir
 
     with open(osp.join(args.npz_dir, args.dataset, args.training_data_victim_arch, 'image_ids_step.json')) as f:
@@ -624,7 +629,7 @@ def main_worker(gpu, num_gpu_per_node, args):
     grad_loader = dict()
     for phase in train_phases:
         grad_dataset[phase] = GradDataset(
-            args, train_tuple_fnames, args.use_true_grad if phase == 'train_seen' else True, args.pre_load)
+            args, train_tuple_fnames, args.use_true_grad if phase == 'train_seen' else True, input_size[-1],args.pre_load)
         log.info('Grad dataset for {} initialization done, use_true_grad: {}'.format(
             phase, grad_dataset[phase].use_true_grad))
 
@@ -645,7 +650,7 @@ def main_worker(gpu, num_gpu_per_node, args):
     # pretest
     if not args.no_init_eval:
         log.info('Evaluating performance before training')
-        test_tuple(train_phases, grad_loader, model, policy, gpu, args)
+        #test_tuple(train_phases, grad_loader, model, policy, gpu, args)
         import gc
         gc.collect()
         torch.cuda.empty_cache()
@@ -734,7 +739,7 @@ def save_checkpoint(model, fname, use_ddp, ddp_rank, num_gpu_per_node):
 
 
 class GradDataset(torch.utils.data.Dataset):
-    def __init__(self, args, tuple_fnames, use_true_grad, pre_load=True):
+    def __init__(self, args, tuple_fnames, use_true_grad, input_size,pre_load=True):
         self.tuple_fnames = tuple_fnames
         self.args = args
         # save parameters
@@ -748,7 +753,8 @@ class GradDataset(torch.utils.data.Dataset):
         for id in ids.keys():
             for j in range(ids[id]):
                 self.id_index.append(id)
-        self.size = IMAGE_SIZE[args.dataset][0]
+        #self.size = IMAGE_SIZE[args.dataset][0]
+        self.size = input_size
         self.channel = IN_CHANNELS[args.dataset]
         #--[debug]
         adv_data = np.memmap(osp.join(json_and_npy_dir, args.dataset, args.training_data_victim_arch, 'adv_iamge.npy'), dtype=np.float32, mode='r', shape=(self.channel, self.size, self.size),
@@ -952,7 +958,7 @@ if __name__ == '__main__':
     os.makedirs(xargs.exp_dir, exist_ok=True)
 
     # set log file, and import glog after that (since we might change sys.stdout/stderr on set_log_file())
-    set_log_file(osp.join(xargs.exp_dir, '/PDA_{}_train.log'.format(xargs.dataset)), file_only=xargs.ssh)
+    set_log_file(osp.join(xargs.exp_dir, 'PDA_{}_train.log'.format(xargs.dataset)), file_only=xargs.ssh)
 
     # do the business
     main(xargs)

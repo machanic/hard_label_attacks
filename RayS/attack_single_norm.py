@@ -129,7 +129,7 @@ class RayS(object):
         # initial_succ_mask is a boolean mask
         initial_succ_mask = self.search_succ(self.get_xadv(images, sgn_unit, self.d_t), true_labels, target_labels, valid_mask, query)
         to_search_ind = valid_mask.nonzero().flatten()[initial_succ_mask]  # 所有valid的mask，进一步找出success的
-        d_end[to_search_ind] = torch.min(self.d_t, sgn_norm)[to_search_ind]  # self.d_t is r_best of the paper, which is sed as infinity
+        d_end[to_search_ind] = torch.min(self.d_t, sgn_norm)[to_search_ind]  # self.d_t is r_best of the paper, which is set as infinity at the begining.
 
         while len(to_search_ind) > 0:
             d_mid = (d_start + d_end) / 2.0
@@ -277,6 +277,7 @@ if __name__ == "__main__":
     if args.targeted:
         if args.dataset == "ImageNet":
             args.max_queries = 20000
+    assert args.norm == "linf"
     args.exp_dir = osp.join(args.exp_dir,
                             get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  # 随机产生一个目录用于实验
     os.makedirs(args.exp_dir, exist_ok=True)

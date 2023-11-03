@@ -21,10 +21,11 @@ from dataset.dataset_loader_maker import DataLoaderMaker
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
 from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10Dataset,TinyImageNetDataset
+from utils.dataset_toolkit import select_random_image_of_target_class
 
 class Evolutionary(object):
-    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon,
-                 ccov=0.001, decay_weight=0.99, max_queries=10000, mu=0.01, sigma=3e-2, maxlen=30,
+    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon, load_random_class_image,
+                 ccov=0.001, decay_weight=0.99, mu=0.01, sigma=3e-2, maxlen=30,
                  maximum_queries=10000, batch_size=1):
         """
         :param clip_min: lower bound of the image.
@@ -46,11 +47,10 @@ class Evolutionary(object):
         self.width = width
         self.channels = channels
         self.shape = (channels, height, width)
-
+        self.load_random_class_image = load_random_class_image
         self.model = model
         self.ccov = ccov
         self.decay_weight = decay_weight
-        self.max_queries = max_queries
         self.mu = mu
         self.sigma = sigma
         self.maxlen = maxlen
@@ -69,50 +69,6 @@ class Evolutionary(object):
         self.success_all = torch.zeros_like(self.query_all)
         self.success_query_all = torch.zeros_like(self.query_all)
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
-
-    # We directly randomly select an image from corresponding dataset, and then querying the target model verify it.
-    def get_image_of_target_class(self, dataset_name, target_labels, target_model):
-
-        images = []
-        for label in target_labels:  # length of target_labels is 1
-            if dataset_name == "ImageNet":
-                dataset = ImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-10":
-                dataset = CIFAR10Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "CIFAR-100":
-                dataset = CIFAR100Dataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            elif dataset_name == "TinyImageNet":
-                dataset = TinyImageNetDataset(IMAGE_DATA_ROOT[dataset_name], label.item(), "validation")
-            index = np.random.randint(0, len(dataset))
-            image, true_label = dataset[index]
-            image = image.unsqueeze(0)
-            if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                image = F.interpolate(image,
-                                      size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                      align_corners=False)
-            with torch.no_grad():
-                logits = target_model(image.cuda())
-            max_recursive_loop_limit = 100
-            loop_count = 0
-            while logits.max(1)[1].item() != label.item() and loop_count < max_recursive_loop_limit:
-                loop_count += 1
-                index = np.random.randint(0, len(dataset))
-                image, true_label = dataset[index]
-                image = image.unsqueeze(0)
-                if dataset_name == "ImageNet" and target_model.input_size[-1] != 299:
-                    image = F.interpolate(image,
-                                          size=(target_model.input_size[-2], target_model.input_size[-1]), mode='bilinear',
-                                          align_corners=False)
-                with torch.no_grad():
-                    logits = target_model(image.cuda())
-
-            if loop_count == max_recursive_loop_limit:
-                # The program cannot find a valid image from the validation set.
-                return None
-
-            assert true_label == label.item()
-            images.append(torch.squeeze(image))
-        return torch.stack(images)  # B,C,H,W
 
     def decision_function(self, images, true_labels, target_labels):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max).cuda()
@@ -140,14 +96,14 @@ class Evolutionary(object):
                     log.info("Initialization failed! Use a misclassified image as `target_image")
                     if target_labels is None:
                         target_labels = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                      size=true_labels.size()).long()
+                                                      size=true_labels.size()).long().cuda()
                         invalid_target_index = target_labels.eq(true_labels)
                         while invalid_target_index.sum().item() > 0:
                             target_labels[invalid_target_index] = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                                size=target_labels[invalid_target_index].size()).long()
+                                                                size=target_labels[invalid_target_index].size()).long().cuda()
                             invalid_target_index = target_labels.eq(true_labels)
 
-                    initialization = self.get_image_of_target_class(self.dataset_name,target_labels, self.model).squeeze()
+                    initialization = select_random_image_of_target_class(self.dataset_name, target_labels, self.model, self.load_random_class_image).squeeze()
                     return initialization, 1
                 # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
             # Binary search to minimize l2 distance to original image.
@@ -199,7 +155,7 @@ class Evolutionary(object):
 
         # find an starting point
         # x_adv = self.get_init_noise(x, y, ytarget)
-        x_adv, num_eval = self.initialize(images, target_images, true_labels, target_labels)
+        x_adv, num_eval = self.initialize(images, target_images, y, target_labels)
         # log.info("after initialize")
         query += num_eval
         dist = torch.norm((x_adv - images).view(batch_size, -1), self.ord, 1)
@@ -212,7 +168,8 @@ class Evolutionary(object):
         x_adv = x_adv.cuda()
         mindist = 1e10
         stats_adversarial = []
-        for _ in range(self.max_queries):
+
+        for _ in range(self.maximum_queries):
             unnormalized_source_direction = x - x_adv
             source_norm = torch.norm(unnormalized_source_direction)
             if mindist > source_norm:
@@ -254,15 +211,9 @@ class Evolutionary(object):
 
             if torch.sum(query >= self.maximum_queries).item() == true_labels.size(0):
                 break
-            # compute new distance.
-            # dist = torch.norm((x_adv - x).view(batch_size, -1), self.ord, 1)
-            # log.info('{}-th image, {}: distortion {:.4f}, query: {}'.format(batch_index + 1,
-            #                                                                 self.norm, dist.item(),
-            #                                                                 int(query[0].item())))
             if dist.item() < 1e-4:  # 发现攻击jpeg时候卡住，故意加上这句话
                 break
         success_stop_queries = torch.clamp(success_stop_queries, 0, self.maximum_queries)
-
         return x_adv, query, success_stop_queries, dist, (dist <= self.epsilon)
 
     def attack_all_images(self, args, arch_name, result_dump_path):
@@ -302,7 +253,7 @@ class Evolutionary(object):
                 else:
                     raise NotImplementedError('Unknown target_type: {}'.format(args.target_type))
 
-                target_images = self.get_image_of_target_class(self.dataset_name, target_labels, self.model)
+                target_images = select_random_image_of_target_class(self.dataset_name, target_labels, self.model, self.load_random_class_image)
                 if target_images is None:
                     log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index+1))
                     continue
@@ -388,13 +339,15 @@ if __name__ == "__main__":
     parser.add_argument('--arch', default=None, type=str, help='network architecture')
     parser.add_argument('--all-archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
-    parser.add_argument('--target-type',type=str, default='increment', choices=['random', "load_random", 'least_likely',"increment"])
+    parser.add_argument('--target-type', type=str, default='increment', choices=['random', "load_random", 'least_likely',"increment"])
+    parser.add_argument('--load-random-class-image', action='store_true',
+                        help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
-    parser.add_argument('--attack-defense',action="store_true")
-    parser.add_argument('--defense-model',type=str, default=None)
-    parser.add_argument('--defense-norm',type=str,choices=["l2","linf"],default='linf')
-    parser.add_argument('--defense-eps',type=str,default="")
+    parser.add_argument('--attack_defense',action="store_true")
+    parser.add_argument('--defense_model',type=str, default=None)
+    parser.add_argument('--defense_norm',type=str,choices=["l2","linf"],default='linf')
+    parser.add_argument('--defense_eps',type=str,default="")
     parser.add_argument('--k', type=int, help='the key parameter that influences the results of untargeted and targeted attacks')
     parser.add_argument('--max-queries',type=int, default=10000)
 
@@ -477,6 +430,7 @@ if __name__ == "__main__":
         model.cuda()
         model.eval()
         attacker = Evolutionary(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                                args.norm, args.epsilon, maximum_queries=args.max_queries, batch_size=args.batch_size)
+                                args.norm, args.epsilon, args.load_random_class_image,
+                                maximum_queries=args.max_queries, batch_size=args.batch_size)
         attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()

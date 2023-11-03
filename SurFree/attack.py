@@ -19,23 +19,21 @@ from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
 from utils.dataset_toolkit import select_random_image_of_target_class
 import math
-import dct as torch_dct
+from scipy import fft
 
 def atleast_kdim(x, ndim):
     shape = x.shape + (1,) * (ndim - len(x.shape))
     return x.reshape(shape)
 
 class SurFree(object):
-    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, batch_size, epsilon, norm, load_random_class_image,
-                maximum_queries=10000, BS_gamma: float = 0.01, quantification=True, theta_max: float = 30,
-                BS_max_iteration: int = 7, steps: int = 100, n_ortho: int = 100, clip=True,
-                rho: float = 0.95, T: int = 1, with_alpha_line_search: bool = True, with_distance_line_search: bool = False,
-                with_interpolation: bool = False, final_line_search: bool=True):
+    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, batch_size, epsilon, norm,
+                 load_random_class_image, maximum_queries=10000, BS_gamma: float = 0.01, theta_max: float = 30,
+                 BS_max_iteration: int = 10, n_ortho: int = 100, rho: float = 0.98, T: int = 3,
+                 with_alpha_line_search: bool = True, with_distance_line_search: bool = False,
+                 with_interpolation: bool = False):
         self.model = model
         self.batch_size = batch_size
         self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
-        # self.images = torch.from_numpy(self.dataset_loader.dataset.images).cuda()
-        # self.labels = torch.from_numpy(self.dataset_loader.dataset.labels).cuda()
         self.total_images = len(self.dataset_loader.dataset)
         self.norm = norm
         self.ord = np.inf if self.norm == "linf" else 2
@@ -46,23 +44,22 @@ class SurFree(object):
         self.load_random_class_image = load_random_class_image
 
         # Attack Parameters
-        self._steps = steps
         self._BS_gamma = BS_gamma
         self._theta_max = theta_max
-        # self._max_queries = max_queries
         self._BS_max_iteration = BS_max_iteration
-        self._steps = steps
-        self.clip = clip
         self.T = T
         self.rho = rho
+        assert self.rho <= 1 and self.rho > 0
+        self.n_ortho = n_ortho
+        self._directions_ortho = {}
+        self._nqueries = []
 
+        # Add or remove some parts of the attack
         self.with_alpha_line_search = with_alpha_line_search
         self.with_distance_line_search = with_distance_line_search
         self.with_interpolation = with_interpolation
-        self.final_line_search = final_line_search
-        self.quantification = quantification
-        self._alpha_history = {}
-        self.n_ortho = n_ortho
+        if self.with_interpolation and not self.with_distance_line_search:
+            Warning("It's higly recommended to use Interpolation with distance line search.")
 
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
@@ -143,64 +140,39 @@ class SurFree(object):
         pred = logit.argmax(dim=1)
         correct = pred.eq(true_labels).float()
         for i in range(len(correct)):
-            if correct[i]:
-                if target_images is None:
-                    initialization[i], num_evals[i] = self.initialize(samples[i], None, true_labels[i], None)
-                else:
-                    initialization[i], num_evals[i] = self.initialize(samples[i], target_images[i], true_labels[i], target_labels[i])
+            if target_images is None:
+                initialization[i], num_evals[i] = self.initialize(samples[i], None, true_labels[i], None)
+            else:
+                initialization[i], num_evals[i] = self.initialize(samples[i], target_images[i], true_labels[i], target_labels[i])
 
         return initialization, num_evals
 
-    def distance(self, a, b):
-        return (a - b).flatten(1).norm(dim=1)
-
-    def _quantify(self, x):
-        return (x * 255).round() / 255
-
-    def get_nqueries(self):
-        return {i: n for i, n in enumerate(self._nqueries)}
-
     def _is_adversarial(self, perturbed):
-        # Faster than true_is_adversarial in batch  (time gain 20%)
         # Count the queries made for each image
         # Count if the vector is different from the null vector
-        if self.quantification:
-            perturbed = self._quantify(perturbed)
-        if self.target_labels is not None:
-            is_advs = self.model(perturbed).argmax(1) == self.target_labels
-        else:
-            is_advs = self.model(perturbed).argmax(1) != self.label
-
-        indexes = []
         for i, p in enumerate(perturbed):
-            if not (p == 0).all() and not self._images_finished[i]:
+            if not (p == 0).all():
                 self._nqueries[i] += 1
-                indexes.append(i)
 
-        # "+" in the bool type of torch.Tensor is the bitwise-or operator.
-        self._images_finished = self._nqueries > self.maximum_queries
-        return is_advs
+        if self.target_labels is not None:
+            return self.model(perturbed).argmax(1) == self.target_labels
+        else:
+            return self.model(perturbed).argmax(1) != self.true_labels
 
-    def _get_candidates(self):
+    def _get_candidates(self, originals, best_advs):
         """
-        Find the lowest epsilon to misclassified x following the direction: q of class 1 / q + torchs*direction of class 0
+        Find the lowest epsilon to misclassified x following the direction: q of class 1 / q + eps*direction of class 0
         """
-        epsilon = torch.zeros(len(self.X)).to(self.X.device)
-        direction_2 = torch.zeros_like(self.X)
-        distances = (self.X - self.best_advs).flatten(1).norm(dim=1)
-        while (epsilon == 0).any():
-            epsilon = torch.where(self._images_finished, torch.ones_like(epsilon), epsilon)
-            new_directions = self._basis.get_vector(self._directions_ortho,
-                                                    indexes=[i for i, eps in enumerate(epsilon) if eps == 0])
-
+        epsilons = torch.zeros(len(originals)).to(originals.device)
+        direction_2 = torch.zeros_like(originals)
+        while (epsilons == 0).any():
             direction_2 = torch.where(
-                atleast_kdim(epsilon == 0, len(direction_2.shape)),
-                new_directions,
+                atleast_kdim(epsilons == 0, direction_2.ndim),
+                self._basis.get_vector(self._directions_ortho),
                 direction_2
             )
-            for i, eps_i in enumerate(epsilon):
-                if i not in self._alpha_history:
-                    self._alpha_history[i] = []
+
+            for i, eps_i in enumerate(epsilons):
                 if eps_i == 0:
                     # Concatenate the first directions and the last directions generated
                     self._directions_ortho[i] = torch.cat((
@@ -208,111 +180,70 @@ class SurFree(object):
                         self._directions_ortho[i][1 + len(self._directions_ortho[i]) - self.n_ortho:],
                         direction_2[i].unsqueeze(0)), dim=0)
 
-                    self._alpha_history[i].append([
-                        len(self._history[i]),
-                        float(self.theta_max[i].cpu()),
-                        float(distances[i].cpu())
-                    ])
-
-            function_evolution = self._get_evolution_function(direction_2)
-
-            new_epsilons = self._get_best_theta(function_evolution, epsilon == 0)
-
-            for i, eps_i in enumerate(epsilon):
-                if eps_i == 0:
-                    if new_epsilons[i] == 0:
-                        self._alpha_history[i][-1] += [False]
-                    else:
-                        self._alpha_history[i][-1] += [True]
+            function_evolution = self._get_evolution_function(originals, best_advs, direction_2)
+            new_epsilons = self._get_best_theta(originals, function_evolution, epsilons)
 
             self.theta_max = torch.where(new_epsilons == 0, self.theta_max * self.rho, self.theta_max)
-            self.theta_max = torch.where((new_epsilons != 0) * (epsilon == 0), self.theta_max / self.rho,
-                                         self.theta_max)
-            epsilon = torch.where((new_epsilons != 0) * (epsilon == 0), new_epsilons, epsilon)
+            self.theta_max = torch.where((new_epsilons != 0) * (epsilons == 0), self.theta_max / self.rho, self.theta_max)
+            epsilons = new_epsilons
 
-        function_evolution = self._get_evolution_function(direction_2)
-        if self.with_alpha_line_search:
-            epsilon = self._alpha_binary_search(function_evolution, epsilon)
-
-        epsilon = epsilon.unsqueeze(0)
+        epsilons = epsilons.unsqueeze(0)
         if self.with_interpolation:
-            epsilon = torch.cat((epsilon, epsilon / 2), dim=0)
+            epsilons = torch.cat((epsilons, epsilons[0] / 2), dim=0)
 
-        candidates = torch.cat([function_evolution(eps).unsqueeze(0) for eps in epsilon], dim=0)
+        candidates = torch.cat([function_evolution(eps).unsqueeze(0) for eps in epsilons], dim=0)
 
         if self.with_interpolation:
-            d = (self.best_advs - self.X).flatten(1).norm(dim=1)
-            delta = (self._binary_search(candidates[1], boost=True) - self.X).flatten(1).norm(dim=1)
-            theta_star = epsilon[0]
+            d = self.distance(best_advs, originals)
+            delta = self.distance(self._binary_search(originals, candidates[1], boost=True), originals)
+            theta_star = epsilons[0]
 
-            num = theta_star * (4 * delta - d * (torch.cos(theta_star.raw) + 3))
-            den = 4 * (2 * delta - d * (torch.cos(theta_star.raw) + 1))
+            num = theta_star * (4 * delta - d * (torch.cos(theta_star) + 3))
+            den = 4 * (2 * delta - d * (torch.cos(theta_star) + 1))
 
             theta_hat = num / den
             q_interp = function_evolution(theta_hat)
-            candidates = torch.cat((candidates, q_interp.unsqueeze(0)), dim=0)
+            if self.with_distance_line_search:
+                q_interp = self._binary_search(originals, q_interp, boost=True)
+            candidates = torch.cat((candidates, q_interp.unqueeze(0)), dim=0)
 
-        if self.with_distance_line_search:
-            for i, candidate in enumerate(candidates):
-                candidates[i] = self._binary_search(candidate, boost=True)
         return candidates
 
-    def _get_evolution_function(self, direction_2):
-        distances = (self.best_advs - self.X).flatten(1).norm(dim=1, keepdim=True)
-        direction_1 = (self.best_advs - self.X).flatten(1) / distances
-        direction_1 = direction_1.reshape(self.X.shape)
+    def _get_evolution_function(self, originals, best_advs, direction_2):
+        distances = self.distance(best_advs, originals)
+        direction_1 = (best_advs - originals).flatten(1) / distances.reshape((-1, 1))
+        direction_1 = direction_1.reshape(originals.shape)
+        return lambda theta: (
+                    originals + self._add_step_in_circular_direction(direction_1, direction_2, distances, theta)).clip(
+            0, 1)
 
-        if self.clip:
-            return lambda theta: (
-                        self.X + self._add_step_in_circular_direction(direction_1, direction_2, distances, theta)).clip(
-                0, 1)
-        else:
-            return lambda theta: (
-                        self.X + self._add_step_in_circular_direction(direction_1, direction_2, distances, theta))
-
-    def _add_step_in_circular_direction(self, direction1: torch.Tensor, direction2: torch.Tensor, r: torch.Tensor,
-                                        degree: torch.Tensor) -> torch.Tensor:
-        degree = atleast_kdim(degree, len(direction1.shape))
-        r = atleast_kdim(r, len(direction1.shape))
-        results = torch.cos(degree * np.pi / 180) * direction1 + torch.sin(degree * np.pi / 180) * direction2
-        results = results * r * torch.cos(degree * np.pi / 180)
-        return results
-
-    def _get_best_theta(self, function_evolution, mask):
-        coefficients = torch.zeros(2 * self.T).to(self.X.device)
+    def _get_best_theta(self, originals, function_evolution, best_params):
+        coefficients = torch.zeros(2 * self.T)
         for i in range(0, self.T):
             coefficients[2 * i] = 1 - (i / self.T)
             coefficients[2 * i + 1] = - coefficients[2 * i]
 
-        best_params = torch.zeros_like(self.theta_max)
         for i, coeff in enumerate(coefficients):
-
             params = coeff * self.theta_max
             x_evol = function_evolution(params)
-            x = torch.where(
-                atleast_kdim((best_params == 0) * mask, len(self.X.shape)),
-                x_evol,
-                torch.zeros_like(self.X))
-
+            x = torch.where(atleast_kdim(best_params == 0, len(originals.shape)), x_evol, torch.zeros_like(originals))
             is_advs = self._is_adversarial(x)
             best_params = torch.where(
-                (best_params == 0) * mask * is_advs,
+                torch.logical_and(best_params == 0, is_advs),
                 params,
                 best_params
             )
-            if (best_params != 0).all():
-                break
+        if (best_params == 0).all() or not self.with_alpha_line_search:
+            return best_params
+        else:
+            return self._alpha_binary_search(function_evolution, best_params, best_params != 0)
 
-        return best_params
-
-    def _alpha_binary_search(self, function_evolution, lower):
+    def _alpha_binary_search(self, function_evolution, lower, mask):
         # Upper --> not adversarial /  Lower --> adversarial
-        mask = self._images_finished.logical_not()
 
-        def get_alpha(theta: torch.Tensor) -> torch.Tensor:
+        def get_alpha(theta):
             return 1 - torch.cos(theta * np.pi / 180)
 
-        lower = torch.where(mask, lower, torch.zeros_like(lower))
         check_opposite = lower > 0  # if param < 0: abs(param) doesn't work
 
         # Get the upper range
@@ -323,192 +254,154 @@ class SurFree(object):
         )
 
         mask_upper = torch.logical_and(upper == 0, mask)
-        max_angle = torch.ones_like(lower) * 180
         while mask_upper.any():
             # Find the correct lower/upper range
-            # if True in mask_upper, the range haven't been found
-            new_upper = lower + torch.sign(lower) * self.theta_max / self.T
-            new_upper = torch.where(new_upper < max_angle, new_upper, max_angle)
-            new_upper_x = function_evolution(new_upper)
-            x = torch.where(
-                atleast_kdim(mask_upper, len(self.X.shape)),
-                new_upper_x,
-                torch.zeros_like(self.X)
+            upper = torch.where(
+                mask_upper,
+                lower + torch.sign(lower) * self.theta_max / self.T,
+                upper
             )
+            x = function_evolution(upper)
 
-            is_advs = self._is_adversarial(x)
-            lower = torch.where(torch.logical_and(mask_upper, is_advs), new_upper, lower)
-            upper = torch.where(torch.logical_and(mask_upper, is_advs.logical_not()), new_upper, upper)
-            mask_upper = mask_upper * is_advs * torch.logical_not(self._images_finished)
-
-        lower = torch.where(self._images_finished, torch.zeros_like(lower), lower)
-        upper = torch.where(self._images_finished, torch.zeros_like(upper), upper)
+            mask_upper = mask_upper * self._is_adversarial(x) * (self._nqueries < self.maximum_queries)
+            lower = torch.where(mask_upper, upper, lower)
 
         step = 0
-        over_gamma = abs(get_alpha(upper) - get_alpha(lower)) > self._BS_gamma
-        while step < self._BS_max_iteration and over_gamma.any():
+        while step < self._BS_max_iteration and (abs(get_alpha(upper) - get_alpha(lower)) > self._BS_gamma).any():
             mid_bound = (upper + lower) / 2
-            mid = torch.where(
-                atleast_kdim(torch.logical_and(mid_bound != 0, over_gamma), len(self.X.shape)),
-                function_evolution(mid_bound),
-                torch.zeros_like(self.X)
-            )
+            mid = function_evolution(mid_bound)
             is_adv = self._is_adversarial(mid)
 
             mid_opp = torch.where(
-                atleast_kdim(torch.logical_and(check_opposite, over_gamma), len(mid.shape)),
+                atleast_kdim(check_opposite, mid.ndim),
                 function_evolution(-mid_bound),
                 torch.zeros_like(mid)
             )
             is_adv_opp = self._is_adversarial(mid_opp)
 
-            lower = torch.where(mask * over_gamma * is_adv, mid_bound, lower)
-            lower = torch.where(mask * over_gamma * is_adv.logical_not() * check_opposite * is_adv_opp, -mid_bound,
-                                lower)
-            upper = torch.where(mask * over_gamma * is_adv.logical_not() * check_opposite * is_adv_opp, - upper, upper)
-            upper = torch.where(mask * over_gamma * (abs(lower) != abs(mid_bound)), mid_bound, upper)
+            lower = torch.where(mask * is_adv, mid_bound, lower)
+            lower = torch.where(mask * is_adv.logical_not() * check_opposite * is_adv_opp, -mid_bound, lower)
+            upper = torch.where(mask * is_adv.logical_not() * check_opposite * is_adv_opp, - upper, upper)
+            upper = torch.where(mask * (abs(lower) != abs(mid_bound)), mid_bound, upper)
 
-            check_opposite = mask * over_gamma * check_opposite * is_adv_opp * (lower > 0)
-            over_gamma = abs(get_alpha(upper) - get_alpha(lower)) > self._BS_gamma
+            check_opposite = mask * check_opposite * is_adv_opp * (lower > 0)
 
             step += 1
-
         return lower
 
-    def _binary_search(self, perturbed: torch.Tensor, boost=False) -> torch.Tensor:
+    def _binary_search(self, originals, perturbed, boost=False):
         # Choose upper thresholds in binary search based on constraint.
         highs = torch.ones(len(perturbed)).to(perturbed.device)
         d = np.prod(perturbed.shape[1:])
         thresholds = self._BS_gamma / (d * math.sqrt(d))
         lows = torch.zeros_like(highs)
-        mask = atleast_kdim(self._images_finished, len(perturbed.shape))
 
         # Boost Binary search
         if boost:
-            boost_vec = torch.where(mask, torch.zeros_like(perturbed), 0.2 * self.X + 0.8 * perturbed)
+            boost_vec = 0.1 * originals + 0.9 * perturbed
             is_advs = self._is_adversarial(boost_vec)
-            is_advs = atleast_kdim(is_advs, len(self.X.shape))
-            originals = torch.where(is_advs.logical_not(), boost_vec, self.X)
+            is_advs = atleast_kdim(is_advs, originals.ndim)
+            originals = torch.where(is_advs.logical_not(), boost_vec, originals)
             perturbed = torch.where(is_advs, boost_vec, perturbed)
-        else:
-            originals = self.X
 
         # use this variable to check when mids stays constant and the BS has converged
+        old_mids = highs
         iteration = 0
         while torch.any(highs - lows > thresholds) and iteration < self._BS_max_iteration:
             iteration += 1
             mids = (lows + highs) / 2
-            epsilon = atleast_kdim(mids, len(originals.shape))
-
-            mids_perturbed = torch.where(
-                mask,
-                torch.zeros_like(perturbed),
-                (1.0 - epsilon) * originals + epsilon * perturbed)
-
+            mids_perturbed = self._project(originals, perturbed, mids)
             is_adversarial_ = self._is_adversarial(mids_perturbed)
 
             highs = torch.where(is_adversarial_, mids, highs)
             lows = torch.where(is_adversarial_, lows, mids)
 
-        epsilon = atleast_kdim(highs, len(originals.shape))
-        return torch.where(mask, perturbed, (1.0 - epsilon) * originals + epsilon * perturbed)
+            # check of there is no more progress due to numerical imprecision
+            reached_numerical_precision = (old_mids == mids).all()
+            old_mids = mids
+            if reached_numerical_precision:
+                break
+
+        results = self._project(originals, perturbed, highs)
+        return results
+
+    def _project(self, originals, perturbed, epsilons):
+        epsilons = atleast_kdim(epsilons, originals.ndim)
+        return (1.0 - epsilons) * originals + epsilons * perturbed
+
+    def _add_step_in_circular_direction(self, direction1, direction2, r, degree):
+        degree = atleast_kdim(degree, len(direction1.shape))
+        r = atleast_kdim(r, len(direction1.shape))
+        results = torch.cos(degree * np.pi / 180) * direction1 + torch.sin(degree * np.pi / 180) * direction2
+        results = results * r * torch.cos(degree * np.pi / 180)
+        return results
+
+    def distance(self, a, b):
+        return (a - b).flatten(1).norm(dim=1)
 
     def attack(self, batch_index, images, target_images, true_labels, target_labels, **kwargs):
         images = images.cuda()
-        true_labels = true_labels.cuda()
-        self._nqueries = torch.zeros(len(images)).to(images.device)
-        self._history  = {i: [] for i in range(len(images))}
+        batch_size = images.size(0)
+        self.true_labels = true_labels.cuda()
+        self.target_images = target_images if target_labels is None else target_images.cuda()
+        self.target_labels = target_labels if target_labels is None else target_labels.cuda()
+
+        self._nqueries = torch.zeros(len(images)).to(images.device)#{i: 0 for i in range(len(originals))}
         self.theta_max = torch.ones(len(images)).to(images.device) * self._theta_max
 
-        self.label = true_labels
-        self.X = images
-        batch_size = images.size(0)
-
-        # Check if X are already adversarials.
-        if target_labels is None:
-            self.target_labels = target_labels
-        else:
-            target_labels = target_labels.cuda()
-            target_images = target_images.cuda()
-            self.target_labels = target_labels
-
-        # The following code will prevent misclassified images from being attacked,
-        # thereby preventing DCT.py's torch.fft from causing errors。
-        self._images_finished = model(images).argmax(1) != true_labels
-        print("Already advs: ", self._images_finished.cpu().tolist())
-        self._nqueries[self._images_finished] = self.maximum_queries + 1
-
-        # query = torch.zeros_like(true_labels).float()
         success_stop_queries = self._nqueries.clone()  # stop query count once the distortion < epsilon
         batch_image_positions = np.arange(batch_index * self.batch_size,
                                           min((batch_index + 1) * self.batch_size, self.total_images)).tolist()
 
-        self.best_advs, num_evals = self.batch_initialize(self.X, target_images, true_labels, target_labels)
-        self.best_advs = torch.where(atleast_kdim(self._images_finished, len(images.shape)), images, self.best_advs)
-        self.best_advs = self._binary_search(self.best_advs, boost=True)
+        # Get Starting Point
+        best_advs, num_evals = self.batch_initialize(images, self.target_images, self.true_labels, self.target_labels)
         self._nqueries += num_evals
-        # query = self._nqueries
-        dist = torch.norm((self.best_advs - images).view(batch_size, -1), self.ord, 1)
+        # best_advs = self._binary_search(images, best_advs, boost=True)
+
+        dist = torch.norm((best_advs - images).view(batch_size, -1), self.ord, 1)
         working_ind = torch.nonzero(dist > self.epsilon).view(-1)
         success_stop_queries[working_ind] = self._nqueries[working_ind]
         for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
             self.distortion_all[index_over_all_images][self._nqueries[inside_batch_index].item()] = dist[
                 inside_batch_index].item()
 
-        self.best_advs = torch.where(atleast_kdim(self._images_finished, len(images.shape)), images, self.best_advs)
-
+        # assert self._is_adversarial(best_advs).all()
         # Initialize the direction orthogonalized with the first direction
-        fd = self.best_advs - self.X
-        self._directions_ortho = {i: v.unsqueeze(0) / v.norm() for i, v in enumerate(fd)}
+        fd = best_advs - images
+        norm = torch.norm(fd.view(batch_size, -1), self.ord, 1)
+        fd = fd / atleast_kdim(norm, len(fd.shape))
+        self._directions_ortho = {i: v.unsqueeze(0) for i, v in enumerate(fd)}
 
         # Load Basis
-        self._basis = Basis(self.X, **kwargs["basis_params"]) if "basis_params" in kwargs else Basis(self.X)
-
-        while not self._images_finished.all():
+        self._basis = Basis(images, **kwargs["basis_params"]) if "basis_params" in kwargs else Basis(images)
+        while not all(v > self.maximum_queries for v in self._nqueries):
             # Get candidates. Shape: (n_candidates, batch_size, image_size)
-            candidates = self._get_candidates()
+            candidates = self._get_candidates(images, best_advs)
             candidates = candidates.transpose(1, 0)
 
-            best_candidates = torch.zeros_like(self.best_advs)
-            for i, o in enumerate(self.X):
+            best_candidates = torch.zeros_like(best_advs)
+            for i, o in enumerate(images):
                 o_repeated = torch.cat([o.unsqueeze(0)] * len(candidates[i]), dim=0)
                 index = self.distance(o_repeated, candidates[i]).argmax()
                 best_candidates[i] = candidates[i][index]
 
-            is_success = self.distance(best_candidates, self.X) < self.distance(self.best_advs, self.X)
-            self.best_advs = torch.where(
-                atleast_kdim(is_success * self._images_finished.logical_not(), len(best_candidates.shape)),
-                best_candidates,
-                self.best_advs
-            )
+            is_success = self.distance(best_candidates, images) < self.distance(best_advs, images)
+            best_advs = torch.where(atleast_kdim(is_success, best_candidates.ndim), best_candidates, best_advs)
 
-            # query = self._nqueries
-            dist = torch.norm((self.best_advs - images).view(batch_size, -1), self.ord, 1)
+            dist = torch.norm((best_advs - images).view(batch_size, -1), self.ord, 1)
             working_ind = torch.nonzero(dist > self.epsilon).view(-1)
             success_stop_queries[working_ind] = self._nqueries[working_ind]
             for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
                 self.distortion_all[index_over_all_images][self._nqueries[inside_batch_index].item()] = dist[
                     inside_batch_index].item()
 
-            log.info('Attacking image {} - {} / {}, query {}, distortion {}'.format(
-                batch_index * args.batch_size, (batch_index + 1) * args.batch_size, self.total_images, self._nqueries, dist))
-
-            # if self._images_finished.all():
-            #     print("Max queries attained for all the images.")
-            #     break
-
-            # log.info('{}-th image, {}: distortion {:.4f}, query: {}'.format(batch_index+1, self.norm, dist.item(), int(query[0].item())))
-            # if dist.item() < 1e-4:  # 发现攻击jpeg时候卡住，故意加上这句话
-            #     break
-        if self.final_line_search:
-            self.best_advs = self._binary_search(self.best_advs,  boost=True)
-
-        #print("Final adversarial", self._criterion_is_adversarial(self.best_advs).raw.cpu().tolist())
-        if self.quantification:
-            self.best_advs = self._quantify(self.best_advs)
+            log.info('Attacking image {} - {} / {}, distortion {}, query {}'.format(
+                batch_index * args.batch_size, (batch_index + 1) * args.batch_size, self.total_images,
+                dist.cpu().numpy(), self._nqueries.cpu().numpy()))
 
         success_stop_queries = torch.clamp(success_stop_queries, 0, self.maximum_queries)
-        return self.best_advs, self._nqueries, success_stop_queries, dist, (dist <= self.epsilon)
+        return best_advs, self._nqueries, success_stop_queries, dist, (dist <= self.epsilon)
+
 
     def attack_all_images(self, args, arch_name, result_dump_path, config):
         if args.targeted and args.target_type == "load_random":
@@ -602,7 +495,7 @@ class SurFree(object):
 
 
 class Basis:
-    def __init__(self, originals: torch.Tensor, random_noise: str = "normal", basis_type: str = "dct", **kwargs):
+    def __init__(self, originals, random_noise: str = "normal", basis_type: str = "dct", **kwargs):
         """
         Args:
             random_noise (str, optional): When basis is created, a noise will be added.This noise can be normal or
@@ -613,147 +506,184 @@ class Basis:
                     * Random: No parameters
                     * DCT:
                             * function (tanh / constant / linear): function applied on the dct
+                            * alpha
                             * beta
-                            * gamma
-                            * frequence_range: tuple of 2 float
+                            * lambda
+                            * frequence_range: integers or float
+                            * min_dct_value
                             * dct_type: 8x8 or full
         """
-        self.X = originals
-        self._f_dct2 = lambda a: torch_dct.dct_2d(a)
-        self._f_idct2 = lambda a: torch_dct.idct_2d(a)
-
+        self._originals = originals
+        self._direction_shape = originals.shape[1:]
         self.basis_type = basis_type
-        self._function_generation = getattr(self, "_get_vector_" + self.basis_type)
+
         self._load_params(**kwargs)
 
         assert random_noise in ["normal", "uniform"]
         self.random_noise = random_noise
 
-    def get_vector(self, ortho_with=None, indexes=None) -> torch.Tensor:
-        # random.seed()
-        if indexes is None:
-            indexes = range(len(self.X))
+    def get_vector(self, ortho_with = None, bounds = (0, 1)):
         if ortho_with is None:
-            ortho_with = {i: None for i in indexes}
+            ortho_with = {i: None for i in range(len(self._originals))}
 
-        r: torch.Tensor = self._function_generation(indexes)
         vectors = [
-            self._gram_schmidt(r[i], ortho_with[i]) if ortho_with[i] is not None else r[i]
-            for i in range(len(self.X))
+            self.get_vector_i(i, ortho_with[i], bounds)
+            for i in range(len(self._originals))
         ]
-        vectors = torch.cat([v.unsqueeze(0) for v in vectors], dim=0)
-        norms = vectors.flatten(1).norm(dim=1)
-        vectors /= atleast_kdim(norms, len(vectors.shape))
-        return vectors
+        return torch.cat(vectors, dim=0)
 
-    def _gram_schmidt(self, v: torch.Tensor, ortho_with: torch.Tensor):
-        v_repeated = torch.cat([v.unsqueeze(0)] * len(ortho_with), dim=0)
+    def get_vector_i(self, index, ortho_with = None, bounds = (0, 1)):
+        r: torch.Tensor = getattr(self, "_get_vector_i_" + self.basis_type)(index, bounds).to(self._originals.device)
+        if ortho_with is not None:
+            r_repeated = torch.cat([r.unsqueeze(0)] * len(ortho_with), dim=0).to(self._originals.device)
 
-        # inner product
-        gs_coeff = (ortho_with * v_repeated).flatten(1).sum(1)
-        proj = atleast_kdim(gs_coeff, len(ortho_with.shape)) * ortho_with
-        v = v - proj.sum(0)
-        return v
+            # inner product
+            gs_coeff = (ortho_with * r_repeated).flatten(1).sum(1)
+            proj = atleast_kdim(gs_coeff, len(ortho_with.shape)) * ortho_with
+            r = r - proj.sum(0)
+        r = r.unsqueeze(0)
+        return r / atleast_kdim(r.flatten(1).norm(dim=1), len(r.shape))
 
-    def _get_vector_dct(self, indexes) -> torch.Tensor:
-        probs = self.X[indexes].uniform_(0, 3).long() - 1
-        r_np = self.dcts[indexes] * probs
-        r_np = self._inverse_dct(r_np)
-        new_v = torch.zeros_like(self.X)
-        new_v[indexes] = (r_np + self.X[indexes].normal_(std=self._beta))
-        return new_v
+    def _get_vector_i_dct(self, index, bounds):
+        r_np = np.zeros(self._direction_shape)
+        for channel, dct_channel in enumerate(self.dcts[index]):
+            probs = np.random.randint(-2, 1, dct_channel.shape) + 1
+            r_np[channel] = dct_channel * probs
+        r_np = idct2_full(r_np) + self._beta * (2 * np.random.rand(*r_np.shape) - 1)
+        return torch.from_numpy(r_np.astype("float32"))
 
-    def _get_vector_random(self, indexes) -> torch.Tensor:
-        r = torch.zeros_like(self.X)
-        r = getattr(r, self.random_noise + "_")(0, 1)
-        new_v = torch.zeros_like(self.X)
-        new_v[indexes] = r[indexes]
-        return new_v
+    def _get_vector_i_random(self, index, bounds):
+        r = torch.zeros_like(self._originals)
+        r = getattr(torch, self.random_noise)(r, r.shape, *bounds)
+        return r
 
     def _load_params(
             self,
-            beta: float = 0,
-            frequence_range=(0, 0.5),
-            dct_type: str = "full",
-            function: str = "tanh",
-            tanh_gamma: float = 1
+            beta = 0,
+            frequence_range = (0, 1),
+            dct_type = "full",
+            function = "tanh",
+            lambda_ = 1
     ) -> None:
-        if not hasattr(self, "_get_vector_" + self.basis_type):
+        if not hasattr(self, "_get_vector_i_" + self.basis_type):
             raise ValueError("Basis {} doesn't exist.".format(self.basis_type))
 
         if self.basis_type == "dct":
             self._beta = beta
             if dct_type == "8x8":
                 mask_size = (8, 8)
-                dct_function = self.dct2_8_8
-                self._inverse_dct = self.idct2_8_8
+                dct_function = dct2_8_8
             elif dct_type == "full":
-                mask_size = self.X.shape[-2:]
-                dct_function = lambda x, mask: self._f_dct2(x) * mask
-                self._inverse_dct = self._f_idct2
+                mask_size = (self._direction_shape[-2], self._direction_shape[-1])
+                dct_function = dct2_full
             else:
                 raise ValueError("DCT {} doesn't exist.".format(dct_type))
 
-            dct_mask = self.get_zig_zag_mask(frequence_range, mask_size).to(self.X.device)
-            self.dcts = dct_function(self.X, dct_mask)
+            dct_mask = get_zig_zag_mask(frequence_range, mask_size)
+            self.dcts = np.array([dct_function(np.array(image.cpu()), dct_mask) for image in self._originals])
 
-            def get_function(function: str):
+            def get_function(function, lambda_):
                 if function == "tanh":
-                    return lambda x: torch.tanh(tanh_gamma * x)
+                    return lambda x: np.tanh(lambda_ * x)
                 elif function == "identity":
                     return lambda x: x
                 elif function == "constant":
-                    return lambda x: (abs(x) > 0).long()
+                    return lambda x: (abs(x) > 0).astype(int)
                 else:
                     raise ValueError("Function given for DCT is incorrect.")
 
-            self.dcts = get_function(function)(self.dcts)
+            self.dcts = get_function(function, lambda_)(self.dcts)
 
-    def get_zig_zag_mask(self, frequence_range, mask_shape=(8, 8)):
-        total_component = mask_shape[0] * mask_shape[1]
-        n_coeff_kept = int(total_component * min(1, frequence_range[1]))
-        n_coeff_to_start = int(total_component * max(0, frequence_range[0]))
 
-        imsize = self.X.shape
-        mask_shape = (imsize[0], imsize[1], mask_shape[0], mask_shape[1])
-        mask = torch.zeros(mask_shape)
-        s = 0
+def dct2(a):
+    return fft.dct(fft.dct(a, axis=0), axis=1)
 
-        while n_coeff_kept > 0:
-            for i in range(min(s + 1, mask_shape[2])):
-                for j in range(min(s + 1, mask_shape[3])):
-                    if i + j == s:
-                        if n_coeff_to_start > 0:
-                            n_coeff_to_start -= 1
-                            continue
 
-                        if s % 2:
-                            mask[:, :, i, j] = 1
-                        else:
-                            mask[:, :, j, i] = 1
-                        n_coeff_kept -= 1
-                        if n_coeff_kept == 0:
-                            return mask
-            s += 1
-        return mask
+def idct2(a):
+    return fft.idct(fft.idct(a, axis=0), axis=1)
 
-    def dct2_8_8(self, image: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        assert mask.shape[-2:] == (8, 8)
 
-        imsize = image.shape
-        dct = torch.zeros_like(image)
-        for i in np.r_[:imsize[2]:8]:
-            for j in np.r_[:imsize[3]:8]:
-                dct_i_j = self._f_dct2(image[:, :, i:(i + 8), j:(j + 8)])
-                dct[:, :, i:(i + 8), j:(j + 8)] = dct_i_j * mask  # [:dct_i_j.shape[0], :dct_i_j.shape[1]]
-        return dct
+def dct2_8_8(image, mask = None):
+    if mask is None:
+        mask = np.ones((8, 8))
+    if mask.shape != (8, 8):
+        raise ValueError("Mask have to be with a size of (8, 8)")
 
-    def idct2_8_8(self, dct: torch.Tensor) -> torch.Tensor:
-        im_dct = torch.zeros_like(dct)
-        for i in np.r_[:dct.shape[2]:8]:
-            for j in np.r_[:dct.shape[3]:8]:
-                im_dct[:, :, i:(i + 8), j:(j + 8)] = self._f_idct2(dct[:, :, i:(i + 8), j:(j + 8)])
-        return im_dct
+    imsize = image.shape
+    dct = np.zeros_like(image)
+
+    for channel in range(imsize[0]):
+        for i in np.r_[:imsize[1]:8]:
+            for j in np.r_[:imsize[2]:8]:
+                dct_i_j = dct2(image[channel, i:(i + 8), j:(j + 8)])
+                dct[channel, i:(i + 8), j:(j + 8)] = dct_i_j * mask[:dct_i_j.shape[0], :dct_i_j.shape[1]]
+    return dct
+
+
+def idct2_8_8(dct):
+    im_dct = np.zeros(dct.shape)
+
+    for channel in range(dct.shape[0]):
+        for i in np.r_[:dct.shape[1]:8]:
+            for j in np.r_[:dct.shape[2]:8]:
+                im_dct[channel, i:(i + 8), j:(j + 8)] = idct2(dct[channel, i:(i + 8), j:(j + 8)])
+    return im_dct
+
+
+def dct2_full(image, mask = None):
+    if mask is None:
+        mask = np.ones(image.shape[-2:])
+
+    imsize = image.shape
+    dct = np.zeros(imsize)
+
+    for channel in range(imsize[0]):
+        dct_i_j = dct2(image[channel])
+        dct[channel] = dct_i_j * mask
+    return dct
+
+
+def idct2_full(dct):
+    im_dct = np.zeros(dct.shape)
+
+    for channel in range(dct.shape[0]):
+        im_dct[channel] = idct2(dct[channel])
+    return im_dct
+
+
+def get_zig_zag_mask(frequence_range, mask_shape = (8, 8)):
+    mask = np.zeros(mask_shape)
+    s = 0
+    total_component = sum(mask.flatten().shape)
+
+    if frequence_range[1] <= 1:
+        n_coeff = int(total_component * frequence_range[1])
+    else:
+        n_coeff = int(frequence_range[1])
+
+    if frequence_range[0] <= 1:
+        min_coeff = int(total_component * frequence_range[0])
+    else:
+        min_coeff = int(frequence_range[0])
+
+    while n_coeff > 0:
+        for i in range(min(s + 1, mask_shape[0])):
+            for j in range(min(s + 1, mask_shape[1])):
+                if i + j == s:
+                    if min_coeff > 0:
+                        min_coeff -= 1
+                        continue
+
+                    if s % 2:
+                        mask[i, j] = 1
+                    else:
+                        mask[j, i] = 1
+                    n_coeff -= 1
+                    if n_coeff == 0:
+                        return mask
+        s += 1
+    return mask
+
 
 def get_exp_dir_name(dataset,  norm, targeted, target_type, args):
     if target_type == "load_random":
@@ -797,7 +727,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp-dir', default='logs', type=str, help='directory to save results and logs')
     parser.add_argument('--seed', default=0, type=int, help='random seed')
     parser.add_argument('--attack_defense',action="store_true")
-    parser.add_argument('--defense-model',type=str, default=None)
+    parser.add_argument('--defense_model',type=str, default=None)
     parser.add_argument('--defense_norm',type=str,choices=["l2","linf"],default='linf')
     parser.add_argument('--defense_eps',type=str,default="")
     parser.add_argument('--max-queries',type=int, default=10000)
@@ -826,7 +756,7 @@ if __name__ == "__main__":
     if args.attack_defense and args.defense_model == "adv_train_on_ImageNet":
         args.max_queries = 20000
     args.exp_dir = osp.join(args.exp_dir,
-                            get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  # 随机产生一个目录用于实验
+                            get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))
     os.makedirs(args.exp_dir, exist_ok=True)
 
     if args.all_archs:
@@ -858,13 +788,6 @@ if __name__ == "__main__":
     else:
         assert args.arch is not None
         archs = [args.arch]
-
-    # if args.json_config is not None:
-    #     if not os.path.exists(args.config_path):
-    #         raise ValueError("{} doesn't exist.".format(args.config_path))
-    #     config = json.load(open(args.config_path, "r"))
-    # else:
-    #     config = {"init": {}, "run": {"epsilons": None}}
 
     args.arch = ", ".join(archs)
     log.info('Command line is: {}'.format(' '.join(sys.argv)))

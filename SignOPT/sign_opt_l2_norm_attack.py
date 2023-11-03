@@ -9,11 +9,11 @@ import glog as log
 from config import CLASS_NUM, IMAGE_DATA_ROOT
 from dataset.dataset_loader_maker import DataLoaderMaker
 from dataset.target_class_dataset import ImageNetDataset, CIFAR10Dataset, CIFAR100Dataset, TinyImageNetDataset
-
+from utils.dataset_toolkit import select_random_image_of_target_class
 
 class SignOptL2Norm(object):
     def __init__(self, model, dataset, epsilon, targeted, batch_size=1, k=200, alpha=0.2, beta=0.001, iterations=1000,
-                 maximum_queries=10000, svm=False, momentum=0.0, tot=None, best_initial_target_sample=False):
+                 maximum_queries=10000, svm=False, momentum=0.0, tol=None, best_initial_target_sample=False):
         self.model = model
         self.k = k
         self.alpha = alpha
@@ -22,7 +22,7 @@ class SignOptL2Norm(object):
         self.maximum_queries = maximum_queries
         self.svm = svm
         self.momentum = momentum
-        self.epsilon  = epsilon
+        self.epsilon = epsilon
         self.targeted = targeted
         self.best_initial_target_sample = best_initial_target_sample
         self.dataset = dataset
@@ -37,7 +37,7 @@ class SignOptL2Norm(object):
         self.success_all = torch.zeros_like(self.query_all)
         self.success_query_all = torch.zeros_like(self.query_all)
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
-        self.tot = tot
+        self.tol = tol
 
     def fine_grained_binary_search_local(self,  x0, y0, theta, initial_lbd=1.0, tol=1e-5):
         nquery = 1
@@ -61,6 +61,7 @@ class SignOptL2Norm(object):
                 lbd_lo = lbd_lo * 0.99
                 nquery += 1
         tot_count = 0
+        old_lbd_mid = lbd_hi
         while (lbd_hi - lbd_lo) > tol:
             tot_count+=1
             lbd_mid = (lbd_lo + lbd_hi) / 2.0
@@ -69,9 +70,10 @@ class SignOptL2Norm(object):
                 lbd_hi = lbd_mid
             else:
                 lbd_lo = lbd_mid
-            if tot_count>200:
-                log.info("reach max while limit, maybe dead loop in binary search function, break!")
+            if old_lbd_mid == lbd_mid or tot_count>200:
+                log.warn("binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(tol, tot_count))
                 break
+            old_lbd_mid = lbd_mid
         return lbd_hi, nquery
 
     def fine_grained_binary_search_local_targeted(self, x0, t, theta, initial_lbd=1.0, tol=1e-5):
@@ -95,6 +97,7 @@ class SignOptL2Norm(object):
                 lbd_lo = lbd_lo * 0.99
                 nquery += 1
         tot_count = 0
+        old_lbd_mid = lbd_hi
         while (lbd_hi - lbd_lo) > tol:
             tot_count += 1
             lbd_mid = (lbd_lo + lbd_hi) / 2.0
@@ -103,9 +106,10 @@ class SignOptL2Norm(object):
                 lbd_hi = lbd_mid
             else:
                 lbd_lo = lbd_mid
-            if tot_count>200:
-                log.info("reach max while limit, dead loop in binary search function, break!")
+            if old_lbd_mid == lbd_mid or tot_count > 200:
+                log.warn("binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(tol, tot_count))
                 break
+            old_lbd_mid = lbd_mid
         return lbd_hi, nquery
 
     def fine_grained_binary_search(self,  x0, y0, theta, initial_lbd, current_best):
@@ -180,11 +184,12 @@ class SignOptL2Norm(object):
             alpha[idx] += val
         return alpha
 
-    def sign_grad_svm(self, images, true_label, theta, initial_lbd, h=0.001, K=100, target_label=None):
+    def sign_grad_svm(self, images, true_label, theta, initial_lbd, h=0.001, target_label=None):
         """
         Evaluate the sign of gradient by formulat
         sign(g) = 1/Q [ \sum_{q=1}^Q sign( g(theta+h*u_i) - g(theta) )u_i$ ]
         """
+        K = self.k
         queries = 0
         dim = np.prod(list(theta.size())).item()
         # X = torch.zeros(dim, K).cuda()
@@ -240,7 +245,7 @@ class SignOptL2Norm(object):
         return sign_grad, queries
 
     # the version of accelerate speed by batch feeding
-    def sign_grad_v1(self, images, true_label, theta, initial_lbd, h=0.001, target_label=None):
+    def sign_grad(self, images, true_label, theta, initial_lbd, h=0.001, target_label=None):
         """
         Evaluate the sign of gradient by formulat
         sign(g) = 1/Q [ \sum_{q=1}^Q sign( g(theta+h*u_i) - g(theta) )u_i$ ]
@@ -336,9 +341,9 @@ class SignOptL2Norm(object):
         for i in range(self.iterations):
             ## gradient estimation at x0 + theta (init)
             if self.svm:
-                sign_gradient, grad_queries = self.sign_grad_svm(images, true_label, xg, initial_lbd=gg, h=beta)
+                grad, grad_queries = self.sign_grad_svm(images, true_label, xg, initial_lbd=gg, h=beta)
             else:
-                sign_gradient, grad_queries = self.sign_grad_v1(images, true_label, xg, initial_lbd=gg, h=beta)
+                grad, grad_queries = self.sign_grad(images, true_label, xg, initial_lbd=gg, h=beta)
             ## Line search of the step size of gradient descent
             query += grad_queries
             ls_count = 0  # line search queries
@@ -349,14 +354,14 @@ class SignOptL2Norm(object):
             for _ in range(15):
                 # update theta by one step sgd
                 if momentum > 0:
-                    new_vg = momentum * vg - alpha * sign_gradient
+                    new_vg = momentum * vg - alpha * grad
                     new_theta = xg + new_vg
                 else:
-                    new_theta = xg - alpha * sign_gradient
+                    new_theta = xg - alpha * grad
                 new_theta /= torch.norm(new_theta)
                 tol = beta/500
-                if self.tot is not None:
-                    tol = self.tot
+                if self.tol is not None:
+                    tol = self.tol
                 new_g2, count = self.fine_grained_binary_search_local(images, true_label, new_theta,
                                                                       initial_lbd=min_g2, tol=tol)
                 ls_count += count
@@ -376,14 +381,14 @@ class SignOptL2Norm(object):
                 for _ in range(15):
                     alpha = alpha * 0.25
                     if momentum > 0:
-                        new_vg = momentum * vg - alpha * sign_gradient
+                        new_vg = momentum * vg - alpha * grad
                         new_theta = xg + new_vg
                     else:
-                        new_theta = xg - alpha * sign_gradient
+                        new_theta = xg - alpha * grad
                     new_theta /= torch.norm(new_theta)
                     tol = beta / 500
-                    if self.tot is not None:
-                        tol = self.tot
+                    if self.tol is not None:
+                        tol = self.tol
                     new_g2, count = self.fine_grained_binary_search_local(images, true_label, new_theta,
                                                                           initial_lbd=min_g2, tol=tol)
                     ls_count += count
@@ -400,8 +405,8 @@ class SignOptL2Norm(object):
                 alpha = 1.0
                 log.info("{}-th image warns: not moving".format(image_index+1))
                 beta = beta * 0.1
-                if beta < 1e-8:
-                    break
+                # if beta < 1e-8 and self.tol is None:
+                #     break
             ## if all attemps failed, min_theta, min_g2 will be the current theta (i.e. not moving)
             xg, gg = min_theta, min_g2
             vg = min_vg
@@ -542,20 +547,20 @@ class SignOptL2Norm(object):
         xg, gg = best_theta, g_theta
         for i in range(self.iterations):
             if self.svm:
-                sign_gradient, grad_queries = self.sign_grad_svm(images, None, xg, initial_lbd=gg, h=beta, target_label=target_label)
+                grad, grad_queries = self.sign_grad_svm(images, None, xg, initial_lbd=gg, h=beta, target_label=target_label)
             else:
-                sign_gradient, grad_queries = self.sign_grad_v1(images, None, xg, initial_lbd=gg, h=beta, target_label=target_label)
+                grad, grad_queries = self.sign_grad(images, None, xg, initial_lbd=gg, h=beta, target_label=target_label)
             query += grad_queries
             # Line search
             ls_count = 0
             min_theta = xg
             min_g2 = gg
             for _ in range(15):
-                new_theta = xg - alpha * sign_gradient
+                new_theta = xg - alpha * grad
                 new_theta /= torch.linalg.norm(new_theta)
                 tol = beta / 500
-                if self.tot is not None:
-                    tol = self.tot
+                if self.tol is not None:
+                    tol = self.tol
                 new_g2, count = self.fine_grained_binary_search_local_targeted(images, target_label, new_theta, initial_lbd=min_g2, tol=tol)
                 ls_count += count
                 query += count
@@ -571,11 +576,11 @@ class SignOptL2Norm(object):
             if min_g2 >= gg:
                 for _ in range(15):
                     alpha = alpha * 0.25
-                    new_theta = xg - alpha * sign_gradient
+                    new_theta = xg - alpha * grad
                     new_theta /= torch.linalg.norm(new_theta)
                     tol = beta / 500
-                    if self.tot is not None:
-                        tol = self.tot
+                    if self.tol is not None:
+                        tol = self.tol
                     new_g2, count = self.fine_grained_binary_search_local_targeted(
                          images, target_label, new_theta, initial_lbd=min_g2, tol=tol)
                     ls_count += count
@@ -591,8 +596,8 @@ class SignOptL2Norm(object):
                 alpha = 1.0
                 log.info("{}-th image, warning: not moving".format(image_index+1))
                 beta = beta * 0.1
-                if (beta < 1e-8):
-                    break
+                # if beta < 1e-8 and self.tol is None:
+                #     break
 
             xg, gg = min_theta, min_g2
 
@@ -675,10 +680,12 @@ class SignOptL2Norm(object):
             # return images + gg * xg, query,success_stop_queries, gg, gg <= self.epsilon, xg
             # adv, distortion, is_success, nqueries, theta_signopt
             if args.targeted:
-                target_class_image = self.get_image_of_target_class(self.dataset, target_labels, self.model)
+                # target_class_image = self.get_image_of_target_class(self.dataset, target_labels, self.model)
+                target_class_image = select_random_image_of_target_class(self.dataset, target_labels, self.model, args.load_random_class_image)
                 if target_class_image is None:
                     log.info("{}-th image cannot get a valid target class image to initialize!".format(batch_index + 1))
                     continue
+                target_class_image = target_class_image.cuda()
                 adv_images, query, success_query, distortion_with_max_queries, success_epsilon, theta_signopt = self.targeted_attack(batch_index, images, target_labels, target_class_image)
             else:
                 adv_images, query, success_query, distortion_with_max_queries, success_epsilon, theta_signopt = self.untargeted_attack(batch_index,

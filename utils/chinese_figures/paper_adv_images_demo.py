@@ -101,24 +101,24 @@ def construct_attack(max_queries, model, dataset, target_label, attack, targeted
         if norm == "l2":
             attacker = SignOptL2Norm(model, dataset, epsilon, targeted,
                                      1, 100,
-                                    maximum_queries=max_queries,svm=False,tot=1e-4,
+                                     maximum_queries=max_queries, svm=False, tol=1e-4,
                                      best_initial_target_sample=False)
         elif norm == "linf":
             attacker = SignOptLinfNorm(model, dataset, epsilon, targeted,
-                                     1, 100,
-                                    maximum_queries=max_queries,svm=False,tot=None,
-                                     best_initial_target_sample=False)
+                                       1, 100,
+                                       maximum_queries=max_queries, svm=False, tol=None,
+                                       best_initial_target_sample=False)
     elif attack == "SVMOPT":
         if norm == "l2":
             attacker = SignOptL2Norm(model, dataset, epsilon, targeted,
                                      1, 100,
-                                    maximum_queries=max_queries,svm=True,tot=1e-4,
+                                     maximum_queries=max_queries, svm=True, tol=1e-4,
                                      best_initial_target_sample=False)
         elif norm == "linf":
             attacker = SignOptLinfNorm(model, dataset, epsilon, targeted,
-                                     1, 100,
-                                    maximum_queries=max_queries,svm=True,tot=None,
-                                     best_initial_target_sample=False)
+                                       1, 100,
+                                       maximum_queries=max_queries, svm=True, tol=None,
+                                       best_initial_target_sample=False)
     return attacker
 
 def get_image_of_target_class(dataset_name, target_labels, target_model):
