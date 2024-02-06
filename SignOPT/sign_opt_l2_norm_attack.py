@@ -52,7 +52,7 @@ class SignOptL2Norm(object):
                 lbd_hi = lbd_hi * 1.01
                 nquery += 1
                 if lbd_hi > 20:
-                    return float('inf'), nquery
+                    return float('inf'), nquery - 1
         else:
             lbd_hi = lbd
             lbd_lo = lbd * 0.99
@@ -63,15 +63,17 @@ class SignOptL2Norm(object):
         tot_count = 0
         old_lbd_mid = lbd_hi
         while (lbd_hi - lbd_lo) > tol:
-            tot_count+=1
+            tot_count += 1
             lbd_mid = (lbd_lo + lbd_hi) / 2.0
             nquery += 1
             if self.model(x0 + lbd_mid * theta).max(1)[1].item() != y0:
                 lbd_hi = lbd_mid
             else:
                 lbd_lo = lbd_mid
-            if old_lbd_mid == lbd_mid or tot_count>200:
-                log.warn("binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(tol, tot_count))
+            if old_lbd_mid == lbd_mid or tot_count > 200:
+                log.warn(
+                    "binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(
+                        tol, tot_count))
                 break
             old_lbd_mid = lbd_mid
         return lbd_hi, nquery
@@ -88,7 +90,7 @@ class SignOptL2Norm(object):
                 lbd_hi = lbd_hi * 1.01
                 nquery += 1
                 if lbd_hi > 100:
-                    return float('inf'), nquery
+                    return float('inf'), nquery - 1
         else:
             lbd_hi = lbd
             lbd_lo = lbd * 0.99
@@ -107,7 +109,9 @@ class SignOptL2Norm(object):
             else:
                 lbd_lo = lbd_mid
             if old_lbd_mid == lbd_mid or tot_count > 200:
-                log.warn("binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(tol, tot_count))
+                log.warn(
+                    "binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(
+                        tol, tot_count))
                 break
             old_lbd_mid = lbd_mid
         return lbd_hi, nquery
@@ -407,6 +411,7 @@ class SignOptL2Norm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
+                beta = max(beta, 1e-8)
             ## if all attemps failed, min_theta, min_g2 will be the current theta (i.e. not moving)
             xg, gg = min_theta, min_g2
             vg = min_vg
@@ -598,7 +603,7 @@ class SignOptL2Norm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
-
+                beta = max(beta, 1e-8)
             xg, gg = min_theta, min_g2
 
             ls_total += ls_count

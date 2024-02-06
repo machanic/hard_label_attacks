@@ -164,7 +164,7 @@ class TriangleAttack(object):
             direction, mask = get_orthogonal_1d_in_subspace(self.side_length, x_o2x_adv, self.dim_num, args.ratio_mask, args.dim_num)
             axis_unit2 = direction / torch.norm(direction)
             x_adv, num_eval, changed = get_x_hat_in_2d(torch_dct.dct_2d(images), torch_dct.dct_2d(x_adv), axis_unit1,
-                                                      axis_unit2, self.model, query, original_label,
+                                                      axis_unit2, self.model, original_label,
                                                       max_iter=self.max_iter_num_in_2d,
                                                       plus_learning_rate=self.plus_learning_rate,
                                                       minus_learning_rate=self.minus_learning_rate,

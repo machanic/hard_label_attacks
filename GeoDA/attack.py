@@ -15,7 +15,6 @@ import torchvision.datasets as dsets
 import glog as log
 import torchvision.transforms as transforms
 import torchvision.models as torch_models
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import os
@@ -26,7 +25,6 @@ from models.defensive_model import DefensiveModel
 from models.standard_model import StandardModel
 from GeoDA.utils import get_label
 from GeoDA.utils import valid_bounds, clip_image_values
-from PIL import Image
 from torch.autograd import Variable
 from numpy import linalg
 import math
@@ -53,7 +51,7 @@ class SubNoise(nn.Module):
         return r
 
 class GeoDA(object):
-    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon,
+    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon, eps,
                  search_space='sub', max_queries=10000, grad_estimator_batch_size=40, sub_dim=75, tol=0.0001,
                  sigma=0.0002, mu=0.6, batch_size=1):
         self.model = model
@@ -77,6 +75,7 @@ class GeoDA(object):
         self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
+        self.eps = eps
 
         self.query_all = torch.zeros(self.total_images)
         self.distortion_all = defaultdict(OrderedDict)  # key is image index, value is {query: distortion}
@@ -180,7 +179,7 @@ class GeoDA(object):
                 adv = mid
             else:
                 cln = mid
-            if torch.norm(adv - cln,p='fro').item() < tol:
+            if torch.norm(adv - cln, p='fro').item() < tol:
                 break
         return adv, num_calls
 
@@ -239,7 +238,6 @@ class GeoDA(object):
 
 
     def go_to_boundary(self, x_0, true_label, target_label, grad):
-        epsilon = 5
         num_calls = 0
 
         if self.norm == 'l1' or self.norm == 'l2':
@@ -247,7 +245,7 @@ class GeoDA(object):
         if self.norm == 'linf':
             grads = torch.sign(grad) / torch.norm(grad)
         while True:
-            perturbed = x_0 + (num_calls * epsilon * grads[0])
+            perturbed = x_0 + (num_calls * self.eps * grads[0])
             perturbed = clip_image_values(perturbed, self.clip_min, self.clip_max)
             num_calls += 1
             if self.is_adversarial(perturbed, true_label, target_label):
@@ -255,7 +253,7 @@ class GeoDA(object):
             if num_calls > 100:
                 log.info('failed ... ')
                 break
-        return perturbed, num_calls, epsilon * num_calls
+        return perturbed, num_calls, self.eps * num_calls
 
     def calculate_distortion(self, x_adv, x_original, success_stop_queries, query, image_index):
         dist = torch.norm((x_adv - x_original).view(x_adv.size(0), -1), self.ord, 1).item()
@@ -278,13 +276,13 @@ class GeoDA(object):
             # dist = torch.norm((x_adv - x_0).view(self.batch_size, -1), self.ord, 1)
             x_adv, qs, eps = self.go_to_boundary(x_0, true_label, target_label, grad)
             q_num = q_num + qs
-            x_adv, bin_query = self.bin_search(x_0,x_adv,true_label, target_label, self.tol)
+            x_adv, bin_query = self.bin_search(x_0, x_adv, true_label, target_label, self.tol)
             q_num = q_num + bin_query
             success_stop_queries = self.calculate_distortion(x_adv, x_0, success_stop_queries, q_num, batch_idx)
             log.info("{}-th image, distortion: {:.4f}, query:{}, iteration:{} ".format(batch_idx, torch.norm((x_adv - x_0).view(x_adv.size(0), -1), self.ord, 1).item(), q_num, i))
             x_b = x_adv
 
-        x_adv = clip_image_values(x_adv, self.clip_min,self.clip_max)
+        x_adv = clip_image_values(x_adv, self.clip_min, self.clip_max)
         if success_stop_queries>self.maximum_queries:
             success_stop_queries = self.maximum_queries
         final_dist = torch.norm((x_adv - x_0).view(x_adv.size(0), -1), self.ord, 1)
@@ -402,6 +400,9 @@ class GeoDA(object):
                 logit = self.model(images.cuda())
             pred = logit.argmax(dim=1)
             correct = pred.eq(true_labels.cuda()).float()  # shape = (batch_size,)
+            if correct.int().item() == 0:  # we must skip any image that is classified incorrectly before attacking, otherwise this will cause infinity loop in later procedure
+                log.info("{}-th original image is classified incorrectly, skip!".format(batch_index + 1))
+                continue
             selected = torch.arange(batch_index * args.batch_size, min((batch_index + 1) * args.batch_size, self.total_images))
             not_done = correct.clone()
             if args.targeted:
@@ -522,6 +523,7 @@ if __name__ == "__main__":
     parser.add_argument('--json-config', type=str, default='./configures/GeoDA.json',
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--epsilon', type=float, help='the lp perturbation bound')
+    parser.add_argument('--eps', type=float, help='epsilon for searching boundary')
     parser.add_argument("--norm",type=str, choices=["l2","linf"],required=True)
     parser.add_argument('--batch-size', type=int, default=1, help='batch size must set to 1')
     parser.add_argument('--dataset', type=str, required=True,
@@ -537,8 +539,9 @@ if __name__ == "__main__":
     parser.add_argument('--defense_model',type=str, default=None)
     parser.add_argument('--defense_norm', type=str, choices=["l2", "linf"], default='linf')
     parser.add_argument('--defense_eps', type=str, default="")
-    parser.add_argument('--sub_dim', type=int)
+    parser.add_argument('--sub_dim', type=int, help="the dimension of 2D-DCT's subspace")
     parser.add_argument('--max_queries',type=int, default=10000)
+
 
     args = parser.parse_args()
     assert args.batch_size == 1, "GeoDA only supports mini-batch size equals 1!"
@@ -581,9 +584,12 @@ if __name__ == "__main__":
         assert args.defense_model is not None
 
     torch.backends.cudnn.deterministic = True
+    torch.backends.cuda.matmul.allow_tf32 = False
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
     if args.all_archs:
         archs = MODELS_TEST_STANDARD[args.dataset]
     else:
@@ -614,7 +620,8 @@ if __name__ == "__main__":
         model.cuda()
         model.eval()
         attacker = GeoDA(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                         args.norm,args.epsilon, search_space='sub',sub_dim=args.sub_dim,max_queries=args.max_queries,batch_size=args.batch_size)
+                         args.norm,args.epsilon, eps=args.eps, search_space='sub',sub_dim=args.sub_dim,max_queries=args.max_queries,
+                         batch_size=args.batch_size)
         attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()
 

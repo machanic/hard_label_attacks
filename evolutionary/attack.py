@@ -48,7 +48,6 @@ class Evolutionary(object):
         self.channels = channels
         self.shape = (channels, height, width)
         self.load_random_class_image = load_random_class_image
-        self.model = model
         self.ccov = ccov
         self.decay_weight = decay_weight
         self.mu = mu
@@ -188,7 +187,7 @@ class Evolutionary(object):
             candidate = biased + self.sigma * source_norm * pert_large / torch.norm(pert_large)
             candidate = x - (x - candidate) / torch.norm(x - candidate) * torch.norm(x - biased)
             candidate = torch.clamp(candidate, self.min_value, self.max_value)
-
+            query += 1
             if self._is_adversarial(candidate, y, target_labels):
                 x_adv = candidate
                 evolutionary_path = decay_weight * evolutionary_path + np.sqrt(1 - decay_weight ** 2) * pert
@@ -204,7 +203,7 @@ class Evolutionary(object):
                 log.info('{}-th image, {}: distortion {:.4f}, query: {}'.format(batch_index+1, self.norm, dist.item(), int(query[0].item())))
             else:
                 stats_adversarial.append(0)
-            query += 1
+
             if len(stats_adversarial) == self.maxlen:
                 self.mu *= np.exp(np.mean(stats_adversarial) - 0.2)
                 stats_adversarial = []

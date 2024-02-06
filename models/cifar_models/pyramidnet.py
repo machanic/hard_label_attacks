@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+import torch.nn.functional as F
 
 __all__ = ['pyramidnet272']
 
@@ -59,21 +60,23 @@ class Bottleneck(nn.Module):
 
         if self.downsample is not None:
             shortcut = self.downsample(x)
-            featuremap_size = shortcut.size()[2:4]
+            # featuremap_size = shortcut.size()[2:4]
         else:
             shortcut = x
-            featuremap_size = out.size()[2:4]
+            # featuremap_size = out.size()[2:4]
 
-        batch_size = out.size()[0]
+        # batch_size = out.size()[0]
         residual_channel = out.size()[1]
         shortcut_channel = shortcut.size()[1]
-        if residual_channel != shortcut_channel:
-            padding_tensor = torch.zeros(batch_size, residual_channel - shortcut_channel,
-                                           featuremap_size[0], featuremap_size[1]).type(shortcut.dtype).to(shortcut.device)
-            padding_tensor.requires_grad = True
-            out += torch.cat((shortcut, padding_tensor), 1)
-        else:
-            out += shortcut
+        # if residual_channel != shortcut_channel:
+        #     padding_tensor = torch.zeros(batch_size, residual_channel - shortcut_channel,
+        #                                    featuremap_size[0], featuremap_size[1]).type(shortcut.dtype).to(shortcut.device)
+        #     padding_tensor.requires_grad = True
+        #     out += torch.cat((shortcut, padding_tensor), 1)
+        # else:
+        #     out += shortcut
+        shortcut = F.pad(shortcut, pad=(0, 0, 0, 0, 0, residual_channel - shortcut_channel), mode='constant', value=0)
+        out += shortcut
 
         return out
 
@@ -157,3 +160,14 @@ class PyramidNet(nn.Module):
 
 def pyramidnet272(in_channels, num_classes):
     return PyramidNet(in_channels=in_channels, depth=272, alpha=200, num_classes=num_classes)
+
+
+# torch.backends.cudnn.deterministic = True
+# torch.manual_seed(0)
+from torchsummary import summary
+# model = pyramidnet272(3, 10).cuda()
+# data = torch.randn(10, 3, 32, 32).cuda()
+# print(summary(model, (3, 32, 32)))
+# print('start')
+# print(model(data))
+

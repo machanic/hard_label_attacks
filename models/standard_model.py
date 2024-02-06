@@ -20,6 +20,7 @@ import torchvision.models as vision_models
 from tiny_imagenet_models.inception import inception_v3
 from tiny_imagenet_models.wrn import tiny_imagenet_wrn
 
+import timm
 
 class StandardModel(nn.Module):
     """
@@ -44,7 +45,7 @@ class StandardModel(nn.Module):
             trained_model_path = "{root}/train_pytorch_model/real_image_model/{dataset}-pretrained/hub/checkpoints/{arch}*.pth".format(
                 root=PROJECT_PATH, dataset=dataset, arch=arch)
             trained_model_path_ls = list(glob.glob(trained_model_path))
-            assert trained_model_path_ls,  "{} does not exist!".format(trained_model_path)
+            assert trained_model_path_ls, "{} does not exist!".format(trained_model_path)
             trained_model_path = trained_model_path_ls[0]
 
         self.num_classes = CLASS_NUM[dataset]
@@ -53,7 +54,7 @@ class StandardModel(nn.Module):
 
         # init cnn model meta-information
         self.mean = torch.FloatTensor(self.cnn.mean).view(1, self.in_channels, 1, 1).cuda()
-        self.mean.requires_grad =True
+        self.mean.requires_grad = True
 
         self.std = torch.FloatTensor(self.cnn.std).view(1, self.in_channels, 1, 1).cuda()
         self.std.requires_grad = True
@@ -229,6 +230,44 @@ class StandardModel(nn.Module):
             model.input_size = [in_channels, IMAGE_SIZE[dataset][0], IMAGE_SIZE[dataset][1]]
         return model
 
+    def construct_imagenet_model(self, arch, load_pretrained, trained_model_path):
+        arch_ = arch.split("-")[0].lower()
+        if arch_.startswith("jx_vit"):
+            arch = 'vit_base_patch16_224'
+            pretrained_cfg = timm.models.create_model(arch).default_cfg
+            pretrained_cfg['file'] = trained_model_path
+            model = timm.create_model(arch, pretrained=load_pretrained, pretrained_cfg=pretrained_cfg)
+            model.mean = [0.5, 0.5, 0.5]
+            model.std = [0.5, 0.5, 0.5]
+            model.input_space = 'RGB'
+            model.input_range = [0, 1]
+            model.input_size = [3, 224, 224]
+        elif arch_.startswith("crossvit"):
+            arch = 'crossvit_base_240'
+            pretrained_cfg = timm.models.create_model(arch).default_cfg
+            pretrained_cfg['file'] = trained_model_path
+            model = timm.create_model(arch, pretrained=load_pretrained, pretrained_cfg=pretrained_cfg)
+            model.mean = [0.485, 0.456, 0.406]
+            model.std = [0.229, 0.224, 0.225]
+            model.input_space = 'RGB'
+            model.input_range = [0, 1]
+            model.input_size = [3, 224, 224]
+        elif arch_.startswith("maxvit") or arch_.startswith("swin") \
+                or arch_.startswith("gcvit") or arch_.startswith("levit") or arch_.startswith("convit"):
+            pretrained_cfg = timm.models.create_model(arch).default_cfg
+            pretrained_cfg['file'] = trained_model_path
+            model = timm.create_model(arch, pretrained=load_pretrained, pretrained_cfg=pretrained_cfg)
+            model.mean = [0.485, 0.456, 0.406]
+            model.std = [0.229, 0.224, 0.225]
+            model.input_space = 'RGB'
+            model.input_range = [0, 1]
+            model.input_size = [3, 224, 224]
+        else:
+            pretrained = "imagenet" if load_pretrained else None
+            model = pretrainedmodels.__dict__[arch](num_classes=1000, pretrained=pretrained)
+        return model
+
+
     def make_model(self, dataset, arch, in_channels, num_classes, trained_model_path=None, load_pretrained=True):
         """
         Make model, and load pre-trained weights.
@@ -236,6 +275,7 @@ class StandardModel(nn.Module):
         :param arch: arch name, e.g., alexnet_bn
         :return: model (in cpu and training mode)
         """
+
         if dataset in ['CIFAR-10',"CIFAR-100", "MNIST","FashionMNIST"]:
             if load_pretrained:
                 assert trained_model_path is not None and os.path.exists(trained_model_path), "Pretrained weight model file {} does not exist!".format(trained_model_path)
@@ -248,11 +288,8 @@ class StandardModel(nn.Module):
                 model.load_state_dict(torch.load(trained_model_path, map_location=lambda storage, location: storage)["state_dict"])
         elif dataset == 'ImageNet':
             os.environ["TORCH_HOME"] = "{}/train_pytorch_model/real_image_model/ImageNet-pretrained".format(PROJECT_PATH)
-            if load_pretrained:
-                pretrained = "imagenet"
-            else:
-                pretrained = None
-            model = pretrainedmodels.__dict__[arch](num_classes=1000, pretrained=pretrained)
+            model = self.construct_imagenet_model(arch, load_pretrained, trained_model_path)
+
         return model
 
 # used by meta-learner
@@ -350,10 +387,10 @@ class MetaLearnerModelBuilder(object):
     @staticmethod
     def construct_imagenet_model(arch, dataset):
         os.environ["TORCH_HOME"] = "{}/train_pytorch_model/real_image_model/ImageNet-pretrained".format(PROJECT_PATH)
-        if arch == 'efficient_densenet':
+        if arch == "efficient_densenet":
             depth = 40
             block_config = [(depth - 4) // 6 for _ in range(3)]
-            return EfficientDenseNet(IN_CHANNELS[dataset],block_config=block_config, num_classes=CLASS_NUM[dataset], small_inputs=False, efficient=False)
+            return EfficientDenseNet(IN_CHANNELS[dataset], block_config=block_config, num_classes=CLASS_NUM[dataset], small_inputs=False, efficient=False)
 
         model = vision_models.__dict__[arch](pretrained=False)
         return model

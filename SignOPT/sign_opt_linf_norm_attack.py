@@ -58,7 +58,7 @@ class SignOptLinfNorm(object):
                 lbd_hi = lbd_hi * 1.01
                 nquery += 1
                 if lbd_hi > 20:
-                    return float('inf'), nquery
+                    return float('inf'), nquery - 1
         else:
             lbd_hi = lbd
             lbd_lo = lbd * 0.99
@@ -103,7 +103,7 @@ class SignOptLinfNorm(object):
                 lbd_hi = lbd_hi * 1.01
                 nquery += 1
                 if lbd_hi > 100:
-                    return float('inf'), nquery
+                    return float('inf'), nquery - 1
         else:
             lbd_hi = lbd
             lbd_lo = lbd * 0.99
@@ -403,6 +403,7 @@ class SignOptLinfNorm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
+                beta = max(beta, 1e-8)
             ## if all attemps failed, min_theta, min_g2 will be the current theta (i.e. not moving)
             xg, gg = min_theta, min_g2
             vg = min_vg
@@ -595,7 +596,7 @@ class SignOptLinfNorm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
-
+                beta = max(beta, 1e-8)
             xg, gg = min_theta, min_g2
 
             ls_total += ls_count

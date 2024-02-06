@@ -6,8 +6,12 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from models.standard_model import StandardModel
-
-parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+from dataset.dataset_loader_maker import DataLoaderMaker
+import os
+from torch.nn import functional as F
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ['CUDA_VISIBLE_DEVICES'] = "6"
+parser = argparse.ArgumentParser(description='PyTorch ImageNet Validation')
 args = parser.parse_args()
 args.print_freq = 10
 
@@ -16,17 +20,19 @@ dataset='ImageNet'
 # arch = "T2TViT"
 # arch = "swin"
 # arch = "gcvit"
-arch = "pnasnet5large"
-
-standard_model = StandardModel(dataset=dataset, arch=arch)
-model = standard_model.make_model(dataset=dataset, arch=arch, in_channels=3, num_classes=1000, trained_model_path=None, load_pretrained=True)
+arch = "swin_base_patch4_window7_224"
+arch = "convit_base"
+model = StandardModel(dataset=dataset, arch=arch)
+# model = standard_model.make_model(dataset=dataset, arch=arch, in_channels=3, num_classes=1000, trained_model_path=None, load_pretrained=True)
 model.cuda()
-
+model.eval()
 transform = transforms.Compose([transforms.Resize((model.input_size[-2], model.input_size[-1])), transforms.ToTensor()])
-val_dataset = ImageFolder(root='D:/download/ImageNet ILSVRC 2012 validation/ILSVRC2012/validation', transform=transform)
-batch_size = 50
+val_dataset = ImageFolder(root='/public/machen/dataset/ILSVRC2012/validation', transform=transform)
+batch_size = 1000
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
+transform = transforms.Resize((model.input_size[-2], model.input_size[-1]))
+val_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -75,6 +81,9 @@ def validate(val_loader, model, criterion, args):
     with torch.no_grad():
         end = time.time()
         for i, (input, target) in enumerate(val_loader):
+            input = F.interpolate(input,
+                                   size=(model.input_size[-2], model.input_size[-1]), mode='bilinear',
+                                   align_corners=False)
             input = input.cuda()
             target = target.cuda()
             # compute output

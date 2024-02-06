@@ -2,41 +2,49 @@
 {"CIFAR-10": {
       "l2":{
           "epsilon": 1.0,
-          "sub_dim": 10
+          "sub_dim": 10,
+          "eps": 0.5
         },
       "linf": {
           "epsilon": 0.031372,
-        "sub_dim": 10
+        "sub_dim": 10,
+          "eps": 0.5
       }
   },
     "CIFAR-100": {
       "l2":{
           "epsilon": 1.0,
-        "sub_dim": 10
+        "sub_dim": 10,
+          "eps": 1
         },
       "linf": {
           "epsilon": 0.031372,
-        "sub_dim": 10
+        "sub_dim": 10,
+          "eps": 1
       }
   },
   "TinyImageNet": {
       "l2":{
           "epsilon": 2.0,
-        "sub_dim": 20
+        "sub_dim": 20,
+          "eps": 2
         },
       "linf": {
           "epsilon": 0.031372,
-        "sub_dim": 20
+        "sub_dim": 20,
+          "eps": 2
       }
   },
     "ImageNet": {
         "l2":{
             "epsilon": 10.0,
-          "sub_dim": 75
+          "sub_dim": 75,
+          "eps": 5
         },
         "linf": {
             "epsilon": 0.05,
-          "sub_dim": 75
+          "sub_dim": 75,
+          "eps": 5
         }
     }
 }

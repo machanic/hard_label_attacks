@@ -13,7 +13,7 @@ from utils.dataset_toolkit import select_random_image_of_target_class
 class PriorOptL2Norm(object):
     def __init__(self, model, surrogate_models, dataset, epsilon, targeted, batch_size=1, k=100, alpha=0.2,
                  beta=0.001, iterations=1000, maximum_queries=10000, sign=False, momentum=0.0, clip_grad_max_norm=1.0, tol=None,
-                 best_initial_target_sample=False):
+                 prior_grad_binary_search_tol=0.01, best_initial_target_sample=False):
         self.model = model
         self.surrogate_models = surrogate_models
         self.k = k
@@ -42,6 +42,7 @@ class PriorOptL2Norm(object):
         self.tol = tol
 
         self.use_save_query_trick = False
+        self.prior_grad_binary_search_tol = prior_grad_binary_search_tol
 
 
     def norm(self, t):
@@ -114,7 +115,7 @@ class PriorOptL2Norm(object):
                 lbd_lo = lbd_mid
             if old_lbd_mid == lbd_mid or tot_count > 200:
                 log.warn(
-                    "binary search warn: tol is {:.2e} and the while loop is executed {} times, and it exceeds the lowest numerical precision in binary search, break!".format(
+                    "binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(
                         tol, tot_count))
                 break
             old_lbd_mid = lbd_mid
@@ -303,6 +304,7 @@ class PriorOptL2Norm(object):
         if images.size(-1) != model.input_size[-1]:
             images = F.interpolate(images, size=model.input_size[-1], mode='bilinear', align_corners=False)
             theta = F.interpolate(theta, size=model.input_size[-1], mode='bilinear', align_corners=False)
+            theta /= self.norm(theta)
         with torch.no_grad():
             min_lmdb, target_labels, _ = self.g_function_bin_search(model, images, theta.detach(), initial_lbd, true_labels, target_labels)
         if target_labels is not None:
@@ -310,7 +312,7 @@ class PriorOptL2Norm(object):
 
         with torch.enable_grad():
             theta.requires_grad_()
-            loss = self.cw_loss(model(images + min_lmdb * theta), true_labels, target_labels)
+            loss = self.cw_loss(model(images + min_lmdb * theta / torch.norm(theta, p=2, dim=(1, 2, 3), keepdim=True)), true_labels, target_labels)
             grad_theta = torch.autograd.grad(-loss, theta, create_graph=False)[0]
         return grad_theta
 
@@ -334,14 +336,14 @@ class PriorOptL2Norm(object):
                 if initial_lbd > max_high_bound:
                     max_high_bound = initial_lbd + 100
                 if true_label is not None:
-                    prior_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
+                    perturb_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
                                                                                   initial_lbd, max_high_bound=max_high_bound,tol=0.01)
                 else:
-                    prior_bound, bs_count = self.fine_grained_binary_search_local_targeted(self.model, images, target_label,
+                    perturb_bound, bs_count = self.fine_grained_binary_search_local_targeted(self.model, images, target_label,
                                                                                            new_theta, initial_lbd, max_high_bound=max_high_bound,
                                                                                            tol=0.01)
                 query += bs_count
-                prior_deriv = (prior_bound - initial_lbd) / sigma
+                prior_deriv = (perturb_bound - initial_lbd) / sigma
                 if prior_deriv < 0:
                     prior_deriv, prior_grad = -prior_deriv, -prior_grad
                 if prior_deriv ** 2 >= grad_est_norm:
@@ -399,17 +401,17 @@ class PriorOptL2Norm(object):
             if initial_lbd > max_high_bound:
                 max_high_bound = initial_lbd + 100
             if true_label is not None:
-                prior_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
-                                                                              initial_lbd, max_high_bound, tol=0.01)
+                perturb_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
+                                                                              initial_lbd, max_high_bound, tol=self.prior_grad_binary_search_tol)
             else:
-                prior_bound, bs_count = self.fine_grained_binary_search_local_targeted(self.model, images, target_label,
+                perturb_bound, bs_count = self.fine_grained_binary_search_local_targeted(self.model, images, target_label,
                                                                                        new_theta, initial_lbd, max_high_bound,
-                                                                                       tol=0.01)
+                                                                                       tol=self.prior_grad_binary_search_tol)
             query += bs_count
-            if prior_bound == float("inf"):
+            if perturb_bound == float("inf"):
                 log.warn("warn: the returned boundary distance is float('inf') after the binary search for calculating the loss derivative.")
                 continue
-            weight = (prior_bound - initial_lbd) / sigma  # 梯度指的是朝着lmdb边界距离上升的方向
+            weight = (perturb_bound - initial_lbd) / sigma  # 梯度指的是朝着lmdb边界距离上升的方向
             derivatives.append(weight)
             est_grad += weight * grad_theta_orth
         if len(derivatives) > 0:
@@ -601,6 +603,8 @@ class PriorOptL2Norm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
+                beta = max(beta, 1e-8)
+
             ## if all attemps failed, min_theta, min_g2 will be the current theta (i.e. not moving)
             xg, gg = min_theta, min_g2
             vg = min_vg
@@ -749,7 +753,7 @@ class PriorOptL2Norm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
-
+                beta = max(beta, 1e-8)
             xg, gg = min_theta, min_g2
 
             ls_total += ls_count
@@ -813,8 +817,8 @@ class PriorOptL2Norm(object):
                 with torch.no_grad():
                     logit_surrogate = surrogate_model(images)
                 pred_surrogate = logit_surrogate.argmax(dim=1)
-                correct_surrogate = pred_surrogate.eq(true_labels.cuda()).float()  # shape = (batch_size,)
-                if correct_surrogate.int().item() == 0:  # we must skip any image that is classified incorrectly before attacking, otherwise this will cause infinity loop in later procedure
+                correct_surrogate = pred_surrogate.eq(true_labels.cuda()).int()  # shape = (batch_size,)
+                if correct_surrogate.item() == 0:  # we must skip any image that is classified incorrectly before attacking, otherwise this will cause infinity loop in later procedure
                     log.info("{}-th original image is classified incorrectly by surrogate model, skip!".format(batch_index + 1))
                     all_surrogate_correct = False
                     break

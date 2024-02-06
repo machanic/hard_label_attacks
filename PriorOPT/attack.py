@@ -16,19 +16,17 @@ from models.defensive_model import DefensiveModel
 from models.standard_model import StandardModel
 
 
-def distance(x_adv, x, norm='l2'):
-    diff = (x_adv - x).view(x.size(0), -1)
-    if norm == 'l2':
-        out = torch.sqrt(torch.sum(diff * diff)).item()
-        return out
-    elif norm == 'linf':
-        out = torch.sum(torch.max(torch.abs(diff), 1)[0]).item()
-        return out
-
 def get_exp_dir_name(dataset,  norm, targeted, target_type, args):
     if target_type == "load_random":
         target_type = "random"
     target_str = "untargeted" if not targeted else "targeted_{}".format(target_type)
+    if args.ablation_study:
+        if args.sign:
+            dirname = 'PriorSignOPT-{}-{}-{}/ablation_study'.format(dataset, norm, target_str)
+        else:
+            dirname = 'PriorOPT-{}-{}-{}/ablation_study'.format(dataset, norm, target_str)
+        return dirname
+
     if args.best_initial_target_sample:
         if args.sign:
             if args.attack_defense:
@@ -82,7 +80,6 @@ def get_parse_args():
     surrogate_arch_group = parser.add_mutually_exclusive_group(required=True)
     surrogate_arch_group.add_argument("--surrogate-arch", type=str, help="the architecture of a surrogate model")
     surrogate_arch_group.add_argument("--surrogate-archs", nargs="+", help="multiple surrogate models, and this parameter should be passed in through space splitting")
-    # parser.add_argument("--load-pretrained-surrogate",action="store_true", help="whether to load the pretrained weights of the surrogate model")
     parser.add_argument('--all_archs', action="store_true")
     parser.add_argument('--targeted', action="store_true")
     parser.add_argument('--target_type', type=str, default='increment', choices=['random','load_random', 'least_likely', "increment"])
@@ -102,13 +99,19 @@ def get_parse_args():
     parser.add_argument('--sign',action='store_true',help="whether to use the sign-based prior-guided gradient estimation")
     parser.add_argument('--clip-grad-max-norm',type=float)
     parser.add_argument('--tol',type=float,)
+    parser.add_argument('--ablation-study',action='store_true')
 
     # parser.add_argument('--alpha', type=float)
     args = parser.parse_args()
+    torch.backends.cudnn.enabled = True
     torch.backends.cudnn.deterministic = True
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     return args
@@ -128,6 +131,11 @@ if __name__ == "__main__":
         defaults.update({k: v for k, v in arg_vars.items() if k not in defaults})
         args = SimpleNamespace(**defaults)
         args_dict = defaults
+
+    if args.targeted and args.dataset == "ImageNet":
+        args.max_queries = 20000
+    if args.attack_defense and args.defense_model == "adv_train_on_ImageNet":
+        args.max_queries = 20000
 
     args.exp_dir = osp.join(args.exp_dir,
                             get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  # 随机产生一个目录用于实验
@@ -149,6 +157,19 @@ if __name__ == "__main__":
                 log_file_path = osp.join(args.exp_dir, 'run_defense_{}_{}.log'.format(args.arch, args.defense_model))
         else:
             log_file_path = osp.join(args.exp_dir, 'run_{}.log'.format(args.arch))
+    if args.surrogate_archs is not None:
+        if args.attack_defense:
+            if args.defense_model == "adv_train_on_ImageNet":
+                log_file_path = osp.join(args.exp_dir,
+                                         "run_{}_surrogates_{}_defense_{}_{}_{}.log".format(args.arch, ",".join(args.surrogate_archs),
+                                                                 args.defense_model, args.defense_norm, args.defense_eps))
+            else:
+                log_file_path = osp.join(args.exp_dir, 'run_{}_surrogates_{}_defense_{}.log'.format(args.arch,  ",".join(args.surrogate_archs),
+                                                                                                    args.defense_model))
+        else:
+            log_file_path = osp.join(args.exp_dir, 'run_{}_surrogates_{}.log'.format(args.arch,  ",".join(args.surrogate_archs)))
+    if args.ablation_study:
+        log_file_path = osp.join(args.exp_dir, 'run_{}_estimate_grad_samples_{}.log'.format(args.arch, args.est_grad_samples))
     set_log_file(log_file_path)
     if args.attack_defense:
         assert args.defense_model is not None
@@ -184,8 +205,19 @@ if __name__ == "__main__":
                 save_result_path = args.exp_dir + "/{}_{}_result.json".format(arch, args.defense_model)
         else:
             save_result_path = args.exp_dir + "/{}_result.json".format(arch)
-        if os.path.exists(save_result_path):
-            continue
+        if args.surrogate_archs is not None:
+            if args.attack_defense:
+                if args.defense_model == "adv_train_on_ImageNet":
+                    save_result_path = args.exp_dir + "/{}_surrogates_{}_{}_{}_{}_result.json".format(arch,  ",".join(args.surrogate_archs),
+                                                                             args.defense_model, args.defense_norm, args.defense_eps)
+                else:
+                    save_result_path = args.exp_dir + "/{}_surrogates_{}_{}_result.json".format(arch, ",".join(args.surrogate_archs),
+                                                                                                args.defense_model)
+            else:
+                save_result_path = args.exp_dir + "/{}_surrogates_{}_result.json".format(arch, ",".join(args.surrogate_archs))
+
+        if args.ablation_study:
+            save_result_path = args.exp_dir + "/{}_with_{}_grad_samples_result.json".format(arch, args.est_grad_samples)
         log.info("Begin attack {} on {}, result will be saved to {}".format(arch, args.dataset, save_result_path))
         if args.attack_defense:
             model = DefensiveModel(args.dataset, arch, no_grad=True, defense_model=args.defense_model,norm=args.defense_norm, eps=args.defense_eps)
@@ -194,7 +226,7 @@ if __name__ == "__main__":
         model.cuda()
         model.eval()
         for surrogate_model in surrogate_models:
-            assert model.input_size[-1] == surrogate_model.input_size[-1], "Error, the input sizes of the target model and the surrogate model does not equal!"
+            assert model.input_size[-1] == surrogate_model.input_size[-1], "Error, the input sizes (image's dimension) of the target model and the surrogate model do not equal!"
         tol = None
         if args.tol is not None and args.tol != 0.0:
             tol = args.tol
@@ -202,13 +234,13 @@ if __name__ == "__main__":
             attacker = PriorOptL2Norm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
                                       args.batch_size, args.est_grad_samples,
                                       maximum_queries=args.max_queries, sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm,
-                                      tol=tol, best_initial_target_sample=args.best_initial_target_sample)
+                                      tol=tol, prior_grad_binary_search_tol=0.01, best_initial_target_sample=args.best_initial_target_sample)
             attacker.attack_all_images(args, arch, save_result_path)
         elif args.norm == "linf":
             attacker = PriorOptLinfNorm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
                                         args.batch_size, args.est_grad_samples, maximum_queries=args.max_queries,
                                          sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm, tol=tol,
-                                        best_initial_target_sample=args.best_initial_target_sample)
+                                        prior_grad_binary_search_tol=0.01, best_initial_target_sample=args.best_initial_target_sample)
             attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()
 

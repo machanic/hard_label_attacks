@@ -67,7 +67,7 @@ def get_orthogonal_1d_in_subspace(side_length, x_o2x_adv: torch.Tensor, n, ratio
 
 # compute the best adversarial example in the surface
 def get_x_hat_in_2d(x_o: torch.Tensor, x_adv: torch.Tensor, axis_unit1: torch.Tensor, axis_unit2: torch.Tensor,
-                    net: torch.nn.Module, queries, original_label, max_iter=2,plus_learning_rate=0.01,minus_learning_rate=0.0005,half_range=0.1, init_alpha = np.pi/2):
+                    net: torch.nn.Module, original_label, max_iter=2,plus_learning_rate=0.01,minus_learning_rate=0.0005,half_range=0.1, init_alpha = np.pi/2):
     num_eval = 0
     if not hasattr(get_x_hat_in_2d, 'alpha'):
         get_x_hat_in_2d.alpha = init_alpha

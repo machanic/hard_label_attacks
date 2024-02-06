@@ -3,7 +3,6 @@ import argparse
 import os
 import random
 import sys
-# sys.path.insert(0, os.getcwd())
 sys.path.append(os.getcwd())
 from collections import defaultdict, OrderedDict
 
@@ -12,13 +11,13 @@ from types import SimpleNamespace
 import os.path as osp
 import glog as log
 from torch.nn import functional as F
-from config import CLASS_NUM, MODELS_TEST_STANDARD, IN_CHANNELS, IMAGE_DATA_ROOT
+from config import CLASS_NUM, MODELS_TEST_STANDARD, IN_CHANNELS
 from dataset.dataset_loader_maker import DataLoaderMaker
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
-from dataset.target_class_dataset import ImageNetDataset,CIFAR100Dataset,CIFAR10Dataset,TinyImageNetDataset
 
-from scipy.fftpack import dct, idct
+# from scipy.fftpack import dct, idct
+import CGBA.torch_dct as torch_dct
 import math
 
 import numpy as np
@@ -27,10 +26,10 @@ import os
 from utils.dataset_toolkit import select_random_image_of_target_class
 
 class CGBA(object):
-    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon, load_random_class_image,tol, sigma,
-                 init_rnd_adv, dim_reduce_factor, attack_method = 'CGBA_H',
-                 iterations=93,verbose_control='Yes',
-                 max_num_evals=1e4, init_num_evals=100,maximum_queries=10000,batch_size=1
+    def __init__(self, model, dataset, clip_min, clip_max, height, width, channels, norm, epsilon, load_random_class_image,
+                 tol, sigma, init_rnd_adv, dim_reduce_factor, attack_method = 'CGBA_H',
+                 iterations=93,initial_query=100,
+                 grad_estimator_batch_size=40, maximum_queries=10000,batch_size=1
                  ):
         self.dim_reduce_factor = dim_reduce_factor
         self.model = model
@@ -46,14 +45,12 @@ class CGBA(object):
         self.shape = (channels, height, width)
         self.load_random_class_image = load_random_class_image
         self.init_rnd_adv = init_rnd_adv
-        self.init_num_evals = init_num_evals
-        self.max_num_evals = max_num_evals
         self.num_iterations = iterations
+        self.N0 = initial_query
 
         self.tol = tol
         self.sigma = sigma
-        self.grad_estimator_batch_size = 40
-        self.verbose_control = verbose_control
+        self.grad_estimator_batch_size = grad_estimator_batch_size
         self.attack_method = attack_method
 
         self.maximum_queries = maximum_queries
@@ -73,66 +70,64 @@ class CGBA(object):
         images = torch.clamp(images, min=self.clip_min, max=self.clip_max).cuda()
         logits = self.model(images)
         if target_labels is None:
-            return logits.max(1)[1].detach().cpu() != true_labels
+            return logits.max(1)[1] != true_labels
         else:
-            return logits.max(1)[1].detach().cpu() == target_labels
+            return logits.max(1)[1] == target_labels
 
     def is_adversarial(self, images):
+        assert images.dim() == 4
         is_adv = self.decision_function(images, self.true_labels, self.target_labels)
         if is_adv:
             return 1
         else:
             return -1
 
-    def initialize(self, sample, target_images, true_labels, target_labels):
+    def initialize(self, sample, true_labels, target_labels):
         """
         sample: the shape of sample is [C,H,W] without batch-size
         Efficient Implementation of BlendedUniformNoiseAttack in Foolbox.
         """
         num_eval = 0
-        if target_images is None:
-            while True:
-                random_noise = torch.from_numpy(
-                    np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float()
-                # random_noise = torch.FloatTensor(*self.shape).uniform_(self.clip_min, self.clip_max)
-                success = self.decision_function(random_noise, true_labels, target_labels)
-                num_eval += 1
-                if success:
-                    break
-                if num_eval > 1000:
-                    log.info("Initialization failed! Use a misclassified image as `target_image")
-                    if target_labels is None:
-                        target_labels = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
-                                                      size=true_labels.size()).long()
+        while True:
+            random_noise = torch.from_numpy(
+                np.random.uniform(self.clip_min, self.clip_max, size=self.shape)).float().to(sample.device)
+            # random_noise = torch.FloatTensor(*self.shape).uniform_(self.clip_min, self.clip_max)
+            success = self.decision_function(random_noise[None], true_labels, target_labels)
+            num_eval += 1
+            if success:
+                break
+            if num_eval > 1000:
+                log.info("Initialization failed! Use a misclassified image of a targeted class as the initial image.")
+                if target_labels is None:
+                    target_labels = torch.randint(low=0, high=CLASS_NUM[self.dataset_name],
+                                                  size=true_labels.size()).long().to(sample.device)
+                    invalid_target_index = target_labels.eq(true_labels)
+                    while invalid_target_index.sum().item() > 0:
+                        target_labels[invalid_target_index] = torch.randint(low=0,
+                                                                            high=CLASS_NUM[self.dataset_name],
+                                                                            size=target_labels[
+                                                                                invalid_target_index].size()).long().to(sample.device)
                         invalid_target_index = target_labels.eq(true_labels)
-                        while invalid_target_index.sum().item() > 0:
-                            target_labels[invalid_target_index] = torch.randint(low=0,
-                                                                                high=CLASS_NUM[self.dataset_name],
-                                                                                size=target_labels[
-                                                                                    invalid_target_index].size()).long()
-                            invalid_target_index = target_labels.eq(true_labels)
 
-                    initialization = select_random_image_of_target_class(self.dataset_name, target_labels, self.model,
-                                                                         self.load_random_class_image).squeeze()
-                    return initialization, 1
-                # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
-            # Binary search to minimize l2 distance to original image.
-            low = 0.0
-            high = 1.0
-            while high - low > 0.001:
-                mid = (high + low) / 2.0
-                blended = (1 - mid) * sample + mid * random_noise
-                success = self.decision_function(blended, true_labels, target_labels)
-                num_eval += 1
-                if success:
-                    high = mid
-                else:
-                    low = mid
-            # Sometimes, the found `high` is so tiny that the difference between initialization and sample is very
-            # small, this case will cause an infinity loop
-            initialization = (1 - high) * sample + high * random_noise
-        else:
-            initialization = target_images
+                initialization = select_random_image_of_target_class(self.dataset_name, target_labels, self.model,
+                                                                     self.load_random_class_image).squeeze().to(sample.device)
+                return initialization, 1
+            # assert num_eval < 1e4, "Initialization failed! Use a misclassified image as `target_image`"
+        # Binary search to minimize l2 distance to original image.
+        low = 0.0
+        high = 1.0
+        while high - low > 0.001:
+            mid = (high + low) / 2.0
+            blended = (1 - mid) * sample + mid * random_noise
+            success = self.decision_function(blended, true_labels, target_labels)
+            num_eval += 1
+            if success:
+                high = mid
+            else:
+                low = mid
+        # Sometimes, the found `high` is so tiny that the difference between initialization and sample is very
+        # small, this case will cause an infinity loop
+        initialization = (1 - high) * sample + high * random_noise
         return initialization, num_eval
 
     def find_random_adversarial(self, image):
@@ -142,8 +137,8 @@ class CGBA(object):
         perturbed = image
         while self.is_adversarial(perturbed) == -1:
             pert = torch.randn(image.shape).to(image.device)
-            perturbed = image + num_calls*step * pert
-            perturbed = self.clip_image_values(perturbed).to(image.device)
+            perturbed = image + num_calls * step * pert
+            perturbed = self.clip_image_values(perturbed)
             num_calls += 1
         return perturbed, num_calls
 
@@ -162,7 +157,7 @@ class CGBA(object):
                 break
         return adv, num_calls
 
-    def normal_vector_approximation_batch(self, x_boundary, q_max, random_noises,true_labels, target_labels):
+    def normal_vector_approximation_batch(self, x_boundary, q_max, random_noises):
         '''
         To estimate the normal vector on the boundary point, x_boundary, at each iteration
         '''
@@ -178,36 +173,35 @@ class CGBA(object):
                 # noisy_boundary = [x_boundary[0,:,:,:].cpu().numpy()]*last_batch + self.sigma*current_batch.cpu().numpy()
                 #print(x_boundary.shape)
                 #print(current_batch.shape)
-                if x_boundary.shape == torch.Size([self.channels, self.width, self.height]):
-                    x_boundary = x_boundary.unsqueeze(dim=0) #--[debug]
-                noisy_boundary = [x_boundary[0].cpu().numpy()] * last_batch + self.sigma * current_batch.cpu().numpy()
+                # if x_boundary.shape == torch.Size([self.channels, self.width, self.height]):
+                #     x_boundary = x_boundary.unsqueeze(dim=0) #--[debug]
+                noisy_boundary = x_boundary.repeat(last_batch, 1, 1, 1) + self.sigma * current_batch
             else:
                 current_batch = random_noises[self.grad_estimator_batch_size * j:self.grad_estimator_batch_size * (j + 1)]
-                noisy_boundary = [x_boundary[0,:,:,:].cpu().numpy()]*self.grad_estimator_batch_size +self.sigma*current_batch.cpu().numpy()
-
-            noisy_boundary_tensor = torch.tensor(noisy_boundary).cuda()
-            predict_labels = torch.argmax(self.model.forward(noisy_boundary_tensor),1).cpu().numpy().astype(int)
-            num_calls += noisy_boundary_tensor.size(0)
+                noisy_boundary = x_boundary.repeat(self.grad_estimator_batch_size, 1, 1, 1) +self.sigma * current_batch
+            # log.info("Gradient estimation costs {} queries".format(noisy_boundary.size(0)))
+            predict_labels = torch.argmax(self.model.forward(noisy_boundary), 1) #.cpu().numpy().astype(int)
+            num_calls += noisy_boundary.size(0)
             outs.append(predict_labels)
-        outs = np.concatenate(outs, axis=0)
+        outs = torch.cat(outs, dim=0)
         for i, predict_label in enumerate(outs):
-            if target_labels == None:
-                if predict_label == true_labels:
+            if self.target_labels == None:
+                if predict_label == self.true_labels:
                     z.append(1)
-                    grad_tmp.append(random_noises.cpu().numpy()[i])
+                    grad_tmp.append(random_noises[i])
                 else:
                     z.append(-1)
-                    grad_tmp.append(-random_noises.cpu().numpy()[i])
-            if target_labels != None:
-                if predict_label != target_labels:
+                    grad_tmp.append(-random_noises[i])
+            if self.target_labels != None:
+                if predict_label != self.target_labels:
                     z.append(1)
-                    grad_tmp.append(random_noises.cpu().numpy()[i])
+                    grad_tmp.append(random_noises[i])
                 else:
                     z.append(-1)
-                    grad_tmp.append(-random_noises.cpu().numpy()[i])
+                    grad_tmp.append(-random_noises[i])
         grad = -(1/q_max)*sum(grad_tmp)
-        grad_f = torch.tensor(grad)[None, :,:,:].cuda()
-        return grad_f, sum(z),num_calls
+        grad_f = grad.unsqueeze(0)
+        return grad_f, sum(z), num_calls
 
     def go_to_boundary_CGBA(self, x_s, eta_o, x_b):
         num_calls = 1
@@ -224,14 +218,13 @@ class CGBA(object):
             zeta = (eta + m*v)/torch.norm(eta + m*v)
             p_near_boundary = x_s + zeta*torch.norm(x_b-x_s)*torch.dot(v.reshape(-1), zeta.reshape(-1))
             p_near_boundary = self.clip_image_values(p_near_boundary)
-            if self.is_adversarial(p_near_boundary) == -1:
-                break
-            num_calls += 1
-            if num_calls > 100:
-                print('Finding initial boundary point failed')
+            num_calls += p_near_boundary.size(0)
+            if self.is_adversarial(p_near_boundary) == -1 or num_calls > 100:
+                if num_calls>100:
+                    log.info("Finding initial boundary point failed!")
                 break
         perturbed, n_calls = self.semi_circular_boundary_search(x_s, x_b, p_near_boundary)
-        return perturbed, num_calls+n_calls
+        return perturbed, num_calls - 1 + n_calls
 
     def go_to_boundary_CGBA_H(self, x_s, eta_o, x_b):
         num_calls = 1
@@ -239,16 +232,17 @@ class CGBA(object):
         v = (x_b - x_s) / torch.norm(x_b - x_s)
         theta = torch.acos(torch.clamp(torch.dot(eta.reshape(-1), v.reshape(-1)), -1.0, 1.0))
         while True:
-            m = (torch.sin(theta) * torch.cos(theta / (pow(2, num_calls))) / torch.sin(
-                theta / (pow(2, num_calls))) - torch.cos(
-                theta)).item()
-
+            # It may cause RuntimeError: Overflow when unpacking long, because 2^num_calls is too large for torch.sin and torch.cos.
+            x = theta / float(pow(2, num_calls))
+            m = (torch.sin(theta) * torch.cos(x) / torch.sin(x) - torch.cos(theta)).item()
             zeta = (eta + m * v) / torch.norm(eta + m * v)
 
             perturbed = x_s + zeta * torch.norm(x_b - x_s) * torch.dot(zeta.reshape(-1), v.reshape(-1))
             perturbed = self.clip_image_values(perturbed)
-            num_calls += 1
-            if self.is_adversarial(perturbed) == 1 or num_calls >= 10:
+            num_calls += perturbed.size(0)
+            if self.is_adversarial(perturbed) == 1 or num_calls > 100:
+                if num_calls>100:
+                    log.info("Finding initial boundary point failed!")
                 break
         perturbed, bin_query = self.bin_search(x_s, perturbed)
         return perturbed, num_calls - 1 + bin_query
@@ -334,12 +328,14 @@ class CGBA(object):
         for i in range(n):
             random_x = torch.zeros_like(x)
             fill_size = int(image_size[-1] / self.dim_reduce_factor)
-            random_x[:, :fill_size, :fill_size] = torch.randn(image_size[0], fill_size, fill_size)
+            random_x[:, :, :fill_size, :fill_size] = torch.randn(image_size[0], x.size(1), fill_size, fill_size)
             if self.dim_reduce_factor > 1.0:
-                random_x = torch.from_numpy(
-                    idct(idct(random_x.cpu().numpy(), axis=2, norm='ortho'), axis=1, norm='ortho'))
+                random_x = torch_dct.idct_2d(random_x, norm='ortho')
+                # random_x = torch.from_numpy(
+                #     idct(idct(random_x.cpu().numpy(), axis=3, norm='ortho'), axis=2, norm='ortho'))
             out[i] = random_x
         return out
+
 
     def clip_image_values(self, x):
         x = torch.clamp(x, self.clip_min, self.clip_max)
@@ -352,50 +348,58 @@ class CGBA(object):
                                           min((batch_index + 1)*self.batch_size, self.total_images)).tolist()
         assert images.size(0) == 1
         batch_size = images.size(0)
-        images = images.squeeze()
-        self.true_labels = true_labels
-        self.target_labels = target_labels
+        images = images.cuda()
+        self.true_labels = true_labels.to(images.device)
+        if target_labels is not None:
+            target_images = target_images.to(images.device)
+            self.target_labels = target_labels.to(images.device)
+        else:
+            self.target_labels = target_labels
 
         # Initialize. Note that if the original image is already classified incorrectly, the difference between the found initialization and sample is very very small, this case will lead to inifinity loop later.
         if self.init_rnd_adv:
-            if target_images is None:
+            if target_labels is None:
                 x_adv, query_random = self.find_random_adversarial(images)
             else:
                 x_adv, query_random = target_images, 0
             x_adv, num_eval = self.bin_search(images, x_adv)
             query += num_eval + query_random
         else:
-            x_adv, num_eval = self.initialize(images, target_images, true_labels, target_labels)
-            query += num_eval
-        dist = torch.norm((x_adv - images).view(batch_size, -1), self.ord, 1)
-        working_ind = torch.nonzero(dist > self.epsilon).view(-1)
+            if self.target_labels is None:
+                x_adv, query_random = self.initialize(images, self.true_labels, self.target_labels)
+                query += query_random
+            else:
+                x_adv, query_random = target_images, 0
+                x_adv, num_eval = self.bin_search(images, x_adv)
+                query += num_eval + query_random
+        dist = torch.norm((x_adv - images).view(batch_size, -1), self.ord,1)
+        working_ind = torch.nonzero(dist > self.epsilon).view(-1).detach().cpu()
         success_stop_queries[working_ind] = query[working_ind]
         for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
             self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[inside_batch_index].item()
 
-        cur_iter = 0
         size = images.shape
         # init variables
         for j in range(self.num_iterations):
-            cur_iter += 1
+            q_opt = int(self.N0 * np.sqrt(j+1))
             # search step size.
             if self.dim_reduce_factor < 1.0:
                 raise Exception("The dimension reduction factor should be greater than 1 for reduced dimension, and should be 1 for Full dimensional image space.")
             if self.dim_reduce_factor > 1.0:
-                random_vec_o = self.find_random(images, cur_iter)
+                random_vec_o = self.find_random(images, q_opt).to(images.device)
             else:
                 # print('The attack is performing in full-dimensional image space')
-                random_vec_o = torch.randn(cur_iter,3,size[-2],size[-1])
-            query += cur_iter
-            grad_oi, ratios, calls = self.normal_vector_approximation_batch(x_adv, cur_iter, random_vec_o,true_labels, target_labels)
+                random_vec_o = torch.randn(q_opt, self.channels, size[-2],size[-1]).to(images.device)
+
+            grad_oi, ratios, calls = self.normal_vector_approximation_batch(x_adv, q_opt, random_vec_o)
             query += calls
             if self.attack_method == 'CGBA':
-                x_adv, qs = self.go_to_boundary_CGBA(images.cuda(), grad_oi, x_adv.cuda())
+                x_adv, qs = self.go_to_boundary_CGBA(images, grad_oi, x_adv)
             if self.attack_method == 'CGBA_H':
-                x_adv, qs = self.go_to_boundary_CGBA_H(images.cuda(), grad_oi, x_adv.cuda())
-            query = query + qs
-            dist = torch.norm((x_adv.detach().cpu() - images).view(batch_size, -1), self.ord, 1)
-            working_ind = torch.nonzero(dist > self.epsilon).view(-1)
+                x_adv, qs = self.go_to_boundary_CGBA_H(images, grad_oi, x_adv)
+            query += qs
+            dist = torch.norm((x_adv - images).view(batch_size, -1), self.ord, 1)
+            working_ind = torch.nonzero(dist > self.epsilon).view(-1).detach().cpu()
             success_stop_queries[working_ind] = query[working_ind]
             for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
                 self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[
@@ -415,8 +419,6 @@ class CGBA(object):
             loaded_target_labels = np.load("./target_class_labels/{}/label.npy".format(args.dataset))
             loaded_target_labels = torch.from_numpy(loaded_target_labels).long()
         for batch_index, (images, true_labels) in enumerate(self.dataset_loader):
-            #if batch_index<=5:
-            #    continue
             if args.dataset == "ImageNet" and self.model.input_size[-1] != 299:
                 images = F.interpolate(images,
                                        size=(self.model.input_size[-2], self.model.input_size[-1]), mode='bilinear',
@@ -462,7 +464,7 @@ class CGBA(object):
             with torch.no_grad():
                 if adv_images.dim() == 3:
                     adv_images = adv_images.unsqueeze(0)
-                adv_logit = self.model(adv_images.cuda())
+                adv_logit = self.model(adv_images)
             adv_pred = adv_logit.argmax(dim=1)
             ## Continue query count
             not_done = correct.clone()
@@ -470,7 +472,8 @@ class CGBA(object):
                 not_done = not_done * (1 - adv_pred.eq(target_labels.cuda()).float()).float()  # not_done初始化为 correct, shape = (batch_size,)
             else:
                 not_done = not_done * adv_pred.eq(true_labels.cuda()).float()  #
-            success = (1 - not_done.detach().cpu()) * correct.detach().cpu() * success_epsilon.float() *(success_query <= self.maximum_queries).float()
+            success = (1 - not_done.detach().cpu()) * correct.detach().cpu() * success_epsilon.detach().cpu() * (
+                    success_query.detach().cpu() <= self.maximum_queries).float()
 
             for key in ['query', 'correct', 'not_done',
                         'success', 'success_query', "distortion_with_max_queries"]:
@@ -501,16 +504,11 @@ def get_exp_dir_name(dataset,  norm, targeted, target_type, args):
     if target_type == "load_random":
         target_type = "random"
     target_str = "untargeted" if not targeted else "targeted_{}".format(target_type)
-    if args.init_num_eval_grad!=100:
-        if args.attack_defense:
-            dirname = '{}@{}_on_defensive_model-{}-{}-{}'.format(args.attack_method, args.init_num_eval_grad, dataset, norm, target_str)
-        else:
-            dirname = '{}@{}-{}-{}-{}'.format(args.attack_method,  args.init_num_eval_grad, dataset, norm, target_str)
+
+    if args.attack_defense:
+        dirname = '{}_on_defensive_model-{}-{}-{}'.format(args.attack_method, dataset, norm, target_str)
     else:
-        if args.attack_defense:
-            dirname = '{}_on_defensive_model-{}-{}-{}'.format(args.attack_method, dataset, norm, target_str)
-        else:
-            dirname = '{}-{}-{}-{}'.format(args.attack_method, dataset, norm, target_str)
+        dirname = '{}-{}-{}-{}'.format(args.attack_method, dataset, norm, target_str)
     return dirname
 
 def print_args(args):
@@ -529,7 +527,7 @@ def set_log_file(fname):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu",type=int, required=True)
-    parser.add_argument('--json-config', type=str, default='../configures/CGBA.json',
+    parser.add_argument('--json-config', type=str, default='./configures/CGBA.json',
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--epsilon', type=float, help='the lp perturbation bound')
     parser.add_argument("--norm",type=str, choices=["l2","linf"],required=True)
@@ -547,11 +545,11 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=0, type=int, help='random seed')
     parser.add_argument('--attack_defense',action="store_true")
     parser.add_argument("--num_iterations",type=int,default=200)
+    parser.add_argument("--initial-query", type=int, default=100)
     parser.add_argument('--defense_model',type=str, default=None)
     parser.add_argument('--defense_norm',type=str,choices=["l2","linf"],default='linf')
     parser.add_argument('--defense_eps',type=str,default="")
     parser.add_argument('--max_queries',type=int, default=10000)
-    parser.add_argument('--init_num_eval_grad', type=int, default=100)
     parser.add_argument('--attack_method', type=str,choices=['CGBA_H',"CGBA"], required=True)
     parser.add_argument('--dim_reduce_factor', type=int)
 
@@ -600,11 +598,14 @@ if __name__ == "__main__":
     set_log_file(log_file_path)
     if args.attack_defense:
         assert args.defense_model is not None
-
+    torch.backends.cudnn.enabled = True
     torch.backends.cudnn.deterministic = True
+    torch.backends.cuda.matmul.allow_tf32 = False
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
     if args.all_archs:
         archs = MODELS_TEST_STANDARD[args.dataset]
     else:
@@ -635,8 +636,9 @@ if __name__ == "__main__":
         model.cuda()
         model.eval()
         attacker = CGBA(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
-                                     args.norm, args.epsilon, args.load_random_class_image,args.tol,args.sigma,args.init_rnd_adv, args.dim_reduce_factor,args.attack_method, args.num_iterations,
-                                     max_num_evals=1e4, init_num_evals=args.init_num_eval_grad,
+                                     args.norm, args.epsilon, args.load_random_class_image,args.tol,args.sigma,args.init_rnd_adv,
+                                    args.dim_reduce_factor,args.attack_method, args.num_iterations,args.initial_query,
+                                    grad_estimator_batch_size=40,
                                      maximum_queries=args.max_queries)
         attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()

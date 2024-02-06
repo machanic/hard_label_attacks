@@ -73,7 +73,7 @@ def get_parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, required=True, choices=["CIFAR-10","CIFAR-100","ImageNet","TinyImageNet"],
                         help='Dataset to be used, [CIFAR-10, CIFAR-100, ImageNet, TinyImageNet]')
-    parser.add_argument('--json-config', type=str, default='../configures/SignOPT.json',
+    parser.add_argument('--json-config', type=str, default='./configures/SignOPT.json',
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--norm', type=str, required=True, choices=["l2","linf"], help='Which lp constraint to run bandits [linf|l2]')
     parser.add_argument('--est-grad-queries', type=int,default=200)
@@ -125,9 +125,10 @@ if __name__ == "__main__":
         defaults.update({k: v for k, v in arg_vars.items() if k not in defaults})
         args = SimpleNamespace(**defaults)
         args_dict = defaults
-    # if args.targeted:
-    #     if args.dataset == "ImageNet":
-    #         args.max_queries = 20000
+    if args.targeted and args.dataset == "ImageNet":
+        args.max_queries = 20000
+    if args.attack_defense and args.defense_model == "adv_train_on_ImageNet":
+        args.max_queries = 20000
     args.exp_dir = osp.join(args.exp_dir,
                             get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type, args))  # 随机产生一个目录用于实验
     os.makedirs(args.exp_dir, exist_ok=True)

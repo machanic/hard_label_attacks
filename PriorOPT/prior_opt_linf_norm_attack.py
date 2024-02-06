@@ -12,7 +12,8 @@ from utils.dataset_toolkit import select_random_image_of_target_class
 
 class PriorOptLinfNorm(object):
     def __init__(self, model, surrogate_models, dataset, epsilon, targeted, batch_size=1, k=100, alpha=0.2, beta=0.001, iterations=1000,
-                 maximum_queries=10000, sign=False, momentum=0.0, clip_grad_max_norm=1.0, tol=None, best_initial_target_sample=False):
+                 maximum_queries=10000, sign=False, momentum=0.0, clip_grad_max_norm=1.0, tol=None, prior_grad_binary_search_tol=0.01,
+                 best_initial_target_sample=False):
         self.model = model
         self.surrogate_models = surrogate_models
         self.k = k
@@ -39,6 +40,7 @@ class PriorOptLinfNorm(object):
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
         self.clip_grad_max_norm = clip_grad_max_norm
         self.tol = tol
+        self.prior_grad_binary_search_tol = prior_grad_binary_search_tol
 
     def convert_linf_to_l2_distance(self, theta, distance_linf):
         return distance_linf / torch.norm(theta.view(-1), p=float('inf')) * torch.norm(theta.view(-1), p=2)
@@ -292,6 +294,7 @@ class PriorOptLinfNorm(object):
         if images.size(-1) != model.input_size[-1]:
             images = F.interpolate(images, size=model.input_size[-1], mode='bilinear', align_corners=False)
             theta = F.interpolate(theta, size=model.input_size[-1], mode='bilinear', align_corners=False)
+            theta /= self.norm_l2(theta)
         with torch.no_grad():
             min_lmdb, target_labels, _ = self.g_function_bin_search(model, images, theta.detach(), initial_lbd, true_labels, target_labels)
         if target_labels is not None:
@@ -299,7 +302,9 @@ class PriorOptLinfNorm(object):
 
         with torch.enable_grad():
             theta.requires_grad_()
-            loss = self.cw_loss(model(images + self.convert_linf_to_l2_distance(theta, min_lmdb).item() * theta), true_labels, target_labels)
+            loss = self.cw_loss(model(images + self.convert_linf_to_l2_distance(theta, min_lmdb).item()
+                                 * theta / torch.norm(theta, p=2, dim=(1, 2, 3), keepdim=True)),
+                                true_labels, target_labels)
             grad_theta = torch.autograd.grad(-loss, theta, create_graph=False)[0]
         return grad_theta
 
@@ -368,18 +373,18 @@ class PriorOptLinfNorm(object):
             if initial_lbd_l2_norm > max_high_bound:
                 max_high_bound = initial_lbd_l2_norm + 100
             if true_label is not None:
-                prior_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
-                                                                              initial_lbd, max_high_bound, tol=0.01)
+                perturb_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
+                                                                              initial_lbd, max_high_bound, tol=self.prior_grad_binary_search_tol)
             else:
-                prior_bound, bs_count = self.fine_grained_binary_search_local_targeted(self.model, images, target_label,
+                perturb_bound, bs_count = self.fine_grained_binary_search_local_targeted(self.model, images, target_label,
                                                                                        new_theta, initial_lbd, max_high_bound,
-                                                                                       tol=0.01)
+                                                                                       tol=self.prior_grad_binary_search_tol)
             query += bs_count
-            if prior_bound == float("inf"):
+            if perturb_bound == float("inf"):
                 log.warn("warn: the returned boundary distance is float('inf') after the binary search for calculating the loss derivative.")
                 continue
                 # assert prior_bound!=float('inf'), "Error! returned float('inf') in binary search for calculating the loss derivative."
-            weight = (prior_bound - initial_lbd) / sigma  # 梯度指的是朝着lmdb边界距离上升的方向
+            weight = (perturb_bound - initial_lbd) / sigma  # 梯度指的是朝着lmdb边界距离上升的方向
             derivatives.append(weight)
             est_grad += weight * grad_theta_orth
         if len(derivatives) > 0:
@@ -546,6 +551,7 @@ class PriorOptLinfNorm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
+                beta = max(beta, 1e-8)
             ## if all attemps failed, min_theta, min_g2 will be the current theta (i.e. not moving)
             xg, gg = min_theta, min_g2
             vg = min_vg
@@ -693,7 +699,7 @@ class PriorOptLinfNorm(object):
                 beta = beta * 0.1
                 # if beta < 1e-8 and self.tol is None:
                 #     break
-
+                beta = max(beta, 1e-8)
             xg, gg = min_theta, min_g2
 
             ls_total += ls_count

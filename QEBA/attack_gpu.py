@@ -465,17 +465,24 @@ class QEBA(object):
         else:
             succeed = False
         # Call recursive function.
+        highs = highs.to(torch.float64)
+        lows = lows.to(torch.float64)
+        old_mids = highs
         while torch.max((highs - lows) / thresholds).item() > 1:
             # projection to mids.
             mids = (highs + lows) / 2.0
-            mid_inputs = self.project(unperturbed, perturbed_inputs, mids)
+            mid_inputs = self.project(unperturbed, perturbed_inputs, mids).to(torch.float32)
             # Update highs and lows based on model decisions.
             decisions = decision_function(mid_inputs)
             num_evals += mid_inputs.size(0)
             lows = torch.where(decisions == 0, mids, lows)
             highs = torch.where(decisions == 1, mids, highs)
+            reached_numerical_precision = (old_mids == mids).all()
+            old_mids = mids
+            if reached_numerical_precision:
+                break
 
-        out_inputs = self.project(unperturbed, perturbed_inputs, highs)
+        out_inputs = self.project(unperturbed, perturbed_inputs, highs).to(torch.float32)
 
         # Compute distance of the output to select the best choice.
         # (only used when stepsize_search is grid_search.)
@@ -544,7 +551,7 @@ class QEBA(object):
             epsilon = dist * size_ratio / np.sqrt(current_iteration) + 0.1
         else:
             epsilon = dist / np.sqrt(current_iteration)
-        while True:
+        while epsilon > 1e-50:
             updated = torch.clamp(x + epsilon * update, min=self.clip_min, max=self.clip_max)
             success = bool(decision_function(updated[None])[0].item())
             num_evals += 1
@@ -711,7 +718,7 @@ class QEBA(object):
                 def decision_function(x):
                     out = a.forward(x, strict=False)[1]  # forward function returns pr
                     return out
-                target_images, num_calls = self.initialize(target_model, images.squeeze(0),decision_function,None,true_labels, target_labels)
+                target_images, num_calls = self.initialize(target_model, images.squeeze(0), decision_function,None,true_labels, target_labels)
 
             if model is None or self._default_criterion is None:
                 raise ValueError('The attack needs to be initialized'
@@ -732,7 +739,6 @@ class QEBA(object):
             # self.rho_ref = rho
 
             self._starting_point = target_images # Adversarial input to use as a starting point
-
             adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, a)
             distortion_with_max_queries = distortion_with_max_queries.detach().cpu()
             if adv_images.dim() == 3:
