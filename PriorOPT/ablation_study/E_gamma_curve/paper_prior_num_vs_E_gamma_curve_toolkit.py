@@ -101,7 +101,7 @@ if __name__ == '__main__':
     y_prior_opt_upper_bound = np.array(prior_opt_gamma_upper_bound_list)
     y_prior_sign_opt_sorted = np.array(sorted_prior_sign_opt_gamma_square_list)
     y_prior_opt_sorted = np.array(sorted_prior_opt_gamma_square_list)
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'r', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     plt.yticks(np.linspace(0, max_y,11), fontsize=20)
     plt.xlabel(r"Number of Priors", fontsize=25)
     plt.ylabel(r"$\mathbb{E}[\gamma]$", fontsize=25)
-    plt.legend(loc='upper left', prop={'size': 20}, framealpha=0.5, fancybox=True, frameon=True)
+    plt.legend(loc='lower right', prop={'size': 20}, framealpha=0.5, fancybox=True, frameon=True)
     ax = plt.gca()
     # plt.show()
     #
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     # axins.set_xticklabels(axins.get_xticks(),color='steelblue')
     # axins.set_yticklabels(axins.get_yticks(), color='steelblue')
     # mark_inset(ax, axins, loc1=3, loc2=4, fc="none", ec='k', lw=1)
-    plt.savefig("./s_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
+    plt.savefig("./prior_num_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
     plt.close()
 
 

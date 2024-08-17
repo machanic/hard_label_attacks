@@ -126,7 +126,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     return path
 
 def get_all_exists_folder(dataset, method, norm, targeted):
-    root_dir = "F:/logs/hard_label_attack_complete/"
+    root_dir = "H:/logs/hard_label_attack_complete/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     file_name = from_method_to_dir_path(dataset, method, norm, targeted)
     file_path = root_dir + file_name +"/ablation_study"
@@ -141,14 +141,14 @@ def get_all_exists_folder(dataset, method, norm, targeted):
 def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_file_path, xlabel, ylabel):
 
     # fig_type can be [query_success_rate_dict, query_threshold_success_rate_dict, success_rate_to_avg_query]
-    method = "PriorOPT"
+    method = "PriorSignOPT"
     dataset_path_dict= get_all_exists_folder(dataset, method, norm, targeted)
     max_query = 10000
     if dataset=="ImageNet" and targeted:
         max_query = 20000
     query_budgets = np.arange(1000, max_query+1, 1000)
     data_info = read_all_data(dataset_path_dict, arch, query_budgets,np.arange(20,201,20).tolist(), fig_type)  # fig_type can be mean_distortion or median_distortion
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue", "greenyellow",
               "maroon", "steelblue", "r", "slategrey", "navy","olive","darkred","orchid"]
@@ -220,7 +220,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/icml2024/figures/ablation_study/"
+    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/NeurIPS 2024/figures/ablation_study/"
     os.makedirs(dump_folder, exist_ok=True)
 
     if "CIFAR" in args.dataset:

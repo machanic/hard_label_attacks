@@ -82,7 +82,7 @@ if __name__ == '__main__':
     y_prior_opt_2 = np.array(prior_opt_gamma_square_list_2)
     y_prior_sign_opt_5 = np.array(prior_sign_opt_gamma_square_list_5)
     y_prior_opt_5 = np.array(prior_opt_gamma_square_list_5)
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'r', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",

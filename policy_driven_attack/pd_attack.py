@@ -1762,7 +1762,7 @@ if __name__ == '__main__':
     # if args.num_part > 1, then this experiment is just a part and we should use the same token for all parts
     # to guarantee that, we use sha256sum of config in string format to generate unique token
     assert 0 <= args.part_id < args.num_part <= args.num_image
-    args.exp_dir = osp.join(args.exp_dir, 'PDA_{}_{}_{}'.format(args.dataset, args.norm_type, args.targeted))
+    args.exp_dir = osp.join(args.exp_dir, 'PDA-{}-{}-{}'.format(args.dataset, args.norm_type, args.targeted))
     os.makedirs(args.exp_dir, exist_ok=True)
 
     # set log file, and import glog after that (since we might change sys.stdout/stderr on set_log_file())

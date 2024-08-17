@@ -19,7 +19,7 @@ from adversarial_defense.feature_scatter.attack_methods import Attack_FeaScatter
 from adversarial_defense.feature_scatter.utils import softCrossEntropy
 from config import PROJECT_PATH, CLASS_NUM
 from dataset.dataset_loader_maker import DataLoaderMaker
-from dataset.standard_model import StandardModel
+from models.standard_model import StandardModel
 
 torch.set_printoptions(threshold=10000)
 np.set_printoptions(threshold=np.inf)

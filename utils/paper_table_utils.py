@@ -27,15 +27,28 @@ def new_round(_float, _len):
         return (round(_float, _len))
 
 
-method_name_to_paper = {"tangent_attack":"Tangent Attack",  "HSJA":"HopSkipJumpAttack",
-                        "ellipsoid_tangent_attack":"Ellipsoid Tangent Attack",
+method_name_to_paper = {"tangent_attack":"TA",  "HSJA":"HSJA",
+                        "ellipsoid_tangent_attack":"G-TA",
                         "SignOPT":"Sign-OPT", "SVMOPT":"SVM-OPT",
-                        "boundary_attack":"Boundary Attack",
-                        "QEBA":"QEBA-S",
-                        "QEBATangentAttack":"QEBA-S + Tangent Attack"
+                        "biased_boundary_attack":"BBA",
+                        "QEBA":"QEBA","Evolutionary":"Evolutionary",
+                        "SQBA":"SQBA","GeoDA":"GeoDA","TriangleAttack":"Triangle Attack",
+                        "SurFree":"SurFree",
+                        "PriorSignOPT_1prior": "Prior-Sign-OPT-1prior",
+                        "PriorSignOPT_2prior": "Prior-Sign-OPT-2prior",
+                        "PriorSignOPT_PGD_init_theta":"Prior-Sign-OPT_PGD_init_theta",
+                        "PriorOPT_1prior": "Prior-OPT-1prior",
+                        "PriorOPT_2prior": "Prior-OPT-2prior",
+                        "PriorOPT_PGD_init_theta":"Prior-OPT_PGD_init_theta",
                         }
-                        # "RayS": "RayS","GeoDA": "GeoDA",
-                        #"biased_boundary_attack": "Biased Boundary Attack"}
+
+
+# method_name_to_paper = {
+#                         "SignOPT":"Sign-OPT",
+#                         "PriorSignOPT": "Prior-Sign-OPT",
+#                         "PriorOPT": "Prior-OPT"
+#                         }
+
 
 def from_method_to_dir_path(dataset, method, norm, targeted):
     if method == "tangent_attack":
@@ -43,45 +56,69 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
                                                                 norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "ellipsoid_tangent_attack":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
-                                                               norm=norm,
-                                                               target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "HSJA":
-        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
-                                                                norm=norm,  target_str="untargeted" if not targeted else "targeted_increment")
-    if method == "tangent_attack@30":
-        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "HSJA@30":
+    elif method == "HSJA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm,  target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "GeoDA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "RayS":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
+                                                               norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "biased_boundary_attack":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "boundary_attack":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "RayS":
-        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "SignOPT":
-        if targeted:
-            path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
-                                                                   target_str="untargeted" if not targeted else "targeted_increment")
-        else:
-            path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "SVMOPT":
-        if targeted:
-            path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
-                                                                   target_str="untargeted" if not targeted else "targeted_increment")
-        else:
-            path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "QEBA":
-        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
-                                                               norm=norm,
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "AHA":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "QEBATangentAttack":
-        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
-                                                               norm=norm,
+    elif method == "Evolutionary":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "TriangleAttack":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "CGBA_H":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "SQBA":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "SurFree":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorOPT_1prior":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorSignOPT_1prior":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorSignOPT_PGD_init_theta":
+        path = "PriorSignOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format( dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorOPT_2prior":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorSignOPT_2prior":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorOPT_PGD_init_theta":
+        path = "PriorOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format( dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorOPT":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorSignOPT":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "QEBA":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
     return path
 
@@ -95,7 +132,7 @@ def read_json_and_extract(json_path):
 def get_file_name_list(dataset, method_name_to_paper, norm, targeted):
     folder_path_dict = {}
     for method, paper_method_name in method_name_to_paper.items():
-        file_path = "/home1/machen/hard_label_attacks/logs/" + from_method_to_dir_path(dataset, method, norm, targeted)
+        file_path = "H:/logs/hard_label_attack_complete/" + from_method_to_dir_path(dataset, method, norm, targeted)
         folder_path_dict[paper_method_name] = file_path
     return folder_path_dict
 
@@ -115,8 +152,6 @@ def get_mean_and_median_distortion_given_query_budgets(distortion_dict, query_bu
             query_distortion = {int(float(query)):float(dist) for query,dist in query_distortion.items()}
             queries = np.array(list(query_distortion.keys()))
             queries = np.sort(queries)
-            # find_index = bisect.bisect(queries, query_budget) - 1
-            # print(len(queries),find_index)
             find_index = np.searchsorted(queries, query_budget, side='right') - 1
             if query_budget < queries[find_index]:
                 print("query budget is {}, find query is {}, min query is {}, len query_distortion is {}".format(query_budget, queries[find_index], np.min(queries).item(), len(query_distortion)))
@@ -133,3141 +168,568 @@ def get_mean_and_median_distortion_given_query_budgets(distortion_dict, query_bu
     return mean_and_median_distortions
 
 
-def fetch_all_json_content_given_contraint(dataset, norm, targeted, arch, query_budgets, want_key="mean_distortion"):
+def fetch_all_json_content_given_contraint(dataset, norm, targeted, arch, query_budgets,
+    wanted_one_prior_list, wanted_two_prior_list, want_key="mean_distortion"):
     folder_list = get_file_name_list(dataset, method_name_to_paper, norm, targeted)
-    result = {}
+    result = defaultdict(lambda : defaultdict(lambda : "-"))
     for method, folder in folder_list.items():
-        file_path = folder + "/{}_result.json".format(arch)
-        if "QEBA" in method:
-            file_path = folder + "/{}_pgen_resize_result.json".format(arch)
-
-        if method in ["RayS","GeoDA"] and targeted:
-            print("{} does not exist!".format(file_path))
-            result[method] = defaultdict(lambda : "-")
+        if not os.path.exists(folder):
             continue
-        if not os.path.exists(file_path):
-            distortion_dict = {}
-        else:
-            distortion_dict = read_json_and_extract(file_path)
-        print(file_path)
-        mean_and_median_distortions = get_mean_and_median_distortion_given_query_budgets(distortion_dict, query_budgets,want_key)
-        result[method] = mean_and_median_distortions
+        for file_name in os.listdir(folder):
+            file_path = os.path.join(folder, file_name)
+            if file_name.startswith(arch) and file_name.endswith(".json"):
+                if method in ["RayS","GeoDA"] and targeted:
+                    print("{} does not exist!".format(file_path))
+                    result[method] = defaultdict(lambda : "-")
+                    continue
+                if not os.path.exists(file_path):
+                    distortion_dict = {}
+                else:
+                    if method.endswith("1prior"):
+                        json_surrogate_arch = []
+                        with open(file_path, "r") as file_obj:
+                            json_content = json.load(file_obj)
+                            if json_content["args"]["surrogate_arch"]:
+                                json_surrogate_arch.append(json_content["args"]["surrogate_arch"])
+                            elif json_content["args"]["surrogate_archs"]:
+                                json_surrogate_arch.extend(json_content["args"]["surrogate_archs"])
+                            distortion_dict = json_content["distortion"]
+                        if len(json_surrogate_arch) != 1 or json_surrogate_arch[0] not in wanted_one_prior_list:
+                            distortion_dict.clear()
+                            continue
+                        print("Read  : " + file_path)
+                    elif method.endswith("2prior"):
+                        json_surrogate_arch = []
+                        with open(file_path, "r") as file_obj:
+                            json_content = json.load(file_obj)
+                            if json_content["args"]["surrogate_archs"]:
+                                json_surrogate_arch.extend(json_content["args"]["surrogate_archs"])
+                            distortion_dict = json_content["distortion"]
+                        two_prior_found = False
+                        if len(json_surrogate_arch) != 2:
+                            distortion_dict.clear()
+                            continue
+                        for two_prior in wanted_two_prior_list:
+                            if len(set(two_prior) & set(json_surrogate_arch)) == 2:
+                                two_prior_found = True
+                        if not two_prior_found:
+                            distortion_dict.clear()
+                            continue
+                        print("Read  : " + file_path)
+                    else:
+                        with open(file_path, "r") as file_obj:
+                            json_content = json.load(file_obj)
+                            distortion_dict = json_content["distortion"]
+                            print("Read  : " + file_path)
+
+                mean_and_median_distortions = get_mean_and_median_distortion_given_query_budgets(distortion_dict, query_budgets,want_key)
+                result[method] = mean_and_median_distortions
     return result
 
-def draw_tables_for_ImageNet_targeted(result):
+
+
+
+
+def fetch_json_content_for_multiple_priors(dataset, norm, targeted, arch, query_budgets, want_key="mean_distortion"):
+    folder_list = get_file_name_list(dataset, method_name_to_paper, norm, targeted)
+    result = defaultdict(lambda : defaultdict(lambda : "-"))
+    for method, folder in folder_list.items():
+        if not os.path.exists(folder):
+            continue
+        for file_name in os.listdir(folder):
+            file_path = os.path.join(folder, file_name)
+            if file_name.startswith(arch) and file_name.endswith(".json"):
+                if method in ["RayS","GeoDA"] and targeted:
+                    print("{} does not exist!".format(file_path))
+                    result[method] = defaultdict(lambda : "-")
+                    continue
+                if not os.path.exists(file_path):
+                    distortion_dict = {}
+                else:
+                    if method.startswith("Prior"):
+                        json_surrogate_arch = []
+                        with open(file_path, "r") as file_obj:
+                            json_content = json.load(file_obj)
+                            if json_content["args"]["surrogate_archs"]:
+                                json_surrogate_arch.extend(json_content["args"]["surrogate_archs"])
+                            else:
+                                json_surrogate_arch.append(json_content["args"]["surrogate_arch"])
+                            distortion_dict = json_content["distortion"]
+                        new_method = method+"-{}prior".format(len(json_surrogate_arch))
+                        print("{}  : ".format(new_method) + file_path + " Archs:{}".format( ",".join(json_surrogate_arch)))
+                    else:
+                        with open(file_path, "r") as file_obj:
+                            json_content = json.load(file_obj)
+                            distortion_dict = json_content["distortion"]
+                            print("Read  : " + file_path)
+                        new_method = method
+
+                mean_and_median_distortions = get_mean_and_median_distortion_given_query_budgets(distortion_dict, query_budgets,want_key)
+                result[new_method] = mean_and_median_distortions
+    return result
+
+def draw_tables_for_multi_priors(result, surrogate_1, surrogate_2, surrogate_3, surrogate_4, surrogate_5):
     print("""
-                    & \\multirow{{5}}{{*}}{{Inception-v3}} & Sign-OPT & {SignOPT_inceptionv3_1000} & {SignOPT_inceptionv3_2000} & {SignOPT_inceptionv3_5000} & {SignOPT_inceptionv3_8000} & {SignOPT_inceptionv3_10000} & - & - & - & - \\\\
-                    & SVM-OPT & {SVMOPT_inceptionv3_1000} & {SVMOPT_inceptionv3_2000} & {SVMOPT_inceptionv3_5000} & {SVMOPT_inceptionv3_8000} & {SVMOPT_inceptionv3_10000} & - & - & - & - \\\\
-                    & HopSkipJumpAttack & {HSJA_inceptionv3_1000} & {HSJA_inceptionv3_2000} & {HSJA_inceptionv3_5000} & {HSJA_inceptionv3_8000} & {HSJA_inceptionv3_10000} & - & - & - & - \\\\
-                    & Tangent Attack (ours) & {Tangent_inceptionv3_1000} & {Tangent_inceptionv3_2000} & {Tangent_inceptionv3_5000} & {Tangent_inceptionv3_8000} & {Tangent_inceptionv3_10000} & - & - & - & - \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & \\multirow{{5}}{{*}}{{ResNet-101}} & Sign-OPT & {SignOPT_resnet101_1000} & {SignOPT_resnet101_2000} & {SignOPT_resnet101_5000} & {SignOPT_resnet101_8000} & {SignOPT_resnet101_10000} & - & - & - & - \\\\
-                    & SVM-OPT & {SVMOPT_resnet101_1000} & {SVMOPT_resnet101_2000} & {SVMOPT_resnet101_5000} & {SVMOPT_resnet101_8000} & {SVMOPT_resnet101_10000} & - & - & - & - \\\\
-                    & HopSkipJumpAttack & {HSJA_resnet101_1000} & {HSJA_resnet101_2000} & {HSJA_resnet101_5000} & {HSJA_resnet101_8000} & {HSJA_resnet101_10000} & - & - & - & - \\\\
-                    & Tangent Attack (ours) & {Tangent_resnet101_1000} & {Tangent_resnet101_2000} & {Tangent_resnet101_5000} & {Tangent_resnet101_8000} & {Tangent_resnet101_10000} & - & - & - & - \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & \\multirow{{5}}{{*}}{{ResNeXt-101}} & Sign-OPT & {SignOPT_resnext101_1000} & {SignOPT_resnext101_2000} & {SignOPT_resnext101_5000} & {SignOPT_resnext101_8000} & {SignOPT_resnext101_10000} & - & - & - & - \\\\
-                    & SVM-OPT & {SVMOPT_resnext101_1000} & {SVMOPT_resnext101_2000} & {SVMOPT_resnext101_5000} & {SVMOPT_resnext101_8000} & {SVMOPT_resnext101_10000} & - & - & - & - \\\\
-                    & HopSkipJumpAttack & {HSJA_resnext101_1000} & {HSJA_resnext101_2000} & {HSJA_resnext101_5000} & {HSJA_resnext101_8000} & {HSJA_resnext101_10000} & - & - & - & - \\\\
-                    &  Tangent Attack (ours) & {Tangent_resnext101_1000} & {Tangent_resnext101_2000} & {Tangent_resnext101_5000} & {Tangent_resnext101_8000} & {Tangent_resnext101_10000} & - & - & - & - \\\\
-                        """.format(
-
-        SignOPT_inceptionv3_1000=result["inceptionv3"]["Sign-OPT"][1000],
-        SignOPT_inceptionv3_2000=result["inceptionv3"]["Sign-OPT"][2000],
-        SignOPT_inceptionv3_5000=result["inceptionv3"]["Sign-OPT"][5000],
-        SignOPT_inceptionv3_8000=result["inceptionv3"]["Sign-OPT"][8000],
-        SignOPT_inceptionv3_10000=result["inceptionv3"]["Sign-OPT"][10000],
-
-        SignOPT_resnet101_1000=result["resnet101"]["Sign-OPT"][1000],
-        SignOPT_resnet101_2000=result["resnet101"]["Sign-OPT"][2000],
-        SignOPT_resnet101_5000=result["resnet101"]["Sign-OPT"][5000],
-        SignOPT_resnet101_8000=result["resnet101"]["Sign-OPT"][8000],
-        SignOPT_resnet101_10000=result["resnet101"]["Sign-OPT"][10000],
-
-        SignOPT_resnext101_1000=result["resnext101_64x4d"]["Sign-OPT"][1000],
-        SignOPT_resnext101_2000=result["resnext101_64x4d"]["Sign-OPT"][2000],
-        SignOPT_resnext101_5000=result["resnext101_64x4d"]["Sign-OPT"][5000],
-        SignOPT_resnext101_8000=result["resnext101_64x4d"]["Sign-OPT"][8000],
-        SignOPT_resnext101_10000=result["resnext101_64x4d"]["Sign-OPT"][10000],
-
-        SVMOPT_inceptionv3_1000=result["inceptionv3"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv3_2000=result["inceptionv3"]["SVM-OPT"][2000],
-        SVMOPT_inceptionv3_5000=result["inceptionv3"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv3_8000=result["inceptionv3"]["SVM-OPT"][8000],
-        SVMOPT_inceptionv3_10000=result["inceptionv3"]["SVM-OPT"][10000],
-
-        SVMOPT_resnet101_1000=result["resnet101"]["SVM-OPT"][1000],
-        SVMOPT_resnet101_2000=result["resnet101"]["SVM-OPT"][2000],
-        SVMOPT_resnet101_5000=result["resnet101"]["SVM-OPT"][5000],
-        SVMOPT_resnet101_8000=result["resnet101"]["SVM-OPT"][8000],
-        SVMOPT_resnet101_10000=result["resnet101"]["SVM-OPT"][10000],
-
-        SVMOPT_resnext101_1000=result["resnext101_64x4d"]["SVM-OPT"][1000],
-        SVMOPT_resnext101_2000=result["resnext101_64x4d"]["SVM-OPT"][2000],
-        SVMOPT_resnext101_5000=result["resnext101_64x4d"]["SVM-OPT"][5000],
-        SVMOPT_resnext101_8000=result["resnext101_64x4d"]["SVM-OPT"][8000],
-        SVMOPT_resnext101_10000=result["resnext101_64x4d"]["SVM-OPT"][10000],
-
-        HSJA_inceptionv3_1000=result["inceptionv3"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv3_2000=result["inceptionv3"]["HopSkipJumpAttack"][2000],
-        HSJA_inceptionv3_5000=result["inceptionv3"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv3_8000=result["inceptionv3"]["HopSkipJumpAttack"][8000],
-        HSJA_inceptionv3_10000=result["inceptionv3"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnet101_1000=result["resnet101"]["HopSkipJumpAttack"][1000],
-        HSJA_resnet101_2000=result["resnet101"]["HopSkipJumpAttack"][2000],
-        HSJA_resnet101_5000=result["resnet101"]["HopSkipJumpAttack"][5000],
-        HSJA_resnet101_8000=result["resnet101"]["HopSkipJumpAttack"][8000],
-        HSJA_resnet101_10000=result["resnet101"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnext101_1000=result["resnext101_64x4d"]["HopSkipJumpAttack"][1000],
-        HSJA_resnext101_2000=result["resnext101_64x4d"]["HopSkipJumpAttack"][2000],
-        HSJA_resnext101_5000=result["resnext101_64x4d"]["HopSkipJumpAttack"][5000],
-        HSJA_resnext101_8000=result["resnext101_64x4d"]["HopSkipJumpAttack"][8000],
-        HSJA_resnext101_10000=result["resnext101_64x4d"]["HopSkipJumpAttack"][10000],
-
-        Tangent_inceptionv3_1000=result["inceptionv3"]["Tangent Attack"][1000],
-        Tangent_inceptionv3_2000=result["inceptionv3"]["Tangent Attack"][2000],
-        Tangent_inceptionv3_5000=result["inceptionv3"]["Tangent Attack"][5000],
-        Tangent_inceptionv3_8000=result["inceptionv3"]["Tangent Attack"][8000],
-        Tangent_inceptionv3_10000=result["inceptionv3"]["Tangent Attack"][10000],
-
-        Tangent_resnet101_1000=result["resnet101"]["Tangent Attack"][1000],
-        Tangent_resnet101_2000=result["resnet101"]["Tangent Attack"][2000],
-        Tangent_resnet101_5000=result["resnet101"]["Tangent Attack"][5000],
-        Tangent_resnet101_8000=result["resnet101"]["Tangent Attack"][8000],
-        Tangent_resnet101_10000=result["resnet101"]["Tangent Attack"][10000],
-
-        Tangent_resnext101_1000=result["resnext101_64x4d"]["Tangent Attack"][1000],
-        Tangent_resnext101_2000=result["resnext101_64x4d"]["Tangent Attack"][2000],
-        Tangent_resnext101_5000=result["resnext101_64x4d"]["Tangent Attack"][5000],
-        Tangent_resnext101_8000=result["resnext101_64x4d"]["Tangent Attack"][8000],
-        Tangent_resnext101_10000=result["resnext101_64x4d"]["Tangent Attack"][10000],
-    ))
-
-
-def draw_tables_for_ImageNet(result):
-    print("""
-                    & Boundary Attack & {BoundaryAttack_inceptionv3_1000} & {BoundaryAttack_inceptionv3_2000} & {BoundaryAttack_inceptionv3_5000} & {BoundaryAttack_inceptionv3_8000} & {BoundaryAttack_inceptionv3_10000} \\\\
-                    & Sign-OPT & {SignOPT_inceptionv3_1000} & {SignOPT_inceptionv3_2000} & {SignOPT_inceptionv3_5000} & {SignOPT_inceptionv3_8000} & {SignOPT_inceptionv3_10000} \\\\
-                    & SVM-OPT & {SVMOPT_inceptionv3_1000} & {SVMOPT_inceptionv3_2000} & {SVMOPT_inceptionv3_5000} & {SVMOPT_inceptionv3_8000} & {SVMOPT_inceptionv3_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_inceptionv3_1000} & {HSJA_inceptionv3_2000} & {HSJA_inceptionv3_5000} & {HSJA_inceptionv3_8000} & {HSJA_inceptionv3_10000} \\\\
-                    & Tangent Attack (ours)  {Tangent_inceptionv3_1000} & {Tangent_inceptionv3_2000} & {Tangent_inceptionv3_5000} & {Tangent_inceptionv3_8000} & {Tangent_inceptionv3_10000} \\\\
-                    \\midrule
-                    & Boundary Attack & {BoundaryAttack_inceptionv4_1000} & {BoundaryAttack_inceptionv4_2000} & {BoundaryAttack_inceptionv4_5000} & {BoundaryAttack_inceptionv4_8000} & {BoundaryAttack_inceptionv4_10000} \\\\
-                    & Sign-OPT& {SignOPT_inceptionv4_1000} & {SignOPT_inceptionv4_2000} & {SignOPT_inceptionv4_5000} & {SignOPT_inceptionv4_8000} & {SignOPT_inceptionv4_10000} \\\\
-                    & SVM-OPT & {SVMOPT_inceptionv4_1000} & {SVMOPT_inceptionv4_2000} & {SVMOPT_inceptionv4_5000} & {SVMOPT_inceptionv4_8000} & {SVMOPT_inceptionv4_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_inceptionv4_1000} & {HSJA_inceptionv4_2000} & {HSJA_inceptionv4_5000} & {HSJA_inceptionv4_8000} & {HSJA_inceptionv4_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_inceptionv4_1000} & {Tangent_inceptionv4_2000} & {Tangent_inceptionv4_5000} & {Tangent_inceptionv4_8000} & {Tangent_inceptionv4_10000} \\\\
-                    \\midrule
-                    & Boundary Attack  & {BoundaryAttack_senet154_1000} & {BoundaryAttack_senet154_2000} & {BoundaryAttack_senet154_5000} & {BoundaryAttack_senet154_8000} & {BoundaryAttack_senet154_10000} \\\\
-                    & Sign-OPT & {SignOPT_senet154_1000} & {SignOPT_senet154_2000} & {SignOPT_senet154_5000} & {SignOPT_senet154_8000} & {SignOPT_senet154_10000} \\\\
-                    & SVM-OPT & {SVMOPT_senet154_1000} & {SVMOPT_senet154_2000} & {SVMOPT_senet154_5000} & {SVMOPT_senet154_8000} & {SVMOPT_senet154_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_senet154_1000} & {HSJA_senet154_2000} & {HSJA_senet154_5000} & {HSJA_senet154_8000} & {HSJA_senet154_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_senet154_1000} & {Tangent_senet154_2000} & {Tangent_senet154_5000} & {Tangent_senet154_8000} & {Tangent_senet154_10000} \\\\
-                    \\midrule
-                    & Boundary Attack & {BoundaryAttack_resnet101_1000} & {BoundaryAttack_resnet101_2000} & {BoundaryAttack_resnet101_5000} & {BoundaryAttack_resnet101_8000} & {BoundaryAttack_resnet101_10000} \\\\
-                    & Sign-OPT & {SignOPT_resnet101_1000} & {SignOPT_resnet101_2000} & {SignOPT_resnet101_5000} & {SignOPT_resnet101_8000} & {SignOPT_resnet101_10000} \\\\
-                    & SVM-OPT  & {SVMOPT_resnet101_1000} & {SVMOPT_resnet101_2000} & {SVMOPT_resnet101_5000} & {SVMOPT_resnet101_8000} & {SVMOPT_resnet101_10000} \\\\                    
-                    & HopSkipJumpAttack & {HSJA_resnet101_1000} & {HSJA_resnet101_2000} & {HSJA_resnet101_5000} & {HSJA_resnet101_8000} & {HSJA_resnet101_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_resnet101_1000} & {Tangent_resnet101_2000} & {Tangent_resnet101_5000} & {Tangent_resnet101_8000} & {Tangent_resnet101_10000} \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & Boundary Attack  & {BoundaryAttack_resnext101_1000} & {BoundaryAttack_resnext101_2000} & {BoundaryAttack_resnext101_5000} & {BoundaryAttack_resnext101_8000} & {BoundaryAttack_resnext101_10000} \\\\
-                    & Sign-OPT & {SignOPT_resnext101_1000} & {SignOPT_resnext101_2000} & {SignOPT_resnext101_5000} & {SignOPT_resnext101_8000} & {SignOPT_resnext101_10000} \\\\
-                    & SVM-OPT  & {SVMOPT_resnext101_1000} & {SVMOPT_resnext101_2000} & {SVMOPT_resnext101_5000} & {SVMOPT_resnext101_8000} & {SVMOPT_resnext101_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_resnext101_1000} & {HSJA_resnext101_2000} & {HSJA_resnext101_5000} & {HSJA_resnext101_8000} & {HSJA_resnext101_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_resnext101_1000} & {Tangent_resnext101_2000} & {Tangent_resnext101_5000} & {Tangent_resnext101_8000} & {Tangent_resnext101_10000} \\\\
-                        """.format(
-
-        SignOPT_inceptionv3_1000=result["inceptionv3"]["Sign-OPT"][1000],
-        SignOPT_inceptionv3_2000=result["inceptionv3"]["Sign-OPT"][2000],
-        SignOPT_inceptionv3_5000=result["inceptionv3"]["Sign-OPT"][5000],
-        SignOPT_inceptionv3_8000=result["inceptionv3"]["Sign-OPT"][8000],
-        SignOPT_inceptionv3_10000=result["inceptionv3"]["Sign-OPT"][10000],
-
-        SignOPT_inceptionv4_1000=result["inceptionv4"]["Sign-OPT"][1000],
-        SignOPT_inceptionv4_2000=result["inceptionv4"]["Sign-OPT"][2000],
-        SignOPT_inceptionv4_5000=result["inceptionv4"]["Sign-OPT"][5000],
-        SignOPT_inceptionv4_8000=result["inceptionv4"]["Sign-OPT"][8000],
-        SignOPT_inceptionv4_10000=result["inceptionv4"]["Sign-OPT"][10000],
-
-        SignOPT_senet154_1000=result["senet154"]["Sign-OPT"][1000],
-        SignOPT_senet154_2000=result["senet154"]["Sign-OPT"][2000],
-        SignOPT_senet154_5000=result["senet154"]["Sign-OPT"][5000],
-        SignOPT_senet154_8000=result["senet154"]["Sign-OPT"][8000],
-        SignOPT_senet154_10000=result["senet154"]["Sign-OPT"][10000],
-
-        SignOPT_resnet101_1000=result["resnet101"]["Sign-OPT"][1000],
-        SignOPT_resnet101_2000=result["resnet101"]["Sign-OPT"][2000],
-        SignOPT_resnet101_5000=result["resnet101"]["Sign-OPT"][5000],
-        SignOPT_resnet101_8000=result["resnet101"]["Sign-OPT"][8000],
-        SignOPT_resnet101_10000=result["resnet101"]["Sign-OPT"][10000],
-
-        SignOPT_resnext101_1000=result["resnext101_64x4d"]["Sign-OPT"][1000],
-        SignOPT_resnext101_2000=result["resnext101_64x4d"]["Sign-OPT"][2000],
-        SignOPT_resnext101_5000=result["resnext101_64x4d"]["Sign-OPT"][5000],
-        SignOPT_resnext101_8000=result["resnext101_64x4d"]["Sign-OPT"][8000],
-        SignOPT_resnext101_10000=result["resnext101_64x4d"]["Sign-OPT"][10000],
-
-        SVMOPT_inceptionv3_1000=result["inceptionv3"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv3_2000=result["inceptionv3"]["SVM-OPT"][2000],
-        SVMOPT_inceptionv3_5000=result["inceptionv3"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv3_8000=result["inceptionv3"]["SVM-OPT"][8000],
-        SVMOPT_inceptionv3_10000=result["inceptionv3"]["SVM-OPT"][10000],
-
-        SVMOPT_inceptionv4_1000=result["inceptionv4"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv4_2000=result["inceptionv4"]["SVM-OPT"][2000],
-        SVMOPT_inceptionv4_5000=result["inceptionv4"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv4_8000=result["inceptionv4"]["SVM-OPT"][8000],
-        SVMOPT_inceptionv4_10000=result["inceptionv4"]["SVM-OPT"][10000],
-
-        SVMOPT_senet154_1000=result["senet154"]["SVM-OPT"][1000],
-        SVMOPT_senet154_2000=result["senet154"]["SVM-OPT"][2000],
-        SVMOPT_senet154_5000=result["senet154"]["SVM-OPT"][5000],
-        SVMOPT_senet154_8000=result["senet154"]["SVM-OPT"][8000],
-        SVMOPT_senet154_10000=result["senet154"]["SVM-OPT"][10000],
-
-        SVMOPT_resnet101_1000=result["resnet101"]["SVM-OPT"][1000],
-        SVMOPT_resnet101_2000=result["resnet101"]["SVM-OPT"][2000],
-        SVMOPT_resnet101_5000=result["resnet101"]["SVM-OPT"][5000],
-        SVMOPT_resnet101_8000=result["resnet101"]["SVM-OPT"][8000],
-        SVMOPT_resnet101_10000=result["resnet101"]["SVM-OPT"][10000],
-
-        SVMOPT_resnext101_1000=result["resnext101_64x4d"]["SVM-OPT"][1000],
-        SVMOPT_resnext101_2000=result["resnext101_64x4d"]["SVM-OPT"][2000],
-        SVMOPT_resnext101_5000=result["resnext101_64x4d"]["SVM-OPT"][5000],
-        SVMOPT_resnext101_8000=result["resnext101_64x4d"]["SVM-OPT"][8000],
-        SVMOPT_resnext101_10000=result["resnext101_64x4d"]["SVM-OPT"][10000],
-
-        BoundaryAttack_inceptionv3_1000=result["inceptionv3"]["Boundary Attack"][1000],
-        BoundaryAttack_inceptionv3_2000=result["inceptionv3"]["Boundary Attack"][2000],
-        BoundaryAttack_inceptionv3_5000=result["inceptionv3"]["Boundary Attack"][5000],
-        BoundaryAttack_inceptionv3_8000=result["inceptionv3"]["Boundary Attack"][8000],
-        BoundaryAttack_inceptionv3_10000=result["inceptionv3"]["Boundary Attack"][10000],
-
-        BoundaryAttack_inceptionv4_1000=result["inceptionv4"]["Boundary Attack"][1000],
-        BoundaryAttack_inceptionv4_2000=result["inceptionv4"]["Boundary Attack"][2000],
-        BoundaryAttack_inceptionv4_5000=result["inceptionv4"]["Boundary Attack"][5000],
-        BoundaryAttack_inceptionv4_8000=result["inceptionv4"]["Boundary Attack"][8000],
-        BoundaryAttack_inceptionv4_10000=result["inceptionv4"]["Boundary Attack"][10000],
-
-        BoundaryAttack_senet154_1000=result["senet154"]["Boundary Attack"][1000],
-        BoundaryAttack_senet154_2000=result["senet154"]["Boundary Attack"][2000],
-        BoundaryAttack_senet154_5000=result["senet154"]["Boundary Attack"][5000],
-        BoundaryAttack_senet154_8000=result["senet154"]["Boundary Attack"][8000],
-        BoundaryAttack_senet154_10000=result["senet154"]["Boundary Attack"][10000],
-
-        BoundaryAttack_resnet101_1000=result["resnet101"]["Boundary Attack"][1000],
-        BoundaryAttack_resnet101_2000=result["resnet101"]["Boundary Attack"][2000],
-        BoundaryAttack_resnet101_5000=result["resnet101"]["Boundary Attack"][5000],
-        BoundaryAttack_resnet101_8000=result["resnet101"]["Boundary Attack"][8000],
-        BoundaryAttack_resnet101_10000=result["resnet101"]["Boundary Attack"][10000],
-
-        BoundaryAttack_resnext101_1000=result["resnext101_64x4d"]["Boundary Attack"][1000],
-        BoundaryAttack_resnext101_2000=result["resnext101_64x4d"]["Boundary Attack"][2000],
-        BoundaryAttack_resnext101_5000=result["resnext101_64x4d"]["Boundary Attack"][5000],
-        BoundaryAttack_resnext101_8000=result["resnext101_64x4d"]["Boundary Attack"][8000],
-        BoundaryAttack_resnext101_10000=result["resnext101_64x4d"]["Boundary Attack"][10000],
-
-        HSJA_inceptionv3_1000=result["inceptionv3"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv3_2000=result["inceptionv3"]["HopSkipJumpAttack"][2000],
-        HSJA_inceptionv3_5000=result["inceptionv3"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv3_8000=result["inceptionv3"]["HopSkipJumpAttack"][8000],
-        HSJA_inceptionv3_10000=result["inceptionv3"]["HopSkipJumpAttack"][10000],
-
-        HSJA_inceptionv4_1000=result["inceptionv4"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv4_2000=result["inceptionv4"]["HopSkipJumpAttack"][2000],
-        HSJA_inceptionv4_5000=result["inceptionv4"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv4_8000=result["inceptionv4"]["HopSkipJumpAttack"][8000],
-        HSJA_inceptionv4_10000=result["inceptionv4"]["HopSkipJumpAttack"][10000],
-
-        HSJA_senet154_1000=result["senet154"]["HopSkipJumpAttack"][1000],
-        HSJA_senet154_2000=result["senet154"]["HopSkipJumpAttack"][2000],
-        HSJA_senet154_5000=result["senet154"]["HopSkipJumpAttack"][5000],
-        HSJA_senet154_8000=result["senet154"]["HopSkipJumpAttack"][8000],
-        HSJA_senet154_10000=result["senet154"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnet101_1000=result["resnet101"]["HopSkipJumpAttack"][1000],
-        HSJA_resnet101_2000=result["resnet101"]["HopSkipJumpAttack"][2000],
-        HSJA_resnet101_5000=result["resnet101"]["HopSkipJumpAttack"][5000],
-        HSJA_resnet101_8000=result["resnet101"]["HopSkipJumpAttack"][8000],
-        HSJA_resnet101_10000=result["resnet101"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnext101_1000=result["resnext101_64x4d"]["HopSkipJumpAttack"][1000],
-        HSJA_resnext101_2000=result["resnext101_64x4d"]["HopSkipJumpAttack"][2000],
-        HSJA_resnext101_5000=result["resnext101_64x4d"]["HopSkipJumpAttack"][5000],
-        HSJA_resnext101_8000=result["resnext101_64x4d"]["HopSkipJumpAttack"][8000],
-        HSJA_resnext101_10000=result["resnext101_64x4d"]["HopSkipJumpAttack"][10000],
-
-        Tangent_inceptionv3_1000=result["inceptionv3"]["Tangent Attack"][1000],
-        Tangent_inceptionv3_2000=result["inceptionv3"]["Tangent Attack"][2000],
-        Tangent_inceptionv3_5000=result["inceptionv3"]["Tangent Attack"][5000],
-        Tangent_inceptionv3_8000=result["inceptionv3"]["Tangent Attack"][8000],
-        Tangent_inceptionv3_10000=result["inceptionv3"]["Tangent Attack"][10000],
-
-        Tangent_inceptionv4_1000=result["inceptionv4"]["Tangent Attack"][1000],
-        Tangent_inceptionv4_2000=result["inceptionv4"]["Tangent Attack"][2000],
-        Tangent_inceptionv4_5000=result["inceptionv4"]["Tangent Attack"][5000],
-        Tangent_inceptionv4_8000=result["inceptionv4"]["Tangent Attack"][8000],
-        Tangent_inceptionv4_10000=result["inceptionv4"]["Tangent Attack"][10000],
-
-        Tangent_senet154_1000=result["senet154"]["Tangent Attack"][1000],
-        Tangent_senet154_2000=result["senet154"]["Tangent Attack"][2000],
-        Tangent_senet154_5000=result["senet154"]["Tangent Attack"][5000],
-        Tangent_senet154_8000=result["senet154"]["Tangent Attack"][8000],
-        Tangent_senet154_10000=result["senet154"]["Tangent Attack"][10000],
-
-        Tangent_resnet101_1000=result["resnet101"]["Tangent Attack"][1000],
-        Tangent_resnet101_2000=result["resnet101"]["Tangent Attack"][2000],
-        Tangent_resnet101_5000=result["resnet101"]["Tangent Attack"][5000],
-        Tangent_resnet101_8000=result["resnet101"]["Tangent Attack"][8000],
-        Tangent_resnet101_10000=result["resnet101"]["Tangent Attack"][10000],
-
-        Tangent_resnext101_1000=result["resnext101_64x4d"]["Tangent Attack"][1000],
-        Tangent_resnext101_2000=result["resnext101_64x4d"]["Tangent Attack"][2000],
-        Tangent_resnext101_5000=result["resnext101_64x4d"]["Tangent Attack"][5000],
-        Tangent_resnext101_8000=result["resnext101_64x4d"]["Tangent Attack"][8000],
-        Tangent_resnext101_10000=result["resnext101_64x4d"]["Tangent Attack"][10000],
-    )
-    )
-
-def draw_tables_for_ImageNet_with_300_query(result):
-    print("""
-                    & Boundary Attack & {BoundaryAttack_inceptionv3_300} & {BoundaryAttack_inceptionv3_1000} & {BoundaryAttack_inceptionv3_2000} & {BoundaryAttack_inceptionv3_5000} & {BoundaryAttack_inceptionv3_8000} & {BoundaryAttack_inceptionv3_10000} \\\\
-                    & Sign-OPT & {SignOPT_inceptionv3_300} & {SignOPT_inceptionv3_1000} & {SignOPT_inceptionv3_2000} & {SignOPT_inceptionv3_5000} & {SignOPT_inceptionv3_8000} & {SignOPT_inceptionv3_10000} \\\\
-                    & SVM-OPT & {SVMOPT_inceptionv3_300} & {SVMOPT_inceptionv3_1000} & {SVMOPT_inceptionv3_2000} & {SVMOPT_inceptionv3_5000} & {SVMOPT_inceptionv3_8000} & {SVMOPT_inceptionv3_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_inceptionv3_300} & {HSJA_inceptionv3_1000} & {HSJA_inceptionv3_2000} & {HSJA_inceptionv3_5000} & {HSJA_inceptionv3_8000} & {HSJA_inceptionv3_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_inceptionv3_300} & {Tangent_inceptionv3_1000} & {Tangent_inceptionv3_2000} & {Tangent_inceptionv3_5000} & {Tangent_inceptionv3_8000} & {Tangent_inceptionv3_10000} \\\\
-                    \\midrule
-                    & Boundary Attack & {BoundaryAttack_inceptionv4_300} & {BoundaryAttack_inceptionv4_1000} & {BoundaryAttack_inceptionv4_2000} & {BoundaryAttack_inceptionv4_5000} & {BoundaryAttack_inceptionv4_8000} & {BoundaryAttack_inceptionv4_10000} \\\\
-                    & Sign-OPT & {SignOPT_inceptionv4_300} & {SignOPT_inceptionv4_1000} & {SignOPT_inceptionv4_2000} & {SignOPT_inceptionv4_5000} & {SignOPT_inceptionv4_8000} & {SignOPT_inceptionv4_10000} \\\\
-                    & SVM-OPT & {SVMOPT_inceptionv4_300} & {SVMOPT_inceptionv4_1000} & {SVMOPT_inceptionv4_2000} & {SVMOPT_inceptionv4_5000} & {SVMOPT_inceptionv4_8000} & {SVMOPT_inceptionv4_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_inceptionv4_300} & {HSJA_inceptionv4_1000} & {HSJA_inceptionv4_2000} & {HSJA_inceptionv4_5000} & {HSJA_inceptionv4_8000} & {HSJA_inceptionv4_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_inceptionv4_300} & {Tangent_inceptionv4_1000} & {Tangent_inceptionv4_2000} & {Tangent_inceptionv4_5000} & {Tangent_inceptionv4_8000} & {Tangent_inceptionv4_10000} \\\\
-                    \\midrule
-                    & Boundary Attack & {BoundaryAttack_senet154_300} & {BoundaryAttack_senet154_1000} & {BoundaryAttack_senet154_2000} & {BoundaryAttack_senet154_5000} & {BoundaryAttack_senet154_8000} & {BoundaryAttack_senet154_10000} \\\\
-                    & Sign-OPT & {SignOPT_senet154_300} & {SignOPT_senet154_1000} & {SignOPT_senet154_2000} & {SignOPT_senet154_5000} & {SignOPT_senet154_8000} & {SignOPT_senet154_10000} \\\\
-                    & SVM-OPT & {SVMOPT_senet154_300} & {SVMOPT_senet154_1000} & {SVMOPT_senet154_2000} & {SVMOPT_senet154_5000} & {SVMOPT_senet154_8000} & {SVMOPT_senet154_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_senet154_300} & {HSJA_senet154_1000} & {HSJA_senet154_2000} & {HSJA_senet154_5000} & {HSJA_senet154_8000} & {HSJA_senet154_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_senet154_300} & {Tangent_senet154_1000} & {Tangent_senet154_2000} & {Tangent_senet154_5000} & {Tangent_senet154_8000} & {Tangent_senet154_10000} \\\\
-                    \\midrule
-                    & Boundary Attack & {BoundaryAttack_resnet101_300} & {BoundaryAttack_resnet101_1000} & {BoundaryAttack_resnet101_2000} & {BoundaryAttack_resnet101_5000} & {BoundaryAttack_resnet101_8000} & {BoundaryAttack_resnet101_10000} \\\\
-                   & Sign-OPT & {SignOPT_resnet101_300} & {SignOPT_resnet101_1000} & {SignOPT_resnet101_2000} & {SignOPT_resnet101_5000} & {SignOPT_resnet101_8000} & {SignOPT_resnet101_10000} \\\\
-                    & SVM-OPT & {SVMOPT_resnet101_300} & {SVMOPT_resnet101_1000} & {SVMOPT_resnet101_2000} & {SVMOPT_resnet101_5000} & {SVMOPT_resnet101_8000} & {SVMOPT_resnet101_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_resnet101_300} & {HSJA_resnet101_1000} & {HSJA_resnet101_2000} & {HSJA_resnet101_5000} & {HSJA_resnet101_8000} & {HSJA_resnet101_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_resnet101_300} & {Tangent_resnet101_1000} & {Tangent_resnet101_2000} & {Tangent_resnet101_5000} & {Tangent_resnet101_8000} & {Tangent_resnet101_10000} \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & Boundary Attack & {BoundaryAttack_resnext101_300} & {BoundaryAttack_resnext101_1000} & {BoundaryAttack_resnext101_2000} & {BoundaryAttack_resnext101_5000} & {BoundaryAttack_resnext101_8000} & {BoundaryAttack_resnext101_10000} \\\\
-                    & Sign-OPT & {SignOPT_resnext101_300} & {SignOPT_resnext101_1000} & {SignOPT_resnext101_2000} & {SignOPT_resnext101_5000} & {SignOPT_resnext101_8000} & {SignOPT_resnext101_10000} \\\\
-                    & SVM-OPT & {SVMOPT_resnext101_300} & {SVMOPT_resnext101_1000} & {SVMOPT_resnext101_2000} & {SVMOPT_resnext101_5000} & {SVMOPT_resnext101_8000} & {SVMOPT_resnext101_10000} \\\\
-                    & HopSkipJumpAttack & {HSJA_resnext101_300} & {HSJA_resnext101_1000} & {HSJA_resnext101_2000} & {HSJA_resnext101_5000} & {HSJA_resnext101_8000} & {HSJA_resnext101_10000} \\\\
-                    & Tangent Attack (ours) & {Tangent_resnext101_300} & {Tangent_resnext101_1000} & {Tangent_resnext101_2000} & {Tangent_resnext101_5000} & {Tangent_resnext101_8000} & {Tangent_resnext101_10000} \\\\
-                        """.format(
-
-        SignOPT_inceptionv3_300=result["inceptionv3"]["Sign-OPT"][300],
-        SignOPT_inceptionv3_1000=result["inceptionv3"]["Sign-OPT"][1000],
-        SignOPT_inceptionv3_2000=result["inceptionv3"]["Sign-OPT"][2000],
-        SignOPT_inceptionv3_5000=result["inceptionv3"]["Sign-OPT"][5000],
-        SignOPT_inceptionv3_8000=result["inceptionv3"]["Sign-OPT"][8000],
-        SignOPT_inceptionv3_10000=result["inceptionv3"]["Sign-OPT"][10000],
-
-        SignOPT_inceptionv4_300=result["inceptionv4"]["Sign-OPT"][300],
-        SignOPT_inceptionv4_1000=result["inceptionv4"]["Sign-OPT"][1000],
-        SignOPT_inceptionv4_2000=result["inceptionv4"]["Sign-OPT"][2000],
-        SignOPT_inceptionv4_5000=result["inceptionv4"]["Sign-OPT"][5000],
-        SignOPT_inceptionv4_8000=result["inceptionv4"]["Sign-OPT"][8000],
-        SignOPT_inceptionv4_10000=result["inceptionv4"]["Sign-OPT"][10000],
-
-        SignOPT_senet154_300=result["senet154"]["Sign-OPT"][300],
-        SignOPT_senet154_1000=result["senet154"]["Sign-OPT"][1000],
-        SignOPT_senet154_2000=result["senet154"]["Sign-OPT"][2000],
-        SignOPT_senet154_5000=result["senet154"]["Sign-OPT"][5000],
-        SignOPT_senet154_8000=result["senet154"]["Sign-OPT"][8000],
-        SignOPT_senet154_10000=result["senet154"]["Sign-OPT"][10000],
-
-        SignOPT_resnet101_300=result["resnet101"]["Sign-OPT"][300],
-        SignOPT_resnet101_1000=result["resnet101"]["Sign-OPT"][1000],
-        SignOPT_resnet101_2000=result["resnet101"]["Sign-OPT"][2000],
-        SignOPT_resnet101_5000=result["resnet101"]["Sign-OPT"][5000],
-        SignOPT_resnet101_8000=result["resnet101"]["Sign-OPT"][8000],
-        SignOPT_resnet101_10000=result["resnet101"]["Sign-OPT"][10000],
-
-        SignOPT_resnext101_300=result["resnext101_64x4d"]["Sign-OPT"][300],
-        SignOPT_resnext101_1000=result["resnext101_64x4d"]["Sign-OPT"][1000],
-        SignOPT_resnext101_2000=result["resnext101_64x4d"]["Sign-OPT"][2000],
-        SignOPT_resnext101_5000=result["resnext101_64x4d"]["Sign-OPT"][5000],
-        SignOPT_resnext101_8000=result["resnext101_64x4d"]["Sign-OPT"][8000],
-        SignOPT_resnext101_10000=result["resnext101_64x4d"]["Sign-OPT"][10000],
-
-        SVMOPT_inceptionv3_300=result["inceptionv3"]["SVM-OPT"][300],
-        SVMOPT_inceptionv3_1000=result["inceptionv3"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv3_2000=result["inceptionv3"]["SVM-OPT"][2000],
-        SVMOPT_inceptionv3_5000=result["inceptionv3"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv3_8000=result["inceptionv3"]["SVM-OPT"][8000],
-        SVMOPT_inceptionv3_10000=result["inceptionv3"]["SVM-OPT"][10000],
-
-        SVMOPT_inceptionv4_300=result["inceptionv4"]["SVM-OPT"][300],
-        SVMOPT_inceptionv4_1000=result["inceptionv4"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv4_2000=result["inceptionv4"]["SVM-OPT"][2000],
-        SVMOPT_inceptionv4_5000=result["inceptionv4"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv4_8000=result["inceptionv4"]["SVM-OPT"][8000],
-        SVMOPT_inceptionv4_10000=result["inceptionv4"]["SVM-OPT"][10000],
-
-        SVMOPT_senet154_300=result["senet154"]["SVM-OPT"][300],
-        SVMOPT_senet154_1000=result["senet154"]["SVM-OPT"][1000],
-        SVMOPT_senet154_2000=result["senet154"]["SVM-OPT"][2000],
-        SVMOPT_senet154_5000=result["senet154"]["SVM-OPT"][5000],
-        SVMOPT_senet154_8000=result["senet154"]["SVM-OPT"][8000],
-        SVMOPT_senet154_10000=result["senet154"]["SVM-OPT"][10000],
-
-        SVMOPT_resnet101_300=result["resnet101"]["SVM-OPT"][300],
-        SVMOPT_resnet101_1000=result["resnet101"]["SVM-OPT"][1000],
-        SVMOPT_resnet101_2000=result["resnet101"]["SVM-OPT"][2000],
-        SVMOPT_resnet101_5000=result["resnet101"]["SVM-OPT"][5000],
-        SVMOPT_resnet101_8000=result["resnet101"]["SVM-OPT"][8000],
-        SVMOPT_resnet101_10000=result["resnet101"]["SVM-OPT"][10000],
-
-        SVMOPT_resnext101_300=result["resnext101_64x4d"]["SVM-OPT"][300],
-        SVMOPT_resnext101_1000=result["resnext101_64x4d"]["SVM-OPT"][1000],
-        SVMOPT_resnext101_2000=result["resnext101_64x4d"]["SVM-OPT"][2000],
-        SVMOPT_resnext101_5000=result["resnext101_64x4d"]["SVM-OPT"][5000],
-        SVMOPT_resnext101_8000=result["resnext101_64x4d"]["SVM-OPT"][8000],
-        SVMOPT_resnext101_10000=result["resnext101_64x4d"]["SVM-OPT"][10000],
-
-        BoundaryAttack_inceptionv3_300='-',
-        BoundaryAttack_inceptionv3_1000=result["inceptionv3"]["Boundary Attack"][1000],
-        BoundaryAttack_inceptionv3_2000=result["inceptionv3"]["Boundary Attack"][2000],
-        BoundaryAttack_inceptionv3_5000=result["inceptionv3"]["Boundary Attack"][5000],
-        BoundaryAttack_inceptionv3_8000=result["inceptionv3"]["Boundary Attack"][8000],
-        BoundaryAttack_inceptionv3_10000=result["inceptionv3"]["Boundary Attack"][10000],
-
-        BoundaryAttack_inceptionv4_300='-',
-        BoundaryAttack_inceptionv4_1000=result["inceptionv4"]["Boundary Attack"][1000],
-        BoundaryAttack_inceptionv4_2000=result["inceptionv4"]["Boundary Attack"][2000],
-        BoundaryAttack_inceptionv4_5000=result["inceptionv4"]["Boundary Attack"][5000],
-        BoundaryAttack_inceptionv4_8000=result["inceptionv4"]["Boundary Attack"][8000],
-        BoundaryAttack_inceptionv4_10000=result["inceptionv4"]["Boundary Attack"][10000],
-
-        BoundaryAttack_senet154_300='-',
-        BoundaryAttack_senet154_1000=result["senet154"]["Boundary Attack"][1000],
-        BoundaryAttack_senet154_2000=result["senet154"]["Boundary Attack"][2000],
-        BoundaryAttack_senet154_5000=result["senet154"]["Boundary Attack"][5000],
-        BoundaryAttack_senet154_8000=result["senet154"]["Boundary Attack"][8000],
-        BoundaryAttack_senet154_10000=result["senet154"]["Boundary Attack"][10000],
-
-        BoundaryAttack_resnet101_300='-',
-        BoundaryAttack_resnet101_1000=result["resnet101"]["Boundary Attack"][1000],
-        BoundaryAttack_resnet101_2000=result["resnet101"]["Boundary Attack"][2000],
-        BoundaryAttack_resnet101_5000=result["resnet101"]["Boundary Attack"][5000],
-        BoundaryAttack_resnet101_8000=result["resnet101"]["Boundary Attack"][8000],
-        BoundaryAttack_resnet101_10000=result["resnet101"]["Boundary Attack"][10000],
-
-        BoundaryAttack_resnext101_300='-',
-        BoundaryAttack_resnext101_1000=result["resnext101_64x4d"]["Boundary Attack"][1000],
-        BoundaryAttack_resnext101_2000=result["resnext101_64x4d"]["Boundary Attack"][2000],
-        BoundaryAttack_resnext101_5000=result["resnext101_64x4d"]["Boundary Attack"][5000],
-        BoundaryAttack_resnext101_8000=result["resnext101_64x4d"]["Boundary Attack"][8000],
-        BoundaryAttack_resnext101_10000=result["resnext101_64x4d"]["Boundary Attack"][10000],
-
-        HSJA_inceptionv3_300=result["inceptionv3"]["HopSkipJumpAttack"][300],
-        HSJA_inceptionv3_1000=result["inceptionv3"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv3_2000=result["inceptionv3"]["HopSkipJumpAttack"][2000],
-        HSJA_inceptionv3_5000=result["inceptionv3"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv3_8000=result["inceptionv3"]["HopSkipJumpAttack"][8000],
-        HSJA_inceptionv3_10000=result["inceptionv3"]["HopSkipJumpAttack"][10000],
-
-        HSJA_inceptionv4_300=result["inceptionv4"]["HopSkipJumpAttack"][300],
-        HSJA_inceptionv4_1000=result["inceptionv4"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv4_2000=result["inceptionv4"]["HopSkipJumpAttack"][2000],
-        HSJA_inceptionv4_5000=result["inceptionv4"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv4_8000=result["inceptionv4"]["HopSkipJumpAttack"][8000],
-        HSJA_inceptionv4_10000=result["inceptionv4"]["HopSkipJumpAttack"][10000],
-
-        HSJA_senet154_300=result["senet154"]["HopSkipJumpAttack"][300],
-        HSJA_senet154_1000=result["senet154"]["HopSkipJumpAttack"][1000],
-        HSJA_senet154_2000=result["senet154"]["HopSkipJumpAttack"][2000],
-        HSJA_senet154_5000=result["senet154"]["HopSkipJumpAttack"][5000],
-        HSJA_senet154_8000=result["senet154"]["HopSkipJumpAttack"][8000],
-        HSJA_senet154_10000=result["senet154"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnet101_300=result["resnet101"]["HopSkipJumpAttack"][300],
-        HSJA_resnet101_1000=result["resnet101"]["HopSkipJumpAttack"][1000],
-        HSJA_resnet101_2000=result["resnet101"]["HopSkipJumpAttack"][2000],
-        HSJA_resnet101_5000=result["resnet101"]["HopSkipJumpAttack"][5000],
-        HSJA_resnet101_8000=result["resnet101"]["HopSkipJumpAttack"][8000],
-        HSJA_resnet101_10000=result["resnet101"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnext101_300=result["resnext101_64x4d"]["HopSkipJumpAttack"][300],
-        HSJA_resnext101_1000=result["resnext101_64x4d"]["HopSkipJumpAttack"][1000],
-        HSJA_resnext101_2000=result["resnext101_64x4d"]["HopSkipJumpAttack"][2000],
-        HSJA_resnext101_5000=result["resnext101_64x4d"]["HopSkipJumpAttack"][5000],
-        HSJA_resnext101_8000=result["resnext101_64x4d"]["HopSkipJumpAttack"][8000],
-        HSJA_resnext101_10000=result["resnext101_64x4d"]["HopSkipJumpAttack"][10000],
-
-        Tangent_inceptionv3_300=result["inceptionv3"]["Tangent Attack"][300],
-        Tangent_inceptionv3_1000=result["inceptionv3"]["Tangent Attack"][1000],
-        Tangent_inceptionv3_2000=result["inceptionv3"]["Tangent Attack"][2000],
-        Tangent_inceptionv3_5000=result["inceptionv3"]["Tangent Attack"][5000],
-        Tangent_inceptionv3_8000=result["inceptionv3"]["Tangent Attack"][8000],
-        Tangent_inceptionv3_10000=result["inceptionv3"]["Tangent Attack"][10000],
-
-        Tangent_inceptionv4_300=result["inceptionv4"]["Tangent Attack"][300],
-        Tangent_inceptionv4_1000=result["inceptionv4"]["Tangent Attack"][1000],
-        Tangent_inceptionv4_2000=result["inceptionv4"]["Tangent Attack"][2000],
-        Tangent_inceptionv4_5000=result["inceptionv4"]["Tangent Attack"][5000],
-        Tangent_inceptionv4_8000=result["inceptionv4"]["Tangent Attack"][8000],
-        Tangent_inceptionv4_10000=result["inceptionv4"]["Tangent Attack"][10000],
-
-        Tangent_senet154_300=result["senet154"]["Tangent Attack"][300],
-        Tangent_senet154_1000=result["senet154"]["Tangent Attack"][1000],
-        Tangent_senet154_2000=result["senet154"]["Tangent Attack"][2000],
-        Tangent_senet154_5000=result["senet154"]["Tangent Attack"][5000],
-        Tangent_senet154_8000=result["senet154"]["Tangent Attack"][8000],
-        Tangent_senet154_10000=result["senet154"]["Tangent Attack"][10000],
-
-        Tangent_resnet101_300=result["resnet101"]["Tangent Attack"][300],
-        Tangent_resnet101_1000=result["resnet101"]["Tangent Attack"][1000],
-        Tangent_resnet101_2000=result["resnet101"]["Tangent Attack"][2000],
-        Tangent_resnet101_5000=result["resnet101"]["Tangent Attack"][5000],
-        Tangent_resnet101_8000=result["resnet101"]["Tangent Attack"][8000],
-        Tangent_resnet101_10000=result["resnet101"]["Tangent Attack"][10000],
-
-        Tangent_resnext101_300=result["resnext101_64x4d"]["Tangent Attack"][300],
-        Tangent_resnext101_1000=result["resnext101_64x4d"]["Tangent Attack"][1000],
-        Tangent_resnext101_2000=result["resnext101_64x4d"]["Tangent Attack"][2000],
-        Tangent_resnext101_5000=result["resnext101_64x4d"]["Tangent Attack"][5000],
-        Tangent_resnext101_8000=result["resnext101_64x4d"]["Tangent Attack"][8000],
-        Tangent_resnext101_10000=result["resnext101_64x4d"]["Tangent Attack"][10000],
-    )
-    )
-
-
-def draw_targeted_first_tables_for_ImageNet_with_300_query(result, targeted_attack_result):
-    print("""
-                    & BA & {targeted_BoundaryAttack_inceptionv3_300} & {targeted_BoundaryAttack_inceptionv3_1000} & {targeted_BoundaryAttack_inceptionv3_2000} & {targeted_BoundaryAttack_inceptionv3_5000} & {targeted_BoundaryAttack_inceptionv3_8000} & {targeted_BoundaryAttack_inceptionv3_10000} & {BoundaryAttack_inceptionv3_300} & {BoundaryAttack_inceptionv3_1000} & {BoundaryAttack_inceptionv3_2000} & {BoundaryAttack_inceptionv3_5000} & {BoundaryAttack_inceptionv3_8000} & {BoundaryAttack_inceptionv3_10000} \\\\
-                    & Sign-OPT & {targeted_SignOPT_inceptionv3_300} & {targeted_SignOPT_inceptionv3_1000} & {targeted_SignOPT_inceptionv3_2000} & {targeted_SignOPT_inceptionv3_5000} & {targeted_SignOPT_inceptionv3_8000} & {targeted_SignOPT_inceptionv3_10000} & {SignOPT_inceptionv3_300} & {SignOPT_inceptionv3_1000} & {SignOPT_inceptionv3_2000} & {SignOPT_inceptionv3_5000} & {SignOPT_inceptionv3_8000} & {SignOPT_inceptionv3_10000}\\\\
-                    & SVM-OPT &  {targeted_SVMOPT_inceptionv3_300} & {targeted_SVMOPT_inceptionv3_1000} & {targeted_SVMOPT_inceptionv3_2000} & {targeted_SVMOPT_inceptionv3_5000} & {targeted_SVMOPT_inceptionv3_8000} & {targeted_SVMOPT_inceptionv3_10000} & {SVMOPT_inceptionv3_300} & {SVMOPT_inceptionv3_1000} & {SVMOPT_inceptionv3_2000} & {SVMOPT_inceptionv3_5000} & {SVMOPT_inceptionv3_8000} & {SVMOPT_inceptionv3_10000}\\\\
-                    & HSJA & {targeted_HSJA_inceptionv3_300} & {targeted_HSJA_inceptionv3_1000} & {targeted_HSJA_inceptionv3_2000} & {targeted_HSJA_inceptionv3_5000} & {targeted_HSJA_inceptionv3_8000} & {targeted_HSJA_inceptionv3_10000} & {HSJA_inceptionv3_300} & {HSJA_inceptionv3_1000} & {HSJA_inceptionv3_2000} & {HSJA_inceptionv3_5000} & {HSJA_inceptionv3_8000} & {HSJA_inceptionv3_10000} \\\\                    
-                    & Ours (hemisphere)&  {targeted_Tangent_inceptionv3_300} & {targeted_Tangent_inceptionv3_1000} & {targeted_Tangent_inceptionv3_2000} & {targeted_Tangent_inceptionv3_5000} & {targeted_Tangent_inceptionv3_8000} & {targeted_Tangent_inceptionv3_10000} & {Tangent_inceptionv3_300} & {Tangent_inceptionv3_1000} & {Tangent_inceptionv3_2000} & {Tangent_inceptionv3_5000} & {Tangent_inceptionv3_8000} & {Tangent_inceptionv3_10000}\\\\
-                    & Ours (ellipsoid) &  {targeted_Ellipsoid_Tangent_inceptionv3_300} & {targeted_Ellipsoid_Tangent_inceptionv3_1000} & {targeted_Ellipsoid_Tangent_inceptionv3_2000} & {targeted_Ellipsoid_Tangent_inceptionv3_5000} & {targeted_Ellipsoid_Tangent_inceptionv3_8000} & {targeted_Ellipsoid_Tangent_inceptionv3_10000} & {Ellipsoid_Tangent_inceptionv3_300} & {Ellipsoid_Tangent_inceptionv3_1000} & {Ellipsoid_Tangent_inceptionv3_2000} & {Ellipsoid_Tangent_inceptionv3_5000} & {Ellipsoid_Tangent_inceptionv3_8000} & {Ellipsoid_Tangent_inceptionv3_10000}\\\\
-                    & QEBA-S &  {targeted_QEBA_inceptionv3_300} & {targeted_QEBA_inceptionv3_1000} & {targeted_QEBA_inceptionv3_2000} & {targeted_QEBA_inceptionv3_5000} & {targeted_QEBA_inceptionv3_8000} & {targeted_QEBA_inceptionv3_10000} & {QEBA_inceptionv3_300} & {QEBA_inceptionv3_1000} & {QEBA_inceptionv3_2000} & {QEBA_inceptionv3_5000} & {QEBA_inceptionv3_8000} & {QEBA_inceptionv3_10000}\\\\
-                    & QEBA-S + TA &  {targeted_QEBATangent_inceptionv3_300} & {targeted_QEBATangent_inceptionv3_1000} & {targeted_QEBATangent_inceptionv3_2000} & {targeted_QEBATangent_inceptionv3_5000} & {targeted_QEBATangent_inceptionv3_8000} & {targeted_QEBATangent_inceptionv3_10000} & {QEBATangent_inceptionv3_300} & {QEBATangent_inceptionv3_1000} & {QEBATangent_inceptionv3_2000} & {QEBATangent_inceptionv3_5000} & {QEBATangent_inceptionv3_8000} & {QEBATangent_inceptionv3_10000}\\\\
-                    \\midrule
-                    & BA & {targeted_BoundaryAttack_inceptionv4_300} & {targeted_BoundaryAttack_inceptionv4_1000} & {targeted_BoundaryAttack_inceptionv4_2000} & {targeted_BoundaryAttack_inceptionv4_5000} & {targeted_BoundaryAttack_inceptionv4_8000} & {targeted_BoundaryAttack_inceptionv4_10000} & {BoundaryAttack_inceptionv4_300} & {BoundaryAttack_inceptionv4_1000} & {BoundaryAttack_inceptionv4_2000} & {BoundaryAttack_inceptionv4_5000} & {BoundaryAttack_inceptionv4_8000} & {BoundaryAttack_inceptionv4_10000} \\\\
-                    & Sign-OPT &  {targeted_SignOPT_inceptionv4_300} & {targeted_SignOPT_inceptionv4_1000} & {targeted_SignOPT_inceptionv4_2000} & {targeted_SignOPT_inceptionv4_5000} & {targeted_SignOPT_inceptionv4_8000} & {targeted_SignOPT_inceptionv4_10000} & {SignOPT_inceptionv4_300} & {SignOPT_inceptionv4_1000} & {SignOPT_inceptionv4_2000} & {SignOPT_inceptionv4_5000} & {SignOPT_inceptionv4_8000} & {SignOPT_inceptionv4_10000}\\\\
-                    & SVM-OPT & {targeted_SVMOPT_inceptionv4_300} & {targeted_SVMOPT_inceptionv4_1000} & {targeted_SVMOPT_inceptionv4_2000} & {targeted_SVMOPT_inceptionv4_5000} & {targeted_SVMOPT_inceptionv4_8000} & {targeted_SVMOPT_inceptionv4_10000} & {SVMOPT_inceptionv4_300} & {SVMOPT_inceptionv4_1000} & {SVMOPT_inceptionv4_2000} & {SVMOPT_inceptionv4_5000} & {SVMOPT_inceptionv4_8000} & {SVMOPT_inceptionv4_10000} \\\\
-                    & HSJA &  {targeted_HSJA_inceptionv4_300} & {targeted_HSJA_inceptionv4_1000} & {targeted_HSJA_inceptionv4_2000} & {targeted_HSJA_inceptionv4_5000} & {targeted_HSJA_inceptionv4_8000} & {targeted_HSJA_inceptionv4_10000} & {HSJA_inceptionv4_300} & {HSJA_inceptionv4_1000} & {HSJA_inceptionv4_2000} & {HSJA_inceptionv4_5000} & {HSJA_inceptionv4_8000} & {HSJA_inceptionv4_10000}\\\\
-                    & Ours (hemisphere) & {targeted_Tangent_inceptionv4_300} & {targeted_Tangent_inceptionv4_1000} & {targeted_Tangent_inceptionv4_2000} & {targeted_Tangent_inceptionv4_5000} & {targeted_Tangent_inceptionv4_8000} & {targeted_Tangent_inceptionv4_10000} & {Tangent_inceptionv4_300} & {Tangent_inceptionv4_1000} & {Tangent_inceptionv4_2000} & {Tangent_inceptionv4_5000} & {Tangent_inceptionv4_8000} & {Tangent_inceptionv4_10000} \\\\
-                    & Ours (ellipsoid) & {targeted_Ellipsoid_Tangent_inceptionv4_300} & {targeted_Ellipsoid_Tangent_inceptionv4_1000} & {targeted_Ellipsoid_Tangent_inceptionv4_2000} & {targeted_Ellipsoid_Tangent_inceptionv4_5000} & {targeted_Ellipsoid_Tangent_inceptionv4_8000} & {targeted_Ellipsoid_Tangent_inceptionv4_10000} & {Ellipsoid_Tangent_inceptionv4_300} & {Ellipsoid_Tangent_inceptionv4_1000} & {Ellipsoid_Tangent_inceptionv4_2000} & {Ellipsoid_Tangent_inceptionv4_5000} & {Ellipsoid_Tangent_inceptionv4_8000} & {Ellipsoid_Tangent_inceptionv4_10000} \\\\
-                    & QEBA-S &  {targeted_QEBA_inceptionv4_300} & {targeted_QEBA_inceptionv4_1000} & {targeted_QEBA_inceptionv4_2000} & {targeted_QEBA_inceptionv4_5000} & {targeted_QEBA_inceptionv4_8000} & {targeted_QEBA_inceptionv4_10000} & {QEBA_inceptionv4_300} & {QEBA_inceptionv4_1000} & {QEBA_inceptionv4_2000} & {QEBA_inceptionv4_5000} & {QEBA_inceptionv4_8000} & {QEBA_inceptionv4_10000}\\\\
-                    & QEBA-S + TA &  {targeted_QEBATangent_inceptionv4_300} & {targeted_QEBATangent_inceptionv4_1000} & {targeted_QEBATangent_inceptionv4_2000} & {targeted_QEBATangent_inceptionv4_5000} & {targeted_QEBATangent_inceptionv4_8000} & {targeted_QEBATangent_inceptionv4_10000} & {QEBATangent_inceptionv4_300} & {QEBATangent_inceptionv4_1000} & {QEBATangent_inceptionv4_2000} & {QEBATangent_inceptionv4_5000} & {QEBATangent_inceptionv4_8000} & {QEBATangent_inceptionv4_10000}\\\\
-                    \\midrule
-                    & BA & {targeted_BoundaryAttack_senet154_300} & {targeted_BoundaryAttack_senet154_1000} & {targeted_BoundaryAttack_senet154_2000} & {targeted_BoundaryAttack_senet154_5000} & {targeted_BoundaryAttack_senet154_8000} & {targeted_BoundaryAttack_senet154_10000} & {BoundaryAttack_senet154_300} & {BoundaryAttack_senet154_1000} & {BoundaryAttack_senet154_2000} & {BoundaryAttack_senet154_5000} & {BoundaryAttack_senet154_8000} & {BoundaryAttack_senet154_10000} \\\\
-                    & Sign-OPT &  {targeted_SignOPT_senet154_300} & {targeted_SignOPT_senet154_1000} & {targeted_SignOPT_senet154_2000} & {targeted_SignOPT_senet154_5000} & {targeted_SignOPT_senet154_8000} & {targeted_SignOPT_senet154_10000}  & {SignOPT_senet154_300} & {SignOPT_senet154_1000} & {SignOPT_senet154_2000} & {SignOPT_senet154_5000} & {SignOPT_senet154_8000} & {SignOPT_senet154_10000}\\\\
-                    & SVM-OPT & {targeted_SVMOPT_senet154_300} & {targeted_SVMOPT_senet154_1000} & {targeted_SVMOPT_senet154_2000} & {targeted_SVMOPT_senet154_5000} & {targeted_SVMOPT_senet154_8000} & {targeted_SVMOPT_senet154_10000} & {SVMOPT_senet154_300} & {SVMOPT_senet154_1000} & {SVMOPT_senet154_2000} & {SVMOPT_senet154_5000} & {SVMOPT_senet154_8000} & {SVMOPT_senet154_10000} \\\\
-                    & HSJA &  {targeted_HSJA_senet154_300} & {targeted_HSJA_senet154_1000} & {targeted_HSJA_senet154_2000} & {targeted_HSJA_senet154_5000} & {targeted_HSJA_senet154_8000} & {targeted_HSJA_senet154_10000} & {HSJA_senet154_300} & {HSJA_senet154_1000} & {HSJA_senet154_2000} & {HSJA_senet154_5000} & {HSJA_senet154_8000} & {HSJA_senet154_10000}\\\\
-                    & Ours (hemisphere) &  {targeted_Tangent_senet154_300} & {targeted_Tangent_senet154_1000} & {targeted_Tangent_senet154_2000} & {targeted_Tangent_senet154_5000} & {targeted_Tangent_senet154_8000} & {targeted_Tangent_senet154_10000} & {Tangent_senet154_300} & {Tangent_senet154_1000} & {Tangent_senet154_2000} & {Tangent_senet154_5000} & {Tangent_senet154_8000} & {Tangent_senet154_10000}\\\\
-                    & Ours (ellipsoid) &  {targeted_Ellipsoid_Tangent_senet154_300} & {targeted_Ellipsoid_Tangent_senet154_1000} & {targeted_Ellipsoid_Tangent_senet154_2000} & {targeted_Ellipsoid_Tangent_senet154_5000} & {targeted_Ellipsoid_Tangent_senet154_8000} & {targeted_Ellipsoid_Tangent_senet154_10000} & {Ellipsoid_Tangent_senet154_300} & {Ellipsoid_Tangent_senet154_1000} & {Ellipsoid_Tangent_senet154_2000} & {Ellipsoid_Tangent_senet154_5000} & {Ellipsoid_Tangent_senet154_8000} & {Ellipsoid_Tangent_senet154_10000}\\\\
-                    & QEBA-S &  {targeted_QEBA_senet154_300} & {targeted_QEBA_senet154_1000} & {targeted_QEBA_senet154_2000} & {targeted_QEBA_senet154_5000} & {targeted_QEBA_senet154_8000} & {targeted_QEBA_senet154_10000} & {QEBA_senet154_300} & {QEBA_senet154_1000} & {QEBA_senet154_2000} & {QEBA_senet154_5000} & {QEBA_senet154_8000} & {QEBA_senet154_10000}\\\\
-                    & QEBA-S + TA &  {targeted_QEBATangent_senet154_300} & {targeted_QEBATangent_senet154_1000} & {targeted_QEBATangent_senet154_2000} & {targeted_QEBATangent_senet154_5000} & {targeted_QEBATangent_senet154_8000} & {targeted_QEBATangent_senet154_10000} & {QEBATangent_senet154_300} & {QEBATangent_senet154_1000} & {QEBATangent_senet154_2000} & {QEBATangent_senet154_5000} & {QEBATangent_senet154_8000} & {QEBATangent_senet154_10000}\\\\
-                    \\midrule
-                    & BA & {targeted_BoundaryAttack_resnet101_300} & {targeted_BoundaryAttack_resnet101_1000} & {targeted_BoundaryAttack_resnet101_2000} & {targeted_BoundaryAttack_resnet101_5000} & {targeted_BoundaryAttack_resnet101_8000} & {targeted_BoundaryAttack_resnet101_10000} & {BoundaryAttack_resnet101_300} & {BoundaryAttack_resnet101_1000} & {BoundaryAttack_resnet101_2000} & {BoundaryAttack_resnet101_5000} & {BoundaryAttack_resnet101_8000} & {BoundaryAttack_resnet101_10000} \\\\
-                   & Sign-OPT & {targeted_SignOPT_resnet101_300} & {targeted_SignOPT_resnet101_1000} & {targeted_SignOPT_resnet101_2000} & {targeted_SignOPT_resnet101_5000} & {targeted_SignOPT_resnet101_8000} & {targeted_SignOPT_resnet101_10000} & {SignOPT_resnet101_300} & {SignOPT_resnet101_1000} & {SignOPT_resnet101_2000} & {SignOPT_resnet101_5000} & {SignOPT_resnet101_8000} & {SignOPT_resnet101_10000} \\\\
-                    & SVM-OPT &  {targeted_SVMOPT_resnet101_300} & {targeted_SVMOPT_resnet101_1000} & {targeted_SVMOPT_resnet101_2000} & {targeted_SVMOPT_resnet101_5000} & {targeted_SVMOPT_resnet101_8000} & {targeted_SVMOPT_resnet101_10000} & {SVMOPT_resnet101_300} & {SVMOPT_resnet101_1000} & {SVMOPT_resnet101_2000} & {SVMOPT_resnet101_5000} & {SVMOPT_resnet101_8000} & {SVMOPT_resnet101_10000}\\\\
-                    & HSJA & {targeted_HSJA_resnet101_300} & {targeted_HSJA_resnet101_1000} & {targeted_HSJA_resnet101_2000} & {targeted_HSJA_resnet101_5000} & {targeted_HSJA_resnet101_8000} & {targeted_HSJA_resnet101_10000} & {HSJA_resnet101_300} & {HSJA_resnet101_1000} & {HSJA_resnet101_2000} & {HSJA_resnet101_5000} & {HSJA_resnet101_8000} & {HSJA_resnet101_10000} \\\\
-                    & Ours (hemisphere) & {targeted_Tangent_resnet101_300} & {targeted_Tangent_resnet101_1000} & {targeted_Tangent_resnet101_2000} & {targeted_Tangent_resnet101_5000} & {targeted_Tangent_resnet101_8000} & {targeted_Tangent_resnet101_10000} & {Tangent_resnet101_300} & {Tangent_resnet101_1000} & {Tangent_resnet101_2000} & {Tangent_resnet101_5000} & {Tangent_resnet101_8000} & {Tangent_resnet101_10000} \\\\
-                    & Ours (ellipsoid) &  {targeted_Ellipsoid_Tangent_resnet101_300} & {targeted_Ellipsoid_Tangent_resnet101_1000} & {targeted_Ellipsoid_Tangent_resnet101_2000} & {targeted_Ellipsoid_Tangent_resnet101_5000} & {targeted_Ellipsoid_Tangent_resnet101_8000} & {targeted_Ellipsoid_Tangent_resnet101_10000} & {Ellipsoid_Tangent_resnet101_300} & {Ellipsoid_Tangent_resnet101_1000} & {Ellipsoid_Tangent_resnet101_2000} & {Ellipsoid_Tangent_resnet101_5000} & {Ellipsoid_Tangent_resnet101_8000} & {Ellipsoid_Tangent_resnet101_10000} \\\\
-                    & QEBA-S &  {targeted_QEBA_resnet101_300} & {targeted_QEBA_resnet101_1000} & {targeted_QEBA_resnet101_2000} & {targeted_QEBA_resnet101_5000} & {targeted_QEBA_resnet101_8000} & {targeted_QEBA_resnet101_10000} & {QEBA_resnet101_300} & {QEBA_resnet101_1000} & {QEBA_resnet101_2000} & {QEBA_resnet101_5000} & {QEBA_resnet101_8000} & {QEBA_resnet101_10000}\\\\
-                    & QEBA-S + TA &  {targeted_QEBATangent_resnet101_300} & {targeted_QEBATangent_resnet101_1000} & {targeted_QEBATangent_resnet101_2000} & {targeted_QEBATangent_resnet101_5000} & {targeted_QEBATangent_resnet101_8000} & {targeted_QEBATangent_resnet101_10000} & {QEBATangent_resnet101_300} & {QEBATangent_resnet101_1000} & {QEBATangent_resnet101_2000} & {QEBATangent_resnet101_5000} & {QEBATangent_resnet101_8000} & {QEBATangent_resnet101_10000}\\\\
-                        """.format(
-
-        SignOPT_inceptionv3_300=result["inceptionv3"]["Sign-OPT"][300],
-        SignOPT_inceptionv3_1000=result["inceptionv3"]["Sign-OPT"][1000],
-        SignOPT_inceptionv3_2000=result["inceptionv3"]["Sign-OPT"][2000],
-        SignOPT_inceptionv3_5000=result["inceptionv3"]["Sign-OPT"][5000],
-        SignOPT_inceptionv3_8000=result["inceptionv3"]["Sign-OPT"][8000],
-        SignOPT_inceptionv3_10000=result["inceptionv3"]["Sign-OPT"][10000],
-
-        SignOPT_inceptionv4_300=result["inceptionv4"]["Sign-OPT"][300],
-        SignOPT_inceptionv4_1000=result["inceptionv4"]["Sign-OPT"][1000],
-        SignOPT_inceptionv4_2000=result["inceptionv4"]["Sign-OPT"][2000],
-        SignOPT_inceptionv4_5000=result["inceptionv4"]["Sign-OPT"][5000],
-        SignOPT_inceptionv4_8000=result["inceptionv4"]["Sign-OPT"][8000],
-        SignOPT_inceptionv4_10000=result["inceptionv4"]["Sign-OPT"][10000],
-
-        SignOPT_senet154_300=result["senet154"]["Sign-OPT"][300],
-        SignOPT_senet154_1000=result["senet154"]["Sign-OPT"][1000],
-        SignOPT_senet154_2000=result["senet154"]["Sign-OPT"][2000],
-        SignOPT_senet154_5000=result["senet154"]["Sign-OPT"][5000],
-        SignOPT_senet154_8000=result["senet154"]["Sign-OPT"][8000],
-        SignOPT_senet154_10000=result["senet154"]["Sign-OPT"][10000],
-
-        SignOPT_resnet101_300=result["resnet101"]["Sign-OPT"][300],
-        SignOPT_resnet101_1000=result["resnet101"]["Sign-OPT"][1000],
-        SignOPT_resnet101_2000=result["resnet101"]["Sign-OPT"][2000],
-        SignOPT_resnet101_5000=result["resnet101"]["Sign-OPT"][5000],
-        SignOPT_resnet101_8000=result["resnet101"]["Sign-OPT"][8000],
-        SignOPT_resnet101_10000=result["resnet101"]["Sign-OPT"][10000],
-
-        SVMOPT_inceptionv3_300=result["inceptionv3"]["SVM-OPT"][300],
-        SVMOPT_inceptionv3_1000=result["inceptionv3"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv3_2000=result["inceptionv3"]["SVM-OPT"][2000],
-        SVMOPT_inceptionv3_5000=result["inceptionv3"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv3_8000=result["inceptionv3"]["SVM-OPT"][8000],
-        SVMOPT_inceptionv3_10000=result["inceptionv3"]["SVM-OPT"][10000],
-
-        SVMOPT_inceptionv4_300=result["inceptionv4"]["SVM-OPT"][300],
-        SVMOPT_inceptionv4_1000=result["inceptionv4"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv4_2000=result["inceptionv4"]["SVM-OPT"][2000],
-        SVMOPT_inceptionv4_5000=result["inceptionv4"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv4_8000=result["inceptionv4"]["SVM-OPT"][8000],
-        SVMOPT_inceptionv4_10000=result["inceptionv4"]["SVM-OPT"][10000],
-
-        SVMOPT_senet154_300=result["senet154"]["SVM-OPT"][300],
-        SVMOPT_senet154_1000=result["senet154"]["SVM-OPT"][1000],
-        SVMOPT_senet154_2000=result["senet154"]["SVM-OPT"][2000],
-        SVMOPT_senet154_5000=result["senet154"]["SVM-OPT"][5000],
-        SVMOPT_senet154_8000=result["senet154"]["SVM-OPT"][8000],
-        SVMOPT_senet154_10000=result["senet154"]["SVM-OPT"][10000],
-
-        SVMOPT_resnet101_300=result["resnet101"]["SVM-OPT"][300],
-        SVMOPT_resnet101_1000=result["resnet101"]["SVM-OPT"][1000],
-        SVMOPT_resnet101_2000=result["resnet101"]["SVM-OPT"][2000],
-        SVMOPT_resnet101_5000=result["resnet101"]["SVM-OPT"][5000],
-        SVMOPT_resnet101_8000=result["resnet101"]["SVM-OPT"][8000],
-        SVMOPT_resnet101_10000=result["resnet101"]["SVM-OPT"][10000],
-
-        BoundaryAttack_inceptionv3_300=result["inceptionv3"]["Boundary Attack"][300],
-        BoundaryAttack_inceptionv3_1000=result["inceptionv3"]["Boundary Attack"][1000],
-        BoundaryAttack_inceptionv3_2000=result["inceptionv3"]["Boundary Attack"][2000],
-        BoundaryAttack_inceptionv3_5000=result["inceptionv3"]["Boundary Attack"][5000],
-        BoundaryAttack_inceptionv3_8000=result["inceptionv3"]["Boundary Attack"][8000],
-        BoundaryAttack_inceptionv3_10000=result["inceptionv3"]["Boundary Attack"][10000],
-
-        BoundaryAttack_inceptionv4_300=result["inceptionv4"]["Boundary Attack"][300],
-        BoundaryAttack_inceptionv4_1000=result["inceptionv4"]["Boundary Attack"][1000],
-        BoundaryAttack_inceptionv4_2000=result["inceptionv4"]["Boundary Attack"][2000],
-        BoundaryAttack_inceptionv4_5000=result["inceptionv4"]["Boundary Attack"][5000],
-        BoundaryAttack_inceptionv4_8000=result["inceptionv4"]["Boundary Attack"][8000],
-        BoundaryAttack_inceptionv4_10000=result["inceptionv4"]["Boundary Attack"][10000],
-
-        BoundaryAttack_senet154_300=result["senet154"]["Boundary Attack"][300],
-        BoundaryAttack_senet154_1000=result["senet154"]["Boundary Attack"][1000],
-        BoundaryAttack_senet154_2000=result["senet154"]["Boundary Attack"][2000],
-        BoundaryAttack_senet154_5000=result["senet154"]["Boundary Attack"][5000],
-        BoundaryAttack_senet154_8000=result["senet154"]["Boundary Attack"][8000],
-        BoundaryAttack_senet154_10000=result["senet154"]["Boundary Attack"][10000],
-
-        BoundaryAttack_resnet101_300=result["resnet101"]["Boundary Attack"][300],
-        BoundaryAttack_resnet101_1000=result["resnet101"]["Boundary Attack"][1000],
-        BoundaryAttack_resnet101_2000=result["resnet101"]["Boundary Attack"][2000],
-        BoundaryAttack_resnet101_5000=result["resnet101"]["Boundary Attack"][5000],
-        BoundaryAttack_resnet101_8000=result["resnet101"]["Boundary Attack"][8000],
-        BoundaryAttack_resnet101_10000=result["resnet101"]["Boundary Attack"][10000],
-
-        HSJA_inceptionv3_300=result["inceptionv3"]["HopSkipJumpAttack"][300],
-        HSJA_inceptionv3_1000=result["inceptionv3"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv3_2000=result["inceptionv3"]["HopSkipJumpAttack"][2000],
-        HSJA_inceptionv3_5000=result["inceptionv3"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv3_8000=result["inceptionv3"]["HopSkipJumpAttack"][8000],
-        HSJA_inceptionv3_10000=result["inceptionv3"]["HopSkipJumpAttack"][10000],
-
-        HSJA_inceptionv4_300=result["inceptionv4"]["HopSkipJumpAttack"][300],
-        HSJA_inceptionv4_1000=result["inceptionv4"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv4_2000=result["inceptionv4"]["HopSkipJumpAttack"][2000],
-        HSJA_inceptionv4_5000=result["inceptionv4"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv4_8000=result["inceptionv4"]["HopSkipJumpAttack"][8000],
-        HSJA_inceptionv4_10000=result["inceptionv4"]["HopSkipJumpAttack"][10000],
-
-        HSJA_senet154_300=result["senet154"]["HopSkipJumpAttack"][300],
-        HSJA_senet154_1000=result["senet154"]["HopSkipJumpAttack"][1000],
-        HSJA_senet154_2000=result["senet154"]["HopSkipJumpAttack"][2000],
-        HSJA_senet154_5000=result["senet154"]["HopSkipJumpAttack"][5000],
-        HSJA_senet154_8000=result["senet154"]["HopSkipJumpAttack"][8000],
-        HSJA_senet154_10000=result["senet154"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnet101_300=result["resnet101"]["HopSkipJumpAttack"][300],
-        HSJA_resnet101_1000=result["resnet101"]["HopSkipJumpAttack"][1000],
-        HSJA_resnet101_2000=result["resnet101"]["HopSkipJumpAttack"][2000],
-        HSJA_resnet101_5000=result["resnet101"]["HopSkipJumpAttack"][5000],
-        HSJA_resnet101_8000=result["resnet101"]["HopSkipJumpAttack"][8000],
-        HSJA_resnet101_10000=result["resnet101"]["HopSkipJumpAttack"][10000],
-
-        Tangent_inceptionv3_300=result["inceptionv3"]["Tangent Attack"][300],
-        Tangent_inceptionv3_1000=result["inceptionv3"]["Tangent Attack"][1000],
-        Tangent_inceptionv3_2000=result["inceptionv3"]["Tangent Attack"][2000],
-        Tangent_inceptionv3_5000=result["inceptionv3"]["Tangent Attack"][5000],
-        Tangent_inceptionv3_8000=result["inceptionv3"]["Tangent Attack"][8000],
-        Tangent_inceptionv3_10000=result["inceptionv3"]["Tangent Attack"][10000],
-
-        Tangent_inceptionv4_300=result["inceptionv4"]["Tangent Attack"][300],
-        Tangent_inceptionv4_1000=result["inceptionv4"]["Tangent Attack"][1000],
-        Tangent_inceptionv4_2000=result["inceptionv4"]["Tangent Attack"][2000],
-        Tangent_inceptionv4_5000=result["inceptionv4"]["Tangent Attack"][5000],
-        Tangent_inceptionv4_8000=result["inceptionv4"]["Tangent Attack"][8000],
-        Tangent_inceptionv4_10000=result["inceptionv4"]["Tangent Attack"][10000],
-
-        Tangent_senet154_300=result["senet154"]["Tangent Attack"][300],
-        Tangent_senet154_1000=result["senet154"]["Tangent Attack"][1000],
-        Tangent_senet154_2000=result["senet154"]["Tangent Attack"][2000],
-        Tangent_senet154_5000=result["senet154"]["Tangent Attack"][5000],
-        Tangent_senet154_8000=result["senet154"]["Tangent Attack"][8000],
-        Tangent_senet154_10000=result["senet154"]["Tangent Attack"][10000],
-
-        Tangent_resnet101_300=result["resnet101"]["Tangent Attack"][300],
-        Tangent_resnet101_1000=result["resnet101"]["Tangent Attack"][1000],
-        Tangent_resnet101_2000=result["resnet101"]["Tangent Attack"][2000],
-        Tangent_resnet101_5000=result["resnet101"]["Tangent Attack"][5000],
-        Tangent_resnet101_8000=result["resnet101"]["Tangent Attack"][8000],
-        Tangent_resnet101_10000=result["resnet101"]["Tangent Attack"][10000],
-
-        Ellipsoid_Tangent_inceptionv3_300=result["inceptionv3"]["Ellipsoid Tangent Attack"][300],
-        Ellipsoid_Tangent_inceptionv3_1000=result["inceptionv3"]["Ellipsoid Tangent Attack"][1000],
-        Ellipsoid_Tangent_inceptionv3_2000=result["inceptionv3"]["Ellipsoid Tangent Attack"][2000],
-        Ellipsoid_Tangent_inceptionv3_5000=result["inceptionv3"]["Ellipsoid Tangent Attack"][5000],
-        Ellipsoid_Tangent_inceptionv3_8000=result["inceptionv3"]["Ellipsoid Tangent Attack"][8000],
-        Ellipsoid_Tangent_inceptionv3_10000=result["inceptionv3"]["Ellipsoid Tangent Attack"][10000],
-
-        Ellipsoid_Tangent_inceptionv4_300=result["inceptionv4"]["Ellipsoid Tangent Attack"][300],
-        Ellipsoid_Tangent_inceptionv4_1000=result["inceptionv4"]["Ellipsoid Tangent Attack"][1000],
-        Ellipsoid_Tangent_inceptionv4_2000=result["inceptionv4"]["Ellipsoid Tangent Attack"][2000],
-        Ellipsoid_Tangent_inceptionv4_5000=result["inceptionv4"]["Ellipsoid Tangent Attack"][5000],
-        Ellipsoid_Tangent_inceptionv4_8000=result["inceptionv4"]["Ellipsoid Tangent Attack"][8000],
-        Ellipsoid_Tangent_inceptionv4_10000=result["inceptionv4"]["Ellipsoid Tangent Attack"][10000],
-
-        Ellipsoid_Tangent_senet154_300=result["senet154"]["Ellipsoid Tangent Attack"][300],
-        Ellipsoid_Tangent_senet154_1000=result["senet154"]["Ellipsoid Tangent Attack"][1000],
-        Ellipsoid_Tangent_senet154_2000=result["senet154"]["Ellipsoid Tangent Attack"][2000],
-        Ellipsoid_Tangent_senet154_5000=result["senet154"]["Ellipsoid Tangent Attack"][5000],
-        Ellipsoid_Tangent_senet154_8000=result["senet154"]["Ellipsoid Tangent Attack"][8000],
-        Ellipsoid_Tangent_senet154_10000=result["senet154"]["Ellipsoid Tangent Attack"][10000],
-
-        Ellipsoid_Tangent_resnet101_300=result["resnet101"]["Ellipsoid Tangent Attack"][300],
-        Ellipsoid_Tangent_resnet101_1000=result["resnet101"]["Ellipsoid Tangent Attack"][1000],
-        Ellipsoid_Tangent_resnet101_2000=result["resnet101"]["Ellipsoid Tangent Attack"][2000],
-        Ellipsoid_Tangent_resnet101_5000=result["resnet101"]["Ellipsoid Tangent Attack"][5000],
-        Ellipsoid_Tangent_resnet101_8000=result["resnet101"]["Ellipsoid Tangent Attack"][8000],
-        Ellipsoid_Tangent_resnet101_10000=result["resnet101"]["Ellipsoid Tangent Attack"][10000],
-
-        targeted_SignOPT_inceptionv3_300=targeted_attack_result["inceptionv3"]["Sign-OPT"][300],
-        targeted_SignOPT_inceptionv3_1000=targeted_attack_result["inceptionv3"]["Sign-OPT"][1000],
-        targeted_SignOPT_inceptionv3_2000=targeted_attack_result["inceptionv3"]["Sign-OPT"][2000],
-        targeted_SignOPT_inceptionv3_5000=targeted_attack_result["inceptionv3"]["Sign-OPT"][5000],
-        targeted_SignOPT_inceptionv3_8000=targeted_attack_result["inceptionv3"]["Sign-OPT"][8000],
-        targeted_SignOPT_inceptionv3_10000=targeted_attack_result["inceptionv3"]["Sign-OPT"][10000],
-        targeted_SignOPT_inceptionv4_300=targeted_attack_result["inceptionv4"]["Sign-OPT"][300],
-        targeted_SignOPT_inceptionv4_1000=targeted_attack_result["inceptionv4"]["Sign-OPT"][1000],
-        targeted_SignOPT_inceptionv4_2000=targeted_attack_result["inceptionv4"]["Sign-OPT"][2000],
-        targeted_SignOPT_inceptionv4_5000=targeted_attack_result["inceptionv4"]["Sign-OPT"][5000],
-        targeted_SignOPT_inceptionv4_8000=targeted_attack_result["inceptionv4"]["Sign-OPT"][8000],
-        targeted_SignOPT_inceptionv4_10000=targeted_attack_result["inceptionv4"]["Sign-OPT"][10000],
-        targeted_SignOPT_senet154_300=targeted_attack_result["senet154"]["Sign-OPT"][300],
-        targeted_SignOPT_senet154_1000=targeted_attack_result["senet154"]["Sign-OPT"][1000],
-        targeted_SignOPT_senet154_2000=targeted_attack_result["senet154"]["Sign-OPT"][2000],
-        targeted_SignOPT_senet154_5000=targeted_attack_result["senet154"]["Sign-OPT"][5000],
-        targeted_SignOPT_senet154_8000=targeted_attack_result["senet154"]["Sign-OPT"][8000],
-        targeted_SignOPT_senet154_10000=targeted_attack_result["senet154"]["Sign-OPT"][10000],
-        targeted_SignOPT_resnet101_300=targeted_attack_result["resnet101"]["Sign-OPT"][300],
-        targeted_SignOPT_resnet101_1000=targeted_attack_result["resnet101"]["Sign-OPT"][1000],
-        targeted_SignOPT_resnet101_2000=targeted_attack_result["resnet101"]["Sign-OPT"][2000],
-        targeted_SignOPT_resnet101_5000=targeted_attack_result["resnet101"]["Sign-OPT"][5000],
-        targeted_SignOPT_resnet101_8000=targeted_attack_result["resnet101"]["Sign-OPT"][8000],
-        targeted_SignOPT_resnet101_10000=targeted_attack_result["resnet101"]["Sign-OPT"][10000],
-
-        targeted_SVMOPT_inceptionv3_300=targeted_attack_result["inceptionv3"]["SVM-OPT"][300],
-        targeted_SVMOPT_inceptionv3_1000=targeted_attack_result["inceptionv3"]["SVM-OPT"][1000],
-        targeted_SVMOPT_inceptionv3_2000=targeted_attack_result["inceptionv3"]["SVM-OPT"][2000],
-        targeted_SVMOPT_inceptionv3_5000=targeted_attack_result["inceptionv3"]["SVM-OPT"][5000],
-        targeted_SVMOPT_inceptionv3_8000=targeted_attack_result["inceptionv3"]["SVM-OPT"][8000],
-        targeted_SVMOPT_inceptionv3_10000=targeted_attack_result["inceptionv3"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_inceptionv4_300=targeted_attack_result["inceptionv4"]["SVM-OPT"][300],
-        targeted_SVMOPT_inceptionv4_1000=targeted_attack_result["inceptionv4"]["SVM-OPT"][1000],
-        targeted_SVMOPT_inceptionv4_2000=targeted_attack_result["inceptionv4"]["SVM-OPT"][2000],
-        targeted_SVMOPT_inceptionv4_5000=targeted_attack_result["inceptionv4"]["SVM-OPT"][5000],
-        targeted_SVMOPT_inceptionv4_8000=targeted_attack_result["inceptionv4"]["SVM-OPT"][8000],
-        targeted_SVMOPT_inceptionv4_10000=targeted_attack_result["inceptionv4"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_senet154_300=targeted_attack_result["senet154"]["SVM-OPT"][300],
-        targeted_SVMOPT_senet154_1000=targeted_attack_result["senet154"]["SVM-OPT"][1000],
-        targeted_SVMOPT_senet154_2000=targeted_attack_result["senet154"]["SVM-OPT"][2000],
-        targeted_SVMOPT_senet154_5000=targeted_attack_result["senet154"]["SVM-OPT"][5000],
-        targeted_SVMOPT_senet154_8000=targeted_attack_result["senet154"]["SVM-OPT"][8000],
-        targeted_SVMOPT_senet154_10000=targeted_attack_result["senet154"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_resnet101_300=targeted_attack_result["resnet101"]["SVM-OPT"][300],
-        targeted_SVMOPT_resnet101_1000=targeted_attack_result["resnet101"]["SVM-OPT"][1000],
-        targeted_SVMOPT_resnet101_2000=targeted_attack_result["resnet101"]["SVM-OPT"][2000],
-        targeted_SVMOPT_resnet101_5000=targeted_attack_result["resnet101"]["SVM-OPT"][5000],
-        targeted_SVMOPT_resnet101_8000=targeted_attack_result["resnet101"]["SVM-OPT"][8000],
-        targeted_SVMOPT_resnet101_10000=targeted_attack_result["resnet101"]["SVM-OPT"][10000],
-
-        targeted_BoundaryAttack_inceptionv3_300=targeted_attack_result["inceptionv3"]["Boundary Attack"][300],
-        targeted_BoundaryAttack_inceptionv3_1000=targeted_attack_result["inceptionv3"]["Boundary Attack"][1000],
-        targeted_BoundaryAttack_inceptionv3_2000=targeted_attack_result["inceptionv3"]["Boundary Attack"][2000],
-        targeted_BoundaryAttack_inceptionv3_5000=targeted_attack_result["inceptionv3"]["Boundary Attack"][5000],
-        targeted_BoundaryAttack_inceptionv3_8000=targeted_attack_result["inceptionv3"]["Boundary Attack"][8000],
-        targeted_BoundaryAttack_inceptionv3_10000=targeted_attack_result["inceptionv3"]["Boundary Attack"][10000],
-
-        targeted_BoundaryAttack_inceptionv4_300=targeted_attack_result["inceptionv4"]["Boundary Attack"][300],
-        targeted_BoundaryAttack_inceptionv4_1000=targeted_attack_result["inceptionv4"]["Boundary Attack"][1000],
-        targeted_BoundaryAttack_inceptionv4_2000=targeted_attack_result["inceptionv4"]["Boundary Attack"][2000],
-        targeted_BoundaryAttack_inceptionv4_5000=targeted_attack_result["inceptionv4"]["Boundary Attack"][5000],
-        targeted_BoundaryAttack_inceptionv4_8000=targeted_attack_result["inceptionv4"]["Boundary Attack"][8000],
-        targeted_BoundaryAttack_inceptionv4_10000=targeted_attack_result["inceptionv4"]["Boundary Attack"][10000],
-
-        targeted_BoundaryAttack_senet154_300=targeted_attack_result["senet154"]["Boundary Attack"][300],
-        targeted_BoundaryAttack_senet154_1000=targeted_attack_result["senet154"]["Boundary Attack"][1000],
-        targeted_BoundaryAttack_senet154_2000=targeted_attack_result["senet154"]["Boundary Attack"][2000],
-        targeted_BoundaryAttack_senet154_5000=targeted_attack_result["senet154"]["Boundary Attack"][5000],
-        targeted_BoundaryAttack_senet154_8000=targeted_attack_result["senet154"]["Boundary Attack"][8000],
-        targeted_BoundaryAttack_senet154_10000=targeted_attack_result["senet154"]["Boundary Attack"][10000],
-
-        targeted_BoundaryAttack_resnet101_300=targeted_attack_result["resnet101"]["Boundary Attack"][300],
-        targeted_BoundaryAttack_resnet101_1000=targeted_attack_result["resnet101"]["Boundary Attack"][1000],
-        targeted_BoundaryAttack_resnet101_2000=targeted_attack_result["resnet101"]["Boundary Attack"][2000],
-        targeted_BoundaryAttack_resnet101_5000=targeted_attack_result["resnet101"]["Boundary Attack"][5000],
-        targeted_BoundaryAttack_resnet101_8000=targeted_attack_result["resnet101"]["Boundary Attack"][8000],
-        targeted_BoundaryAttack_resnet101_10000=targeted_attack_result["resnet101"]["Boundary Attack"][10000],
-
-        targeted_HSJA_inceptionv3_300=targeted_attack_result["inceptionv3"]["HopSkipJumpAttack"][300],
-        targeted_HSJA_inceptionv3_1000=targeted_attack_result["inceptionv3"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_inceptionv3_2000=targeted_attack_result["inceptionv3"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_inceptionv3_5000=targeted_attack_result["inceptionv3"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_inceptionv3_8000=targeted_attack_result["inceptionv3"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_inceptionv3_10000=targeted_attack_result["inceptionv3"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_inceptionv4_300=targeted_attack_result["inceptionv4"]["HopSkipJumpAttack"][300],
-        targeted_HSJA_inceptionv4_1000=targeted_attack_result["inceptionv4"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_inceptionv4_2000=targeted_attack_result["inceptionv4"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_inceptionv4_5000=targeted_attack_result["inceptionv4"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_inceptionv4_8000=targeted_attack_result["inceptionv4"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_inceptionv4_10000=targeted_attack_result["inceptionv4"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_senet154_300=targeted_attack_result["senet154"]["HopSkipJumpAttack"][300],
-        targeted_HSJA_senet154_1000=targeted_attack_result["senet154"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_senet154_2000=targeted_attack_result["senet154"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_senet154_5000=targeted_attack_result["senet154"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_senet154_8000=targeted_attack_result["senet154"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_senet154_10000=targeted_attack_result["senet154"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_resnet101_300=targeted_attack_result["resnet101"]["HopSkipJumpAttack"][300],
-        targeted_HSJA_resnet101_1000=targeted_attack_result["resnet101"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_resnet101_2000=targeted_attack_result["resnet101"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_resnet101_5000=targeted_attack_result["resnet101"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_resnet101_8000=targeted_attack_result["resnet101"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_resnet101_10000=targeted_attack_result["resnet101"]["HopSkipJumpAttack"][10000],
-
-        targeted_Tangent_inceptionv3_300=targeted_attack_result["inceptionv3"]["Tangent Attack"][300],
-        targeted_Tangent_inceptionv3_1000=targeted_attack_result["inceptionv3"]["Tangent Attack"][1000],
-        targeted_Tangent_inceptionv3_2000=targeted_attack_result["inceptionv3"]["Tangent Attack"][2000],
-        targeted_Tangent_inceptionv3_5000=targeted_attack_result["inceptionv3"]["Tangent Attack"][5000],
-        targeted_Tangent_inceptionv3_8000=targeted_attack_result["inceptionv3"]["Tangent Attack"][8000],
-        targeted_Tangent_inceptionv3_10000=targeted_attack_result["inceptionv3"]["Tangent Attack"][10000],
-
-        targeted_Tangent_inceptionv4_300=targeted_attack_result["inceptionv4"]["Tangent Attack"][300],
-        targeted_Tangent_inceptionv4_1000=targeted_attack_result["inceptionv4"]["Tangent Attack"][1000],
-        targeted_Tangent_inceptionv4_2000=targeted_attack_result["inceptionv4"]["Tangent Attack"][2000],
-        targeted_Tangent_inceptionv4_5000=targeted_attack_result["inceptionv4"]["Tangent Attack"][5000],
-        targeted_Tangent_inceptionv4_8000=targeted_attack_result["inceptionv4"]["Tangent Attack"][8000],
-        targeted_Tangent_inceptionv4_10000=targeted_attack_result["inceptionv4"]["Tangent Attack"][10000],
-
-        targeted_Tangent_senet154_300=targeted_attack_result["senet154"]["Tangent Attack"][300],
-        targeted_Tangent_senet154_1000=targeted_attack_result["senet154"]["Tangent Attack"][1000],
-        targeted_Tangent_senet154_2000=targeted_attack_result["senet154"]["Tangent Attack"][2000],
-        targeted_Tangent_senet154_5000=targeted_attack_result["senet154"]["Tangent Attack"][5000],
-        targeted_Tangent_senet154_8000=targeted_attack_result["senet154"]["Tangent Attack"][8000],
-        targeted_Tangent_senet154_10000=targeted_attack_result["senet154"]["Tangent Attack"][10000],
-
-        targeted_Tangent_resnet101_300=targeted_attack_result["resnet101"]["Tangent Attack"][300],
-        targeted_Tangent_resnet101_1000=targeted_attack_result["resnet101"]["Tangent Attack"][1000],
-        targeted_Tangent_resnet101_2000=targeted_attack_result["resnet101"]["Tangent Attack"][2000],
-        targeted_Tangent_resnet101_5000=targeted_attack_result["resnet101"]["Tangent Attack"][5000],
-        targeted_Tangent_resnet101_8000=targeted_attack_result["resnet101"]["Tangent Attack"][8000],
-        targeted_Tangent_resnet101_10000=targeted_attack_result["resnet101"]["Tangent Attack"][10000],
-
-        targeted_Ellipsoid_Tangent_inceptionv3_300=targeted_attack_result["inceptionv3"]["Ellipsoid Tangent Attack"][
-            300],
-        targeted_Ellipsoid_Tangent_inceptionv3_1000=targeted_attack_result["inceptionv3"]["Ellipsoid Tangent Attack"][
-            1000],
-        targeted_Ellipsoid_Tangent_inceptionv3_2000=targeted_attack_result["inceptionv3"]["Ellipsoid Tangent Attack"][
-            2000],
-        targeted_Ellipsoid_Tangent_inceptionv3_5000=targeted_attack_result["inceptionv3"]["Ellipsoid Tangent Attack"][
-            5000],
-        targeted_Ellipsoid_Tangent_inceptionv3_8000=targeted_attack_result["inceptionv3"]["Ellipsoid Tangent Attack"][
-            8000],
-        targeted_Ellipsoid_Tangent_inceptionv3_10000=targeted_attack_result["inceptionv3"]["Ellipsoid Tangent Attack"][
-            10000],
-
-        targeted_Ellipsoid_Tangent_inceptionv4_300=targeted_attack_result["inceptionv4"]["Ellipsoid Tangent Attack"][
-            300],
-        targeted_Ellipsoid_Tangent_inceptionv4_1000=targeted_attack_result["inceptionv4"]["Ellipsoid Tangent Attack"][
-            1000],
-        targeted_Ellipsoid_Tangent_inceptionv4_2000=targeted_attack_result["inceptionv4"]["Ellipsoid Tangent Attack"][
-            2000],
-        targeted_Ellipsoid_Tangent_inceptionv4_5000=targeted_attack_result["inceptionv4"]["Ellipsoid Tangent Attack"][
-            5000],
-        targeted_Ellipsoid_Tangent_inceptionv4_8000=targeted_attack_result["inceptionv4"]["Ellipsoid Tangent Attack"][
-            8000],
-        targeted_Ellipsoid_Tangent_inceptionv4_10000=targeted_attack_result["inceptionv4"]["Ellipsoid Tangent Attack"][
-            10000],
-
-        targeted_Ellipsoid_Tangent_senet154_300=targeted_attack_result["senet154"]["Ellipsoid Tangent Attack"][300],
-        targeted_Ellipsoid_Tangent_senet154_1000=targeted_attack_result["senet154"]["Ellipsoid Tangent Attack"][1000],
-        targeted_Ellipsoid_Tangent_senet154_2000=targeted_attack_result["senet154"]["Ellipsoid Tangent Attack"][2000],
-        targeted_Ellipsoid_Tangent_senet154_5000=targeted_attack_result["senet154"]["Ellipsoid Tangent Attack"][5000],
-        targeted_Ellipsoid_Tangent_senet154_8000=targeted_attack_result["senet154"]["Ellipsoid Tangent Attack"][8000],
-        targeted_Ellipsoid_Tangent_senet154_10000=targeted_attack_result["senet154"]["Ellipsoid Tangent Attack"][10000],
-
-        targeted_Ellipsoid_Tangent_resnet101_300=targeted_attack_result["resnet101"]["Ellipsoid Tangent Attack"][300],
-        targeted_Ellipsoid_Tangent_resnet101_1000=targeted_attack_result["resnet101"]["Ellipsoid Tangent Attack"][1000],
-        targeted_Ellipsoid_Tangent_resnet101_2000=targeted_attack_result["resnet101"]["Ellipsoid Tangent Attack"][2000],
-        targeted_Ellipsoid_Tangent_resnet101_5000=targeted_attack_result["resnet101"]["Ellipsoid Tangent Attack"][5000],
-        targeted_Ellipsoid_Tangent_resnet101_8000=targeted_attack_result["resnet101"]["Ellipsoid Tangent Attack"][8000],
-        targeted_Ellipsoid_Tangent_resnet101_10000=targeted_attack_result["resnet101"]["Ellipsoid Tangent Attack"][
-            10000],
-
-        QEBA_inceptionv3_300=result["inceptionv3"]["QEBA-S"][300],
-        QEBA_inceptionv3_1000=result["inceptionv3"]["QEBA-S"][1000],
-        QEBA_inceptionv3_2000=result["inceptionv3"]["QEBA-S"][2000],
-        QEBA_inceptionv3_5000=result["inceptionv3"]["QEBA-S"][5000],
-        QEBA_inceptionv3_8000=result["inceptionv3"]["QEBA-S"][8000],
-        QEBA_inceptionv3_10000=result["inceptionv3"]["QEBA-S"][10000],
-        QEBA_inceptionv4_300=result["inceptionv4"]["QEBA-S"][300],
-        QEBA_inceptionv4_1000=result["inceptionv4"]["QEBA-S"][1000],
-        QEBA_inceptionv4_2000=result["inceptionv4"]["QEBA-S"][2000],
-        QEBA_inceptionv4_5000=result["inceptionv4"]["QEBA-S"][5000],
-        QEBA_inceptionv4_8000=result["inceptionv4"]["QEBA-S"][8000],
-        QEBA_inceptionv4_10000=result["inceptionv4"]["QEBA-S"][10000],
-        QEBA_senet154_300=result["senet154"]["QEBA-S"][300],
-        QEBA_senet154_1000=result["senet154"]["QEBA-S"][1000],
-        QEBA_senet154_2000=result["senet154"]["QEBA-S"][2000],
-        QEBA_senet154_5000=result["senet154"]["QEBA-S"][5000],
-        QEBA_senet154_8000=result["senet154"]["QEBA-S"][8000],
-        QEBA_senet154_10000=result["senet154"]["QEBA-S"][10000],
-        QEBA_resnet101_300=result["resnet101"]["QEBA-S"][300],
-        QEBA_resnet101_1000=result["resnet101"]["QEBA-S"][1000],
-        QEBA_resnet101_2000=result["resnet101"]["QEBA-S"][2000],
-        QEBA_resnet101_5000=result["resnet101"]["QEBA-S"][5000],
-        QEBA_resnet101_8000=result["resnet101"]["QEBA-S"][8000],
-        QEBA_resnet101_10000=result["resnet101"]["QEBA-S"][10000],
-
-        QEBATangent_inceptionv3_300=result["inceptionv3"]["QEBA-S + Tangent Attack"][300],
-        QEBATangent_inceptionv3_1000=result["inceptionv3"]["QEBA-S + Tangent Attack"][1000],
-        QEBATangent_inceptionv3_2000=result["inceptionv3"]["QEBA-S + Tangent Attack"][2000],
-        QEBATangent_inceptionv3_5000=result["inceptionv3"]["QEBA-S + Tangent Attack"][5000],
-        QEBATangent_inceptionv3_8000=result["inceptionv3"]["QEBA-S + Tangent Attack"][8000],
-        QEBATangent_inceptionv3_10000=result["inceptionv3"]["QEBA-S + Tangent Attack"][10000],
-        QEBATangent_inceptionv4_300=result["inceptionv4"]["QEBA-S + Tangent Attack"][300],
-        QEBATangent_inceptionv4_1000=result["inceptionv4"]["QEBA-S + Tangent Attack"][1000],
-        QEBATangent_inceptionv4_2000=result["inceptionv4"]["QEBA-S + Tangent Attack"][2000],
-        QEBATangent_inceptionv4_5000=result["inceptionv4"]["QEBA-S + Tangent Attack"][5000],
-        QEBATangent_inceptionv4_8000=result["inceptionv4"]["QEBA-S + Tangent Attack"][8000],
-        QEBATangent_inceptionv4_10000=result["inceptionv4"]["QEBA-S + Tangent Attack"][10000],
-        QEBATangent_senet154_300=result["senet154"]["QEBA-S + Tangent Attack"][300],
-        QEBATangent_senet154_1000=result["senet154"]["QEBA-S + Tangent Attack"][1000],
-        QEBATangent_senet154_2000=result["senet154"]["QEBA-S + Tangent Attack"][2000],
-        QEBATangent_senet154_5000=result["senet154"]["QEBA-S + Tangent Attack"][5000],
-        QEBATangent_senet154_8000=result["senet154"]["QEBA-S + Tangent Attack"][8000],
-        QEBATangent_senet154_10000=result["senet154"]["QEBA-S + Tangent Attack"][10000],
-        QEBATangent_resnet101_300=result["resnet101"]["QEBA-S + Tangent Attack"][300],
-        QEBATangent_resnet101_1000=result["resnet101"]["QEBA-S + Tangent Attack"][1000],
-        QEBATangent_resnet101_2000=result["resnet101"]["QEBA-S + Tangent Attack"][2000],
-        QEBATangent_resnet101_5000=result["resnet101"]["QEBA-S + Tangent Attack"][5000],
-        QEBATangent_resnet101_8000=result["resnet101"]["QEBA-S + Tangent Attack"][8000],
-        QEBATangent_resnet101_10000=result["resnet101"]["QEBA-S + Tangent Attack"][10000],
-
-        targeted_QEBA_inceptionv3_300=targeted_attack_result["inceptionv3"]["QEBA-S"][300],
-        targeted_QEBA_inceptionv3_1000=targeted_attack_result["inceptionv3"]["QEBA-S"][1000],
-        targeted_QEBA_inceptionv3_2000=targeted_attack_result["inceptionv3"]["QEBA-S"][2000],
-        targeted_QEBA_inceptionv3_5000=targeted_attack_result["inceptionv3"]["QEBA-S"][5000],
-        targeted_QEBA_inceptionv3_8000=targeted_attack_result["inceptionv3"]["QEBA-S"][8000],
-        targeted_QEBA_inceptionv3_10000=targeted_attack_result["inceptionv3"]["QEBA-S"][10000],
-        targeted_QEBA_inceptionv4_300=targeted_attack_result["inceptionv4"]["QEBA-S"][300],
-        targeted_QEBA_inceptionv4_1000=targeted_attack_result["inceptionv4"]["QEBA-S"][1000],
-        targeted_QEBA_inceptionv4_2000=targeted_attack_result["inceptionv4"]["QEBA-S"][2000],
-        targeted_QEBA_inceptionv4_5000=targeted_attack_result["inceptionv4"]["QEBA-S"][5000],
-        targeted_QEBA_inceptionv4_8000=targeted_attack_result["inceptionv4"]["QEBA-S"][8000],
-        targeted_QEBA_inceptionv4_10000=targeted_attack_result["inceptionv4"]["QEBA-S"][10000],
-        targeted_QEBA_senet154_300=targeted_attack_result["senet154"]["QEBA-S"][300],
-        targeted_QEBA_senet154_1000=targeted_attack_result["senet154"]["QEBA-S"][1000],
-        targeted_QEBA_senet154_2000=targeted_attack_result["senet154"]["QEBA-S"][2000],
-        targeted_QEBA_senet154_5000=targeted_attack_result["senet154"]["QEBA-S"][5000],
-        targeted_QEBA_senet154_8000=targeted_attack_result["senet154"]["QEBA-S"][8000],
-        targeted_QEBA_senet154_10000=targeted_attack_result["senet154"]["QEBA-S"][10000],
-        targeted_QEBA_resnet101_300=targeted_attack_result["resnet101"]["QEBA-S"][300],
-        targeted_QEBA_resnet101_1000=targeted_attack_result["resnet101"]["QEBA-S"][1000],
-        targeted_QEBA_resnet101_2000=targeted_attack_result["resnet101"]["QEBA-S"][2000],
-        targeted_QEBA_resnet101_5000=targeted_attack_result["resnet101"]["QEBA-S"][5000],
-        targeted_QEBA_resnet101_8000=targeted_attack_result["resnet101"]["QEBA-S"][8000],
-        targeted_QEBA_resnet101_10000=targeted_attack_result["resnet101"]["QEBA-S"][10000],
-
-        targeted_QEBATangent_inceptionv3_300=targeted_attack_result["inceptionv3"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_inceptionv3_1000=targeted_attack_result["inceptionv3"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_inceptionv3_2000=targeted_attack_result["inceptionv3"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_inceptionv3_5000=targeted_attack_result["inceptionv3"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_inceptionv3_8000=targeted_attack_result["inceptionv3"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_inceptionv3_10000=targeted_attack_result["inceptionv3"]["QEBA-S + Tangent Attack"][10000],
-        targeted_QEBATangent_inceptionv4_300=targeted_attack_result["inceptionv4"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_inceptionv4_1000=targeted_attack_result["inceptionv4"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_inceptionv4_2000=targeted_attack_result["inceptionv4"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_inceptionv4_5000=targeted_attack_result["inceptionv4"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_inceptionv4_8000=targeted_attack_result["inceptionv4"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_inceptionv4_10000=targeted_attack_result["inceptionv4"]["QEBA-S + Tangent Attack"][10000],
-        targeted_QEBATangent_senet154_300=targeted_attack_result["senet154"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_senet154_1000=targeted_attack_result["senet154"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_senet154_2000=targeted_attack_result["senet154"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_senet154_5000=targeted_attack_result["senet154"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_senet154_8000=targeted_attack_result["senet154"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_senet154_10000=targeted_attack_result["senet154"]["QEBA-S + Tangent Attack"][10000],
-        targeted_QEBATangent_resnet101_300=targeted_attack_result["resnet101"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_resnet101_1000=targeted_attack_result["resnet101"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_resnet101_2000=targeted_attack_result["resnet101"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_resnet101_5000=targeted_attack_result["resnet101"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_resnet101_8000=targeted_attack_result["resnet101"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_resnet101_10000=targeted_attack_result["resnet101"]["QEBA-S + Tangent Attack"][10000],
-    )
-    )
-
-
-
-
-def draw_wide_table_CIFAR(untargeted_result, targeted_result):
-
-    print("""
-                    & GeoDA & {untargeted_GeoDA_pyramidnet272_1000} & {untargeted_GeoDA_pyramidnet272_2000} & {untargeted_GeoDA_pyramidnet272_5000} & {untargeted_GeoDA_pyramidnet272_8000} & {untargeted_GeoDA_pyramidnet272_10000} & {targeted_GeoDA_pyramidnet272_1000} & {targeted_GeoDA_pyramidnet272_2000} & {targeted_GeoDA_pyramidnet272_5000} & {targeted_GeoDA_pyramidnet272_8000} & {targeted_GeoDA_pyramidnet272_10000}  \\\\
-                    & RayS & {untargeted_RayS_pyramidnet272_1000} & {untargeted_RayS_pyramidnet272_2000} & {untargeted_RayS_pyramidnet272_5000} & {untargeted_RayS_pyramidnet272_8000} & {untargeted_RayS_pyramidnet272_10000} & {targeted_RayS_pyramidnet272_1000} & {targeted_RayS_pyramidnet272_2000} & {targeted_RayS_pyramidnet272_5000} & {targeted_RayS_pyramidnet272_8000} & {targeted_RayS_pyramidnet272_10000}  \\\\
-                    & Sign-OPT & {untargeted_SignOPT_pyramidnet272_1000} & {untargeted_SignOPT_pyramidnet272_2000} & {untargeted_SignOPT_pyramidnet272_5000} & {untargeted_SignOPT_pyramidnet272_8000} & {untargeted_SignOPT_pyramidnet272_10000} & {targeted_SignOPT_pyramidnet272_1000} & {targeted_SignOPT_pyramidnet272_2000} & {targeted_SignOPT_pyramidnet272_5000} & {targeted_SignOPT_pyramidnet272_8000} & {targeted_SignOPT_pyramidnet272_10000}  \\\\
-                    & SVM-OPT & {untargeted_SVMOPT_pyramidnet272_1000} & {untargeted_SVMOPT_pyramidnet272_2000} & {untargeted_SVMOPT_pyramidnet272_5000} & {untargeted_SVMOPT_pyramidnet272_8000} & {untargeted_SVMOPT_pyramidnet272_10000} & {targeted_SVMOPT_pyramidnet272_1000} & {targeted_SVMOPT_pyramidnet272_2000} & {targeted_SVMOPT_pyramidnet272_5000} & {targeted_SVMOPT_pyramidnet272_8000} & {targeted_SVMOPT_pyramidnet272_10000}  \\\\
-                    & HopSkipJumpAttack & {untargeted_HSJA_pyramidnet272_1000} & {untargeted_HSJA_pyramidnet272_2000} & {untargeted_HSJA_pyramidnet272_5000} & {untargeted_HSJA_pyramidnet272_8000} & {untargeted_HSJA_pyramidnet272_10000} & {targeted_HSJA_pyramidnet272_1000} & {targeted_HSJA_pyramidnet272_2000} & {targeted_HSJA_pyramidnet272_5000} & {targeted_HSJA_pyramidnet272_8000} & {targeted_HSJA_pyramidnet272_10000}  \\\\
-                    & Tangent Attack (ours) & {untargeted_Tangent_pyramidnet272_1000} & {untargeted_Tangent_pyramidnet272_2000} & {untargeted_Tangent_pyramidnet272_5000} & {untargeted_Tangent_pyramidnet272_8000} & {untargeted_Tangent_pyramidnet272_10000} & {targeted_Tangent_pyramidnet272_1000} & {targeted_Tangent_pyramidnet272_2000} & {targeted_Tangent_pyramidnet272_5000} & {targeted_Tangent_pyramidnet272_8000} & {targeted_Tangent_pyramidnet272_10000}  \\\\
-                    \\midrule
-                    & GeoDA & {untargeted_GeoDA_gdas_1000} & {untargeted_GeoDA_gdas_2000} & {untargeted_GeoDA_gdas_5000} & {untargeted_GeoDA_gdas_8000} & {untargeted_GeoDA_gdas_10000} & {targeted_GeoDA_gdas_1000} & {targeted_GeoDA_gdas_2000} & {targeted_GeoDA_gdas_5000} & {targeted_GeoDA_gdas_8000} & {targeted_GeoDA_gdas_10000}  \\\\
-                    & RayS & {untargeted_RayS_gdas_1000} & {untargeted_RayS_gdas_2000} & {untargeted_RayS_gdas_5000} & {untargeted_RayS_gdas_8000} & {untargeted_RayS_gdas_10000} & {targeted_RayS_gdas_1000} & {targeted_RayS_gdas_2000} & {targeted_RayS_gdas_5000} & {targeted_RayS_gdas_8000} & {targeted_RayS_gdas_10000}  \\\\
-                    & Sign-OPT & {untargeted_SignOPT_gdas_1000} & {untargeted_SignOPT_gdas_2000} & {untargeted_SignOPT_gdas_5000} & {untargeted_SignOPT_gdas_8000} & {untargeted_SignOPT_gdas_10000} & {targeted_SignOPT_gdas_1000} & {targeted_SignOPT_gdas_2000} & {targeted_SignOPT_gdas_5000} & {targeted_SignOPT_gdas_8000} & {targeted_SignOPT_gdas_10000}  \\\\
-                    & SVM-OPT & {untargeted_SVMOPT_gdas_1000} & {untargeted_SVMOPT_gdas_2000} & {untargeted_SVMOPT_gdas_5000} & {untargeted_SVMOPT_gdas_8000} & {untargeted_SVMOPT_gdas_10000} & {targeted_SVMOPT_gdas_1000} & {targeted_SVMOPT_gdas_2000} & {targeted_SVMOPT_gdas_5000} & {targeted_SVMOPT_gdas_8000} & {targeted_SVMOPT_gdas_10000}  \\\\
-                    & HopSkipJumpAttack & {untargeted_HSJA_gdas_1000} & {untargeted_HSJA_gdas_2000} & {untargeted_HSJA_gdas_5000} & {untargeted_HSJA_gdas_8000} & {untargeted_HSJA_gdas_10000} & {targeted_HSJA_gdas_1000} & {targeted_HSJA_gdas_2000} & {targeted_HSJA_gdas_5000} & {targeted_HSJA_gdas_8000} & {targeted_HSJA_gdas_10000}  \\\\
-                    & Tangent Attack (ours) & {untargeted_Tangent_gdas_1000} & {untargeted_Tangent_gdas_2000} & {untargeted_Tangent_gdas_5000} & {untargeted_Tangent_gdas_8000} & {untargeted_Tangent_gdas_10000} & {targeted_Tangent_gdas_1000} & {targeted_Tangent_gdas_2000} & {targeted_Tangent_gdas_5000} & {targeted_Tangent_gdas_8000} & {targeted_Tangent_gdas_10000}  \\\\
-                    \\midrule
-                    & GeoDA & {untargeted_GeoDA_WRN28_1000} & {untargeted_GeoDA_WRN28_2000} & {untargeted_GeoDA_WRN28_5000} & {untargeted_GeoDA_WRN28_8000} & {untargeted_GeoDA_WRN28_10000} & {targeted_GeoDA_WRN28_1000} & {targeted_GeoDA_WRN28_2000} & {targeted_GeoDA_WRN28_5000} & {targeted_GeoDA_WRN28_8000} & {targeted_GeoDA_WRN28_10000}  \\\\
-                    & RayS & {untargeted_RayS_WRN28_1000} & {untargeted_RayS_WRN28_2000} & {untargeted_RayS_WRN28_5000} & {untargeted_RayS_WRN28_8000} & {untargeted_RayS_WRN28_10000} & {targeted_RayS_WRN28_1000} & {targeted_RayS_WRN28_2000} & {targeted_RayS_WRN28_5000} & {targeted_RayS_WRN28_8000} & {targeted_RayS_WRN28_10000}  \\\\
-                    & Sign-OPT & {untargeted_SignOPT_WRN28_1000} & {untargeted_SignOPT_WRN28_2000} & {untargeted_SignOPT_WRN28_5000} & {untargeted_SignOPT_WRN28_8000} & {untargeted_SignOPT_WRN28_10000} & {targeted_SignOPT_WRN28_1000} & {targeted_SignOPT_WRN28_2000} & {targeted_SignOPT_WRN28_5000} & {targeted_SignOPT_WRN28_8000} & {targeted_SignOPT_WRN28_10000}  \\\\
-                    & SVM-OPT & {untargeted_SVMOPT_WRN28_1000} & {untargeted_SVMOPT_WRN28_2000} & {untargeted_SVMOPT_WRN28_5000} & {untargeted_SVMOPT_WRN28_8000} & {untargeted_SVMOPT_WRN28_10000} & {targeted_SVMOPT_WRN28_1000} & {targeted_SVMOPT_WRN28_2000} & {targeted_SVMOPT_WRN28_5000} & {targeted_SVMOPT_WRN28_8000} & {targeted_SVMOPT_WRN28_10000}  \\\\
-                    & HopSkipJumpAttack & {untargeted_HSJA_WRN28_1000} & {untargeted_HSJA_WRN28_2000} & {untargeted_HSJA_WRN28_5000} & {untargeted_HSJA_WRN28_8000} & {untargeted_HSJA_WRN28_10000} & {targeted_HSJA_WRN28_1000} & {targeted_HSJA_WRN28_2000} & {targeted_HSJA_WRN28_5000} & {targeted_HSJA_WRN28_8000} & {targeted_HSJA_WRN28_10000}  \\\\
-                    & Tangent Attack (ours) & {untargeted_Tangent_WRN28_1000} & {untargeted_Tangent_WRN28_2000} & {untargeted_Tangent_WRN28_5000} & {untargeted_Tangent_WRN28_8000} & {untargeted_Tangent_WRN28_10000} & {targeted_Tangent_WRN28_1000} & {targeted_Tangent_WRN28_2000} & {targeted_Tangent_WRN28_5000} & {targeted_Tangent_WRN28_8000} & {targeted_Tangent_WRN28_10000}  \\\\
-                    \\midrule
-                    & GeoDA & {untargeted_GeoDA_WRN40_1000} & {untargeted_GeoDA_WRN40_2000} & {untargeted_GeoDA_WRN40_5000} & {untargeted_GeoDA_WRN40_8000} & {untargeted_GeoDA_WRN40_10000} & {targeted_GeoDA_WRN40_1000} & {targeted_GeoDA_WRN40_2000} & {targeted_GeoDA_WRN40_5000} & {targeted_GeoDA_WRN40_8000} & {targeted_GeoDA_WRN40_10000}  \\\\
-                    & RayS & {untargeted_RayS_WRN40_1000} & {untargeted_RayS_WRN40_2000} & {untargeted_RayS_WRN40_5000} & {untargeted_RayS_WRN40_8000} & {untargeted_RayS_WRN40_10000} & {targeted_RayS_WRN40_1000} & {targeted_RayS_WRN40_2000} & {targeted_RayS_WRN40_5000} & {targeted_RayS_WRN40_8000} & {targeted_RayS_WRN40_10000}  \\\\
-                    & Sign-OPT & {untargeted_SignOPT_WRN40_1000} & {untargeted_SignOPT_WRN40_2000} & {untargeted_SignOPT_WRN40_5000} & {untargeted_SignOPT_WRN40_8000} & {untargeted_SignOPT_WRN40_10000} & {targeted_SignOPT_WRN40_1000} & {targeted_SignOPT_WRN40_2000} & {targeted_SignOPT_WRN40_5000} & {targeted_SignOPT_WRN40_8000} & {targeted_SignOPT_WRN40_10000}  \\\\
-                    & SVM-OPT & {untargeted_SVMOPT_WRN40_1000} & {untargeted_SVMOPT_WRN40_2000} & {untargeted_SVMOPT_WRN40_5000} & {untargeted_SVMOPT_WRN40_8000} & {untargeted_SVMOPT_WRN40_10000} & {targeted_SVMOPT_WRN40_1000} & {targeted_SVMOPT_WRN40_2000} & {targeted_SVMOPT_WRN40_5000} & {targeted_SVMOPT_WRN40_8000} & {targeted_SVMOPT_WRN40_10000}  \\\\
-                    & HopSkipJumpAttack & {untargeted_HSJA_WRN40_1000} & {untargeted_HSJA_WRN40_2000} & {untargeted_HSJA_WRN40_5000} & {untargeted_HSJA_WRN40_8000} & {untargeted_HSJA_WRN40_10000} & {targeted_HSJA_WRN40_1000} & {targeted_HSJA_WRN40_2000} & {targeted_HSJA_WRN40_5000} & {targeted_HSJA_WRN40_8000} & {targeted_HSJA_WRN40_10000}  \\\\
-                    & Tangent Attack (ours) & {untargeted_Tangent_WRN40_1000} & {untargeted_Tangent_WRN40_2000} & {untargeted_Tangent_WRN40_5000} & {untargeted_Tangent_WRN40_8000} & {untargeted_Tangent_WRN40_10000} & {targeted_Tangent_WRN40_1000} & {targeted_Tangent_WRN40_2000} & {targeted_Tangent_WRN40_5000} & {targeted_Tangent_WRN40_8000} & {targeted_Tangent_WRN40_10000}  \\\\
-                        """.format(
-
-        untargeted_SignOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        untargeted_SignOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        untargeted_SignOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        untargeted_SignOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        untargeted_SignOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        targeted_SignOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        targeted_SignOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        targeted_SignOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        targeted_SignOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_gdas_1000=untargeted_result["gdas"]["Sign-OPT"][1000],
-        untargeted_SignOPT_gdas_2000=untargeted_result["gdas"]["Sign-OPT"][2000],
-        untargeted_SignOPT_gdas_5000=untargeted_result["gdas"]["Sign-OPT"][5000],
-        untargeted_SignOPT_gdas_8000=untargeted_result["gdas"]["Sign-OPT"][8000],
-        untargeted_SignOPT_gdas_10000=untargeted_result["gdas"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_gdas_1000=targeted_result["gdas"]["Sign-OPT"][1000],
-        targeted_SignOPT_gdas_2000=targeted_result["gdas"]["Sign-OPT"][2000],
-        targeted_SignOPT_gdas_5000=targeted_result["gdas"]["Sign-OPT"][5000],
-        targeted_SignOPT_gdas_8000=targeted_result["gdas"]["Sign-OPT"][8000],
-        targeted_SignOPT_gdas_10000=targeted_result["gdas"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SVMOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        targeted_SVMOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        targeted_SVMOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        targeted_SVMOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        targeted_SVMOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_gdas_1000=untargeted_result["gdas"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_gdas_2000=untargeted_result["gdas"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_gdas_5000=untargeted_result["gdas"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_gdas_8000=untargeted_result["gdas"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_gdas_10000=untargeted_result["gdas"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_gdas_1000=targeted_result["gdas"]["SVM-OPT"][1000],
-        targeted_SVMOPT_gdas_2000=targeted_result["gdas"]["SVM-OPT"][2000],
-        targeted_SVMOPT_gdas_5000=targeted_result["gdas"]["SVM-OPT"][5000],
-        targeted_SVMOPT_gdas_8000=targeted_result["gdas"]["SVM-OPT"][8000],
-        targeted_SVMOPT_gdas_10000=targeted_result["gdas"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_GeoDA_pyramidnet272_1000=untargeted_result["pyramidnet272"]["GeoDA"][1000],
-        untargeted_GeoDA_pyramidnet272_2000=untargeted_result["pyramidnet272"]["GeoDA"][2000],
-        untargeted_GeoDA_pyramidnet272_5000=untargeted_result["pyramidnet272"]["GeoDA"][5000],
-        untargeted_GeoDA_pyramidnet272_8000=untargeted_result["pyramidnet272"]["GeoDA"][8000],
-        untargeted_GeoDA_pyramidnet272_10000=untargeted_result["pyramidnet272"]["GeoDA"][10000],
-
-        targeted_GeoDA_pyramidnet272_1000=targeted_result["pyramidnet272"]["GeoDA"][1000],
-        targeted_GeoDA_pyramidnet272_2000=targeted_result["pyramidnet272"]["GeoDA"][2000],
-        targeted_GeoDA_pyramidnet272_5000=targeted_result["pyramidnet272"]["GeoDA"][5000],
-        targeted_GeoDA_pyramidnet272_8000=targeted_result["pyramidnet272"]["GeoDA"][8000],
-        targeted_GeoDA_pyramidnet272_10000=targeted_result["pyramidnet272"]["GeoDA"][10000],
-
-        untargeted_GeoDA_gdas_1000=untargeted_result["gdas"]["GeoDA"][1000],
-        untargeted_GeoDA_gdas_2000=untargeted_result["gdas"]["GeoDA"][2000],
-        untargeted_GeoDA_gdas_5000=untargeted_result["gdas"]["GeoDA"][5000],
-        untargeted_GeoDA_gdas_8000=untargeted_result["gdas"]["GeoDA"][8000],
-        untargeted_GeoDA_gdas_10000=untargeted_result["gdas"]["GeoDA"][10000],
-
-        targeted_GeoDA_gdas_1000=targeted_result["gdas"]["GeoDA"][1000],
-        targeted_GeoDA_gdas_2000=targeted_result["gdas"]["GeoDA"][2000],
-        targeted_GeoDA_gdas_5000=targeted_result["gdas"]["GeoDA"][5000],
-        targeted_GeoDA_gdas_8000=targeted_result["gdas"]["GeoDA"][8000],
-        targeted_GeoDA_gdas_10000=targeted_result["gdas"]["GeoDA"][10000],
-
-        untargeted_GeoDA_WRN28_1000=untargeted_result["WRN-28-10-drop"]["GeoDA"][1000],
-        untargeted_GeoDA_WRN28_2000=untargeted_result["WRN-28-10-drop"]["GeoDA"][2000],
-        untargeted_GeoDA_WRN28_5000=untargeted_result["WRN-28-10-drop"]["GeoDA"][5000],
-        untargeted_GeoDA_WRN28_8000=untargeted_result["WRN-28-10-drop"]["GeoDA"][8000],
-        untargeted_GeoDA_WRN28_10000=untargeted_result["WRN-28-10-drop"]["GeoDA"][10000],
-
-        targeted_GeoDA_WRN28_1000=targeted_result["WRN-28-10-drop"]["GeoDA"][1000],
-        targeted_GeoDA_WRN28_2000=targeted_result["WRN-28-10-drop"]["GeoDA"][2000],
-        targeted_GeoDA_WRN28_5000=targeted_result["WRN-28-10-drop"]["GeoDA"][5000],
-        targeted_GeoDA_WRN28_8000=targeted_result["WRN-28-10-drop"]["GeoDA"][8000],
-        targeted_GeoDA_WRN28_10000=targeted_result["WRN-28-10-drop"]["GeoDA"][10000],
-
-        untargeted_GeoDA_WRN40_1000=untargeted_result["WRN-40-10-drop"]["GeoDA"][1000],
-        untargeted_GeoDA_WRN40_2000=untargeted_result["WRN-40-10-drop"]["GeoDA"][2000],
-        untargeted_GeoDA_WRN40_5000=untargeted_result["WRN-40-10-drop"]["GeoDA"][5000],
-        untargeted_GeoDA_WRN40_8000=untargeted_result["WRN-40-10-drop"]["GeoDA"][8000],
-        untargeted_GeoDA_WRN40_10000=untargeted_result["WRN-40-10-drop"]["GeoDA"][10000],
-
-        targeted_GeoDA_WRN40_1000=targeted_result["WRN-40-10-drop"]["GeoDA"][1000],
-        targeted_GeoDA_WRN40_2000=targeted_result["WRN-40-10-drop"]["GeoDA"][2000],
-        targeted_GeoDA_WRN40_5000=targeted_result["WRN-40-10-drop"]["GeoDA"][5000],
-        targeted_GeoDA_WRN40_8000=targeted_result["WRN-40-10-drop"]["GeoDA"][8000],
-        targeted_GeoDA_WRN40_10000=targeted_result["WRN-40-10-drop"]["GeoDA"][10000],
-
-        untargeted_RayS_pyramidnet272_1000=untargeted_result["pyramidnet272"]["RayS"][1000],
-        untargeted_RayS_pyramidnet272_2000=untargeted_result["pyramidnet272"]["RayS"][2000],
-        untargeted_RayS_pyramidnet272_5000=untargeted_result["pyramidnet272"]["RayS"][5000],
-        untargeted_RayS_pyramidnet272_8000=untargeted_result["pyramidnet272"]["RayS"][8000],
-        untargeted_RayS_pyramidnet272_10000=untargeted_result["pyramidnet272"]["RayS"][10000],
-
-        targeted_RayS_pyramidnet272_1000=targeted_result["pyramidnet272"]["RayS"][1000],
-        targeted_RayS_pyramidnet272_2000=targeted_result["pyramidnet272"]["RayS"][2000],
-        targeted_RayS_pyramidnet272_5000=targeted_result["pyramidnet272"]["RayS"][5000],
-        targeted_RayS_pyramidnet272_8000=targeted_result["pyramidnet272"]["RayS"][8000],
-        targeted_RayS_pyramidnet272_10000=targeted_result["pyramidnet272"]["RayS"][10000],
-
-        untargeted_RayS_gdas_1000=untargeted_result["gdas"]["RayS"][1000],
-        untargeted_RayS_gdas_2000=untargeted_result["gdas"]["RayS"][2000],
-        untargeted_RayS_gdas_5000=untargeted_result["gdas"]["RayS"][5000],
-        untargeted_RayS_gdas_8000=untargeted_result["gdas"]["RayS"][8000],
-        untargeted_RayS_gdas_10000=untargeted_result["gdas"]["RayS"][10000],
-
-        targeted_RayS_gdas_1000=targeted_result["gdas"]["RayS"][1000],
-        targeted_RayS_gdas_2000=targeted_result["gdas"]["RayS"][2000],
-        targeted_RayS_gdas_5000=targeted_result["gdas"]["RayS"][5000],
-        targeted_RayS_gdas_8000=targeted_result["gdas"]["RayS"][8000],
-        targeted_RayS_gdas_10000=targeted_result["gdas"]["RayS"][10000],
-
-        untargeted_RayS_WRN28_1000=untargeted_result["WRN-28-10-drop"]["RayS"][1000],
-        untargeted_RayS_WRN28_2000=untargeted_result["WRN-28-10-drop"]["RayS"][2000],
-        untargeted_RayS_WRN28_5000=untargeted_result["WRN-28-10-drop"]["RayS"][5000],
-        untargeted_RayS_WRN28_8000=untargeted_result["WRN-28-10-drop"]["RayS"][8000],
-        untargeted_RayS_WRN28_10000=untargeted_result["WRN-28-10-drop"]["RayS"][10000],
-
-        targeted_RayS_WRN28_1000=targeted_result["WRN-28-10-drop"]["RayS"][1000],
-        targeted_RayS_WRN28_2000=targeted_result["WRN-28-10-drop"]["RayS"][2000],
-        targeted_RayS_WRN28_5000=targeted_result["WRN-28-10-drop"]["RayS"][5000],
-        targeted_RayS_WRN28_8000=targeted_result["WRN-28-10-drop"]["RayS"][8000],
-        targeted_RayS_WRN28_10000=targeted_result["WRN-28-10-drop"]["RayS"][10000],
-
-        untargeted_RayS_WRN40_1000=untargeted_result["WRN-40-10-drop"]["RayS"][1000],
-        untargeted_RayS_WRN40_2000=untargeted_result["WRN-40-10-drop"]["RayS"][2000],
-        untargeted_RayS_WRN40_5000=untargeted_result["WRN-40-10-drop"]["RayS"][5000],
-        untargeted_RayS_WRN40_8000=untargeted_result["WRN-40-10-drop"]["RayS"][8000],
-        untargeted_RayS_WRN40_10000=untargeted_result["WRN-40-10-drop"]["RayS"][10000],
-
-        targeted_RayS_WRN40_1000=targeted_result["WRN-40-10-drop"]["RayS"][1000],
-        targeted_RayS_WRN40_2000=targeted_result["WRN-40-10-drop"]["RayS"][2000],
-        targeted_RayS_WRN40_5000=targeted_result["WRN-40-10-drop"]["RayS"][5000],
-        targeted_RayS_WRN40_8000=targeted_result["WRN-40-10-drop"]["RayS"][8000],
-        targeted_RayS_WRN40_10000=targeted_result["WRN-40-10-drop"]["RayS"][10000],
-
-        untargeted_HSJA_pyramidnet272_1000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_pyramidnet272_2000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_pyramidnet272_5000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_pyramidnet272_8000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_pyramidnet272_10000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_pyramidnet272_1000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_pyramidnet272_2000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_pyramidnet272_5000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_pyramidnet272_8000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_pyramidnet272_10000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_gdas_1000=untargeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_gdas_2000=untargeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_gdas_5000=untargeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_gdas_8000=untargeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_gdas_10000=untargeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_gdas_1000=targeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_gdas_2000=targeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_gdas_5000=targeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_gdas_8000=targeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_gdas_10000=targeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN28_1000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN28_2000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN28_5000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN28_8000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN28_10000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN28_1000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN28_2000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN28_5000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN28_8000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN28_10000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN40_1000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN40_2000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN40_5000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN40_8000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN40_10000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN40_1000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN40_2000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN40_5000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN40_8000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN40_10000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_Tangent_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        untargeted_Tangent_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        untargeted_Tangent_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        untargeted_Tangent_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        untargeted_Tangent_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        targeted_Tangent_pyramidnet272_1000=targeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        targeted_Tangent_pyramidnet272_2000=targeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        targeted_Tangent_pyramidnet272_5000=targeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        targeted_Tangent_pyramidnet272_8000=targeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        targeted_Tangent_pyramidnet272_10000=targeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_gdas_1000=untargeted_result["gdas"]["Tangent Attack"][1000],
-        untargeted_Tangent_gdas_2000=untargeted_result["gdas"]["Tangent Attack"][2000],
-        untargeted_Tangent_gdas_5000=untargeted_result["gdas"]["Tangent Attack"][5000],
-        untargeted_Tangent_gdas_8000=untargeted_result["gdas"]["Tangent Attack"][8000],
-        untargeted_Tangent_gdas_10000=untargeted_result["gdas"]["Tangent Attack"][10000],
-
-        targeted_Tangent_gdas_1000=targeted_result["gdas"]["Tangent Attack"][1000],
-        targeted_Tangent_gdas_2000=targeted_result["gdas"]["Tangent Attack"][2000],
-        targeted_Tangent_gdas_5000=targeted_result["gdas"]["Tangent Attack"][5000],
-        targeted_Tangent_gdas_8000=targeted_result["gdas"]["Tangent Attack"][8000],
-        targeted_Tangent_gdas_10000=targeted_result["gdas"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN28_1000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN28_2000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN28_5000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN28_8000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN28_10000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN40_1000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN40_2000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN40_5000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN40_8000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN40_10000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-    )
-    )
-
-
-def draw_wide_table_CIFAR_with_ellipsoid(untargeted_result, targeted_result):
-    print("""
-                        & BA & {targeted_Boundary_pyramidnet272_300}  & {targeted_Boundary_pyramidnet272_1000} & {targeted_Boundary_pyramidnet272_2000} & {targeted_Boundary_pyramidnet272_5000} & {targeted_Boundary_pyramidnet272_8000} & {targeted_Boundary_pyramidnet272_10000} & {untargeted_Boundary_pyramidnet272_300} & {untargeted_Boundary_pyramidnet272_1000} & {untargeted_Boundary_pyramidnet272_2000} & {untargeted_Boundary_pyramidnet272_5000} & {untargeted_Boundary_pyramidnet272_8000} & {untargeted_Boundary_pyramidnet272_10000}  \\\\
-                        & Sign-OPT & {targeted_SignOPT_pyramidnet272_300} & {targeted_SignOPT_pyramidnet272_1000} & {targeted_SignOPT_pyramidnet272_2000} & {targeted_SignOPT_pyramidnet272_5000} & {targeted_SignOPT_pyramidnet272_8000} & {targeted_SignOPT_pyramidnet272_10000} &  {untargeted_SignOPT_pyramidnet272_300} & {untargeted_SignOPT_pyramidnet272_1000} & {untargeted_SignOPT_pyramidnet272_2000} & {untargeted_SignOPT_pyramidnet272_5000} & {untargeted_SignOPT_pyramidnet272_8000} & {untargeted_SignOPT_pyramidnet272_10000}  \\\\
-                        & SVM-OPT & {targeted_SVMOPT_pyramidnet272_300}  & {targeted_SVMOPT_pyramidnet272_1000} & {targeted_SVMOPT_pyramidnet272_2000} & {targeted_SVMOPT_pyramidnet272_5000} & {targeted_SVMOPT_pyramidnet272_8000} & {targeted_SVMOPT_pyramidnet272_10000} & {untargeted_SVMOPT_pyramidnet272_300} & {untargeted_SVMOPT_pyramidnet272_1000} & {untargeted_SVMOPT_pyramidnet272_2000} & {untargeted_SVMOPT_pyramidnet272_5000} & {untargeted_SVMOPT_pyramidnet272_8000} & {untargeted_SVMOPT_pyramidnet272_10000}  \\\\
-                        & HSJA &  {targeted_HSJA_pyramidnet272_300}  & {targeted_HSJA_pyramidnet272_1000} & {targeted_HSJA_pyramidnet272_2000} & {targeted_HSJA_pyramidnet272_5000} & {targeted_HSJA_pyramidnet272_8000} & {targeted_HSJA_pyramidnet272_10000} &  {untargeted_HSJA_pyramidnet272_300} & {untargeted_HSJA_pyramidnet272_1000} & {untargeted_HSJA_pyramidnet272_2000} & {untargeted_HSJA_pyramidnet272_5000} & {untargeted_HSJA_pyramidnet272_8000} & {untargeted_HSJA_pyramidnet272_10000}  \\\\
-                        & Ours (hemishpere) &  {targeted_Tangent_pyramidnet272_300}  & {targeted_Tangent_pyramidnet272_1000} & {targeted_Tangent_pyramidnet272_2000} & {targeted_Tangent_pyramidnet272_5000} & {targeted_Tangent_pyramidnet272_8000} & {targeted_Tangent_pyramidnet272_10000} &  {untargeted_Tangent_pyramidnet272_300}  & {untargeted_Tangent_pyramidnet272_1000} & {untargeted_Tangent_pyramidnet272_2000} & {untargeted_Tangent_pyramidnet272_5000} & {untargeted_Tangent_pyramidnet272_8000} & {untargeted_Tangent_pyramidnet272_10000}  \\\\
-                       & Ours (ellipsoid) &  {targeted_Ellipsoid_Tangent_pyramidnet272_300}  & {targeted_Ellipsoid_Tangent_pyramidnet272_1000} & {targeted_Ellipsoid_Tangent_pyramidnet272_2000} & {targeted_Ellipsoid_Tangent_pyramidnet272_5000} & {targeted_Ellipsoid_Tangent_pyramidnet272_8000} & {targeted_Ellipsoid_Tangent_pyramidnet272_10000} &  {untargeted_Ellipsoid_Tangent_pyramidnet272_300}  & {untargeted_Ellipsoid_Tangent_pyramidnet272_1000} & {untargeted_Ellipsoid_Tangent_pyramidnet272_2000} & {untargeted_Ellipsoid_Tangent_pyramidnet272_5000} & {untargeted_Ellipsoid_Tangent_pyramidnet272_8000} & {untargeted_Ellipsoid_Tangent_pyramidnet272_10000}  \\\\
-                       & QEBA-S & {targeted_QEBA_pyramidnet272_300}  & {targeted_QEBA_pyramidnet272_1000} & {targeted_QEBA_pyramidnet272_2000} & {targeted_QEBA_pyramidnet272_5000} & {targeted_QEBA_pyramidnet272_8000} & {targeted_QEBA_pyramidnet272_10000} &  {untargeted_QEBA_pyramidnet272_300}  & {untargeted_QEBA_pyramidnet272_1000} & {untargeted_QEBA_pyramidnet272_2000} & {untargeted_QEBA_pyramidnet272_5000} & {untargeted_QEBA_pyramidnet272_8000} & {untargeted_QEBA_pyramidnet272_10000}  \\\\
-                       & QEBA-S + TA & {targeted_QEBATangent_pyramidnet272_300}  & {targeted_QEBATangent_pyramidnet272_1000} & {targeted_QEBATangent_pyramidnet272_2000} & {targeted_QEBATangent_pyramidnet272_5000} & {targeted_QEBATangent_pyramidnet272_8000} & {targeted_QEBATangent_pyramidnet272_10000} &  {untargeted_QEBATangent_pyramidnet272_300}  & {untargeted_QEBATangent_pyramidnet272_1000} & {untargeted_QEBATangent_pyramidnet272_2000} & {untargeted_QEBATangent_pyramidnet272_5000} & {untargeted_QEBATangent_pyramidnet272_8000} & {untargeted_QEBATangent_pyramidnet272_10000}  \\\\
-                        \\midrule
-                        & BA & {targeted_Boundary_gdas_300}  & {targeted_Boundary_gdas_1000} & {targeted_Boundary_gdas_2000} & {targeted_Boundary_gdas_5000} & {targeted_Boundary_gdas_8000} & {targeted_Boundary_gdas_10000} &  {untargeted_Boundary_gdas_300}  & {untargeted_Boundary_gdas_1000} & {untargeted_Boundary_gdas_2000} & {untargeted_Boundary_gdas_5000} & {untargeted_Boundary_gdas_8000} & {untargeted_Boundary_gdas_10000}  \\\\
-                        & Sign-OPT & {targeted_SignOPT_gdas_300} & {targeted_SignOPT_gdas_1000} & {targeted_SignOPT_gdas_2000} & {targeted_SignOPT_gdas_5000} & {targeted_SignOPT_gdas_8000} & {targeted_SignOPT_gdas_10000} & {untargeted_SignOPT_gdas_300}  & {untargeted_SignOPT_gdas_1000} & {untargeted_SignOPT_gdas_2000} & {untargeted_SignOPT_gdas_5000} & {untargeted_SignOPT_gdas_8000} & {untargeted_SignOPT_gdas_10000}  \\\\
-                        & SVM-OPT & {targeted_SVMOPT_gdas_300}  & {targeted_SVMOPT_gdas_1000} & {targeted_SVMOPT_gdas_2000} & {targeted_SVMOPT_gdas_5000} & {targeted_SVMOPT_gdas_8000} & {targeted_SVMOPT_gdas_10000} &{untargeted_SVMOPT_gdas_300} & {untargeted_SVMOPT_gdas_1000} & {untargeted_SVMOPT_gdas_2000} & {untargeted_SVMOPT_gdas_5000} & {untargeted_SVMOPT_gdas_8000} & {untargeted_SVMOPT_gdas_10000}  \\\\
-                        & HSJA &  {targeted_HSJA_gdas_300} & {targeted_HSJA_gdas_1000} & {targeted_HSJA_gdas_2000} & {targeted_HSJA_gdas_5000} & {targeted_HSJA_gdas_8000} & {targeted_HSJA_gdas_10000} & {untargeted_HSJA_gdas_300}  & {untargeted_HSJA_gdas_1000} & {untargeted_HSJA_gdas_2000} & {untargeted_HSJA_gdas_5000} & {untargeted_HSJA_gdas_8000} & {untargeted_HSJA_gdas_10000}  \\\\
-                        & Ours (hemisphere) &  {targeted_Tangent_gdas_300}  & {targeted_Tangent_gdas_1000} & {targeted_Tangent_gdas_2000} & {targeted_Tangent_gdas_5000} & {targeted_Tangent_gdas_8000} & {targeted_Tangent_gdas_10000} & {untargeted_Tangent_gdas_300} & {untargeted_Tangent_gdas_1000} & {untargeted_Tangent_gdas_2000} & {untargeted_Tangent_gdas_5000} & {untargeted_Tangent_gdas_8000} & {untargeted_Tangent_gdas_10000}  \\\\
-                        & Ours (ellipsoid) &  {targeted_Ellipsoid_Tangent_gdas_300}  & {targeted_Ellipsoid_Tangent_gdas_1000} & {targeted_Ellipsoid_Tangent_gdas_2000} & {targeted_Ellipsoid_Tangent_gdas_5000} & {targeted_Ellipsoid_Tangent_gdas_8000} & {targeted_Ellipsoid_Tangent_gdas_10000} & {untargeted_Ellipsoid_Tangent_gdas_300} & {untargeted_Ellipsoid_Tangent_gdas_1000} & {untargeted_Ellipsoid_Tangent_gdas_2000} & {untargeted_Ellipsoid_Tangent_gdas_5000} & {untargeted_Ellipsoid_Tangent_gdas_8000} & {untargeted_Ellipsoid_Tangent_gdas_10000}  \\\\
-                        & QEBA-S & {targeted_QEBA_gdas_300}  & {targeted_QEBA_gdas_1000} & {targeted_QEBA_gdas_2000} & {targeted_QEBA_gdas_5000} & {targeted_QEBA_gdas_8000} & {targeted_QEBA_gdas_10000} &  {untargeted_QEBA_gdas_300}  & {untargeted_QEBA_gdas_1000} & {untargeted_QEBA_gdas_2000} & {untargeted_QEBA_gdas_5000} & {untargeted_QEBA_gdas_8000} & {untargeted_QEBA_gdas_10000}  \\\\
-                        & QEBA-S + TA & {targeted_QEBATangent_gdas_300}  & {targeted_QEBATangent_gdas_1000} & {targeted_QEBATangent_gdas_2000} & {targeted_QEBATangent_gdas_5000} & {targeted_QEBATangent_gdas_8000} & {targeted_QEBATangent_gdas_10000} &  {untargeted_QEBATangent_gdas_300}  & {untargeted_QEBATangent_gdas_1000} & {untargeted_QEBATangent_gdas_2000} & {untargeted_QEBATangent_gdas_5000} & {untargeted_QEBATangent_gdas_8000} & {untargeted_QEBATangent_gdas_10000}  \\\\
-                        \\midrule
-                        & BA & {targeted_Boundary_WRN28_300}  &  {targeted_Boundary_WRN28_1000} & {targeted_Boundary_WRN28_2000} & {targeted_Boundary_WRN28_5000} & {targeted_Boundary_WRN28_8000} & {targeted_Boundary_WRN28_10000} &  {untargeted_Boundary_WRN28_300} & {untargeted_Boundary_WRN28_1000} & {untargeted_Boundary_WRN28_2000} & {untargeted_Boundary_WRN28_5000} & {untargeted_Boundary_WRN28_8000} & {untargeted_Boundary_WRN28_10000}  \\\\
-                        & Sign-OPT & {targeted_SignOPT_WRN28_300} & {targeted_SignOPT_WRN28_1000} & {targeted_SignOPT_WRN28_2000} & {targeted_SignOPT_WRN28_5000} & {targeted_SignOPT_WRN28_8000} & {targeted_SignOPT_WRN28_10000} &  {untargeted_SignOPT_WRN28_300} & {untargeted_SignOPT_WRN28_1000} & {untargeted_SignOPT_WRN28_2000} & {untargeted_SignOPT_WRN28_5000} & {untargeted_SignOPT_WRN28_8000} & {untargeted_SignOPT_WRN28_10000}  \\\\
-                        & SVM-OPT &  {targeted_SVMOPT_WRN28_300} & {targeted_SVMOPT_WRN28_1000} & {targeted_SVMOPT_WRN28_2000} & {targeted_SVMOPT_WRN28_5000} & {targeted_SVMOPT_WRN28_8000} & {targeted_SVMOPT_WRN28_10000} &  {untargeted_SVMOPT_WRN28_300}  & {untargeted_SVMOPT_WRN28_1000} & {untargeted_SVMOPT_WRN28_2000} & {untargeted_SVMOPT_WRN28_5000} & {untargeted_SVMOPT_WRN28_8000} & {untargeted_SVMOPT_WRN28_10000}  \\\\
-                        & HSJA & {targeted_HSJA_WRN28_300} & {targeted_HSJA_WRN28_1000} & {targeted_HSJA_WRN28_2000} & {targeted_HSJA_WRN28_5000} & {targeted_HSJA_WRN28_8000} & {targeted_HSJA_WRN28_10000} & {untargeted_HSJA_WRN28_300} & {untargeted_HSJA_WRN28_1000} & {untargeted_HSJA_WRN28_2000} & {untargeted_HSJA_WRN28_5000} & {untargeted_HSJA_WRN28_8000} & {untargeted_HSJA_WRN28_10000}  \\\\
-                        & Ours (hemisphere) &  {targeted_Tangent_WRN28_300} & {targeted_Tangent_WRN28_1000} & {targeted_Tangent_WRN28_2000} & {targeted_Tangent_WRN28_5000} & {targeted_Tangent_WRN28_8000} & {targeted_Tangent_WRN28_10000} &  {untargeted_Tangent_WRN28_300} & {untargeted_Tangent_WRN28_1000} & {untargeted_Tangent_WRN28_2000} & {untargeted_Tangent_WRN28_5000} & {untargeted_Tangent_WRN28_8000} & {untargeted_Tangent_WRN28_10000}  \\\\
-                         & Ours (ellipsoid) &  {targeted_Ellipsoid_Tangent_WRN28_300} & {targeted_Ellipsoid_Tangent_WRN28_1000} & {targeted_Ellipsoid_Tangent_WRN28_2000} & {targeted_Ellipsoid_Tangent_WRN28_5000} & {targeted_Ellipsoid_Tangent_WRN28_8000} & {targeted_Ellipsoid_Tangent_WRN28_10000} &  {untargeted_Ellipsoid_Tangent_WRN28_300} & {untargeted_Ellipsoid_Tangent_WRN28_1000} & {untargeted_Ellipsoid_Tangent_WRN28_2000} & {untargeted_Ellipsoid_Tangent_WRN28_5000} & {untargeted_Ellipsoid_Tangent_WRN28_8000} & {untargeted_Ellipsoid_Tangent_WRN28_10000}  \\\\
-                         & QEBA-S & {targeted_QEBA_WRN28_300}  & {targeted_QEBA_WRN28_1000} & {targeted_QEBA_WRN28_2000} & {targeted_QEBA_WRN28_5000} & {targeted_QEBA_WRN28_8000} & {targeted_QEBA_WRN28_10000} &  {untargeted_QEBA_WRN28_300}  & {untargeted_QEBA_WRN28_1000} & {untargeted_QEBA_WRN28_2000} & {untargeted_QEBA_WRN28_5000} & {untargeted_QEBA_WRN28_8000} & {untargeted_QEBA_WRN28_10000}  \\\\
-                        & QEBA-S + TA & {targeted_QEBATangent_WRN28_300}  & {targeted_QEBATangent_WRN28_1000} & {targeted_QEBATangent_WRN28_2000} & {targeted_QEBATangent_WRN28_5000} & {targeted_QEBATangent_WRN28_8000} & {targeted_QEBATangent_WRN28_10000} &  {untargeted_QEBATangent_WRN28_300}  & {untargeted_QEBATangent_WRN28_1000} & {untargeted_QEBATangent_WRN28_2000} & {untargeted_QEBATangent_WRN28_5000} & {untargeted_QEBATangent_WRN28_8000} & {untargeted_QEBATangent_WRN28_10000}  \\\\
-                        \\midrule
-                        & BA &  {targeted_Boundary_WRN40_300} & {targeted_Boundary_WRN40_1000} & {targeted_Boundary_WRN40_2000} & {targeted_Boundary_WRN40_5000} & {targeted_Boundary_WRN40_8000} & {targeted_Boundary_WRN40_10000} & {untargeted_Boundary_WRN40_300}  &{untargeted_Boundary_WRN40_1000} & {untargeted_Boundary_WRN40_2000} & {untargeted_Boundary_WRN40_5000} & {untargeted_Boundary_WRN40_8000} & {untargeted_Boundary_WRN40_10000}  \\\\
-                        & Sign-OPT &  {targeted_SignOPT_WRN40_300} & {targeted_SignOPT_WRN40_1000} & {targeted_SignOPT_WRN40_2000} & {targeted_SignOPT_WRN40_5000} & {targeted_SignOPT_WRN40_8000} & {targeted_SignOPT_WRN40_10000} &  {untargeted_SignOPT_WRN40_300}  & {untargeted_SignOPT_WRN40_1000} & {untargeted_SignOPT_WRN40_2000} & {untargeted_SignOPT_WRN40_5000} & {untargeted_SignOPT_WRN40_8000} & {untargeted_SignOPT_WRN40_10000}  \\\\
-                        & SVM-OPT &  {targeted_SVMOPT_WRN40_300}  & {targeted_SVMOPT_WRN40_1000} & {targeted_SVMOPT_WRN40_2000} & {targeted_SVMOPT_WRN40_5000} & {targeted_SVMOPT_WRN40_8000} & {targeted_SVMOPT_WRN40_10000} &  {untargeted_SVMOPT_WRN40_300}  & {untargeted_SVMOPT_WRN40_1000} & {untargeted_SVMOPT_WRN40_2000} & {untargeted_SVMOPT_WRN40_5000} & {untargeted_SVMOPT_WRN40_8000} & {untargeted_SVMOPT_WRN40_10000}  \\\\
-                        & HSJA &  {targeted_HSJA_WRN40_300} & {targeted_HSJA_WRN40_1000} & {targeted_HSJA_WRN40_2000} & {targeted_HSJA_WRN40_5000} & {targeted_HSJA_WRN40_8000} & {targeted_HSJA_WRN40_10000} &{untargeted_HSJA_WRN40_300} & {untargeted_HSJA_WRN40_1000} & {untargeted_HSJA_WRN40_2000} & {untargeted_HSJA_WRN40_5000} & {untargeted_HSJA_WRN40_8000} & {untargeted_HSJA_WRN40_10000}  \\\\
-                        & Ours (hemisphere) & {targeted_Tangent_WRN40_300}  &{targeted_Tangent_WRN40_1000} & {targeted_Tangent_WRN40_2000} & {targeted_Tangent_WRN40_5000} & {targeted_Tangent_WRN40_8000} & {targeted_Tangent_WRN40_10000} &  {untargeted_Tangent_WRN40_300}  & {untargeted_Tangent_WRN40_1000} & {untargeted_Tangent_WRN40_2000} & {untargeted_Tangent_WRN40_5000} & {untargeted_Tangent_WRN40_8000} & {untargeted_Tangent_WRN40_10000}  \\\\
-                        & Ours (ellipsoid) & {targeted_Ellipsoid_Tangent_WRN40_300}  &{targeted_Ellipsoid_Tangent_WRN40_1000} & {targeted_Ellipsoid_Tangent_WRN40_2000} & {targeted_Ellipsoid_Tangent_WRN40_5000} & {targeted_Ellipsoid_Tangent_WRN40_8000} & {targeted_Ellipsoid_Tangent_WRN40_10000} &  {untargeted_Ellipsoid_Tangent_WRN40_300}  & {untargeted_Ellipsoid_Tangent_WRN40_1000} & {untargeted_Ellipsoid_Tangent_WRN40_2000} & {untargeted_Ellipsoid_Tangent_WRN40_5000} & {untargeted_Ellipsoid_Tangent_WRN40_8000} & {untargeted_Ellipsoid_Tangent_WRN40_10000}  \\\\
-                        & QEBA-S & {targeted_QEBA_WRN40_300}  & {targeted_QEBA_WRN40_1000} & {targeted_QEBA_WRN40_2000} & {targeted_QEBA_WRN40_5000} & {targeted_QEBA_WRN40_8000} & {targeted_QEBA_WRN40_10000} &  {untargeted_QEBA_WRN40_300}  & {untargeted_QEBA_WRN40_1000} & {untargeted_QEBA_WRN40_2000} & {untargeted_QEBA_WRN40_5000} & {untargeted_QEBA_WRN40_8000} & {untargeted_QEBA_WRN40_10000}  \\\\
-                        & QEBA-S + TA & {targeted_QEBATangent_WRN40_300}  & {targeted_QEBATangent_WRN40_1000} & {targeted_QEBATangent_WRN40_2000} & {targeted_QEBATangent_WRN40_5000} & {targeted_QEBATangent_WRN40_8000} & {targeted_QEBATangent_WRN40_10000} &  {untargeted_QEBATangent_WRN40_300}  & {untargeted_QEBATangent_WRN40_1000} & {untargeted_QEBATangent_WRN40_2000} & {untargeted_QEBATangent_WRN40_5000} & {untargeted_QEBATangent_WRN40_8000} & {untargeted_QEBATangent_WRN40_10000}  \\\\
-                            """.format(
-        untargeted_SignOPT_pyramidnet272_300=untargeted_result["pyramidnet272"]["Sign-OPT"][300],
-        untargeted_SignOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        untargeted_SignOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        untargeted_SignOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        untargeted_SignOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        untargeted_SignOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_pyramidnet272_300=targeted_result["pyramidnet272"]["Sign-OPT"][300],
-        targeted_SignOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        targeted_SignOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        targeted_SignOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        targeted_SignOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        targeted_SignOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_gdas_300=untargeted_result["gdas"]["Sign-OPT"][300],
-        untargeted_SignOPT_gdas_1000=untargeted_result["gdas"]["Sign-OPT"][1000],
-        untargeted_SignOPT_gdas_2000=untargeted_result["gdas"]["Sign-OPT"][2000],
-        untargeted_SignOPT_gdas_5000=untargeted_result["gdas"]["Sign-OPT"][5000],
-        untargeted_SignOPT_gdas_8000=untargeted_result["gdas"]["Sign-OPT"][8000],
-        untargeted_SignOPT_gdas_10000=untargeted_result["gdas"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_gdas_300=targeted_result["gdas"]["Sign-OPT"][300],
-        targeted_SignOPT_gdas_1000=targeted_result["gdas"]["Sign-OPT"][1000],
-        targeted_SignOPT_gdas_2000=targeted_result["gdas"]["Sign-OPT"][2000],
-        targeted_SignOPT_gdas_5000=targeted_result["gdas"]["Sign-OPT"][5000],
-        targeted_SignOPT_gdas_8000=targeted_result["gdas"]["Sign-OPT"][8000],
-        targeted_SignOPT_gdas_10000=targeted_result["gdas"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN28_300=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][300],
-        untargeted_SignOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SVMOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        targeted_SVMOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        targeted_SVMOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        targeted_SVMOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        targeted_SVMOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_gdas_1000=untargeted_result["gdas"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_gdas_2000=untargeted_result["gdas"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_gdas_5000=untargeted_result["gdas"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_gdas_8000=untargeted_result["gdas"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_gdas_10000=untargeted_result["gdas"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_gdas_1000=targeted_result["gdas"]["SVM-OPT"][1000],
-        targeted_SVMOPT_gdas_2000=targeted_result["gdas"]["SVM-OPT"][2000],
-        targeted_SVMOPT_gdas_5000=targeted_result["gdas"]["SVM-OPT"][5000],
-        targeted_SVMOPT_gdas_8000=targeted_result["gdas"]["SVM-OPT"][8000],
-        targeted_SVMOPT_gdas_10000=targeted_result["gdas"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_Boundary_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Boundary Attack"][1000],
-        untargeted_Boundary_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Boundary Attack"][2000],
-        untargeted_Boundary_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Boundary Attack"][5000],
-        untargeted_Boundary_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Boundary Attack"][8000],
-        untargeted_Boundary_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Boundary Attack"][10000],
-
-        targeted_Boundary_pyramidnet272_1000=targeted_result["pyramidnet272"]["Boundary Attack"][1000],
-        targeted_Boundary_pyramidnet272_2000=targeted_result["pyramidnet272"]["Boundary Attack"][2000],
-        targeted_Boundary_pyramidnet272_5000=targeted_result["pyramidnet272"]["Boundary Attack"][5000],
-        targeted_Boundary_pyramidnet272_8000=targeted_result["pyramidnet272"]["Boundary Attack"][8000],
-        targeted_Boundary_pyramidnet272_10000=targeted_result["pyramidnet272"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_gdas_1000=untargeted_result["gdas"]["Boundary Attack"][1000],
-        untargeted_Boundary_gdas_2000=untargeted_result["gdas"]["Boundary Attack"][2000],
-        untargeted_Boundary_gdas_5000=untargeted_result["gdas"]["Boundary Attack"][5000],
-        untargeted_Boundary_gdas_8000=untargeted_result["gdas"]["Boundary Attack"][8000],
-        untargeted_Boundary_gdas_10000=untargeted_result["gdas"]["Boundary Attack"][10000],
-
-        targeted_Boundary_gdas_1000=targeted_result["gdas"]["Boundary Attack"][1000],
-        targeted_Boundary_gdas_2000=targeted_result["gdas"]["Boundary Attack"][2000],
-        targeted_Boundary_gdas_5000=targeted_result["gdas"]["Boundary Attack"][5000],
-        targeted_Boundary_gdas_8000=targeted_result["gdas"]["Boundary Attack"][8000],
-        targeted_Boundary_gdas_10000=targeted_result["gdas"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][1000],
-        untargeted_Boundary_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][2000],
-        untargeted_Boundary_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][5000],
-        untargeted_Boundary_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][8000],
-        untargeted_Boundary_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][10000],
-
-        targeted_Boundary_WRN28_1000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][1000],
-        targeted_Boundary_WRN28_2000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][2000],
-        targeted_Boundary_WRN28_5000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][5000],
-        targeted_Boundary_WRN28_8000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][8000],
-        targeted_Boundary_WRN28_10000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][1000],
-        untargeted_Boundary_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][2000],
-        untargeted_Boundary_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][5000],
-        untargeted_Boundary_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][8000],
-        untargeted_Boundary_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][10000],
-
-        targeted_Boundary_WRN40_1000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][1000],
-        targeted_Boundary_WRN40_2000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][2000],
-        targeted_Boundary_WRN40_5000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][5000],
-        targeted_Boundary_WRN40_8000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][8000],
-        targeted_Boundary_WRN40_10000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][10000],
-
-        untargeted_HSJA_pyramidnet272_1000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_pyramidnet272_2000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_pyramidnet272_5000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_pyramidnet272_8000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_pyramidnet272_10000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_pyramidnet272_1000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_pyramidnet272_2000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_pyramidnet272_5000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_pyramidnet272_8000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_pyramidnet272_10000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_gdas_1000=untargeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_gdas_2000=untargeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_gdas_5000=untargeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_gdas_8000=untargeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_gdas_10000=untargeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_gdas_1000=targeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_gdas_2000=targeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_gdas_5000=targeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_gdas_8000=targeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_gdas_10000=targeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN28_1000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN28_2000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN28_5000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN28_8000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN28_10000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN28_1000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN28_2000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN28_5000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN28_8000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN28_10000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN40_1000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN40_2000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN40_5000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN40_8000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN40_10000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN40_1000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN40_2000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN40_5000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN40_8000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN40_10000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_Tangent_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        untargeted_Tangent_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        untargeted_Tangent_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        untargeted_Tangent_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        untargeted_Tangent_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        targeted_Tangent_pyramidnet272_1000=targeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        targeted_Tangent_pyramidnet272_2000=targeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        targeted_Tangent_pyramidnet272_5000=targeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        targeted_Tangent_pyramidnet272_8000=targeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        targeted_Tangent_pyramidnet272_10000=targeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_gdas_1000=untargeted_result["gdas"]["Tangent Attack"][1000],
-        untargeted_Tangent_gdas_2000=untargeted_result["gdas"]["Tangent Attack"][2000],
-        untargeted_Tangent_gdas_5000=untargeted_result["gdas"]["Tangent Attack"][5000],
-        untargeted_Tangent_gdas_8000=untargeted_result["gdas"]["Tangent Attack"][8000],
-        untargeted_Tangent_gdas_10000=untargeted_result["gdas"]["Tangent Attack"][10000],
-
-        targeted_Tangent_gdas_1000=targeted_result["gdas"]["Tangent Attack"][1000],
-        targeted_Tangent_gdas_2000=targeted_result["gdas"]["Tangent Attack"][2000],
-        targeted_Tangent_gdas_5000=targeted_result["gdas"]["Tangent Attack"][5000],
-        targeted_Tangent_gdas_8000=targeted_result["gdas"]["Tangent Attack"][8000],
-        targeted_Tangent_gdas_10000=targeted_result["gdas"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN28_1000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN28_2000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN28_5000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN28_8000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN28_10000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN40_1000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN40_2000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN40_5000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN40_8000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN40_10000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        untargeted_QEBATangent_pyramidnet272_300=untargeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][300],
-        untargeted_QEBATangent_pyramidnet272_1000=untargeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][1000],
-        untargeted_QEBATangent_pyramidnet272_2000=untargeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][2000],
-        untargeted_QEBATangent_pyramidnet272_5000=untargeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][5000],
-        untargeted_QEBATangent_pyramidnet272_8000=untargeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][8000],
-        untargeted_QEBATangent_pyramidnet272_10000=untargeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][10000],
-
-        targeted_QEBATangent_pyramidnet272_300=targeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_pyramidnet272_1000=targeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_pyramidnet272_2000=targeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_pyramidnet272_5000=targeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_pyramidnet272_8000=targeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_pyramidnet272_10000=targeted_result["pyramidnet272"]["QEBA-S + Tangent Attack"][10000],
-
-        untargeted_QEBATangent_gdas_300=untargeted_result["gdas"]["QEBA-S + Tangent Attack"][300],
-        untargeted_QEBATangent_gdas_1000=untargeted_result["gdas"]["QEBA-S + Tangent Attack"][1000],
-        untargeted_QEBATangent_gdas_2000=untargeted_result["gdas"]["QEBA-S + Tangent Attack"][2000],
-        untargeted_QEBATangent_gdas_5000=untargeted_result["gdas"]["QEBA-S + Tangent Attack"][5000],
-        untargeted_QEBATangent_gdas_8000=untargeted_result["gdas"]["QEBA-S + Tangent Attack"][8000],
-        untargeted_QEBATangent_gdas_10000=untargeted_result["gdas"]["QEBA-S + Tangent Attack"][10000],
-
-        targeted_QEBATangent_gdas_300=targeted_result["gdas"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_gdas_1000=targeted_result["gdas"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_gdas_2000=targeted_result["gdas"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_gdas_5000=targeted_result["gdas"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_gdas_8000=targeted_result["gdas"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_gdas_10000=targeted_result["gdas"]["QEBA-S + Tangent Attack"][10000],
-
-        untargeted_QEBATangent_WRN28_300=untargeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][300],
-        untargeted_QEBATangent_WRN28_1000=untargeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][1000],
-        untargeted_QEBATangent_WRN28_2000=untargeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][2000],
-        untargeted_QEBATangent_WRN28_5000=untargeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][5000],
-        untargeted_QEBATangent_WRN28_8000=untargeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][8000],
-        untargeted_QEBATangent_WRN28_10000=untargeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][10000],
-
-        targeted_QEBATangent_WRN28_300=targeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_WRN28_1000=targeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_WRN28_2000=targeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_WRN28_5000=targeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_WRN28_8000=targeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_WRN28_10000=targeted_result["WRN-28-10-drop"]["QEBA-S + Tangent Attack"][10000],
-
-        untargeted_QEBATangent_WRN40_300=untargeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][300],
-        untargeted_QEBATangent_WRN40_1000=untargeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][1000],
-        untargeted_QEBATangent_WRN40_2000=untargeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][2000],
-        untargeted_QEBATangent_WRN40_5000=untargeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][5000],
-        untargeted_QEBATangent_WRN40_8000=untargeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][8000],
-        untargeted_QEBATangent_WRN40_10000=untargeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][10000],
-
-        targeted_QEBATangent_WRN40_300=targeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][300],
-        targeted_QEBATangent_WRN40_1000=targeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][1000],
-        targeted_QEBATangent_WRN40_2000=targeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][2000],
-        targeted_QEBATangent_WRN40_5000=targeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][5000],
-        targeted_QEBATangent_WRN40_8000=targeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][8000],
-        targeted_QEBATangent_WRN40_10000=targeted_result["WRN-40-10-drop"]["QEBA-S + Tangent Attack"][10000],
-
-        untargeted_QEBA_pyramidnet272_300=untargeted_result["pyramidnet272"]["QEBA-S"][300],
-        untargeted_QEBA_pyramidnet272_1000=untargeted_result["pyramidnet272"]["QEBA-S"][1000],
-        untargeted_QEBA_pyramidnet272_2000=untargeted_result["pyramidnet272"]["QEBA-S"][2000],
-        untargeted_QEBA_pyramidnet272_5000=untargeted_result["pyramidnet272"]["QEBA-S"][5000],
-        untargeted_QEBA_pyramidnet272_8000=untargeted_result["pyramidnet272"]["QEBA-S"][8000],
-        untargeted_QEBA_pyramidnet272_10000=untargeted_result["pyramidnet272"]["QEBA-S"][10000],
-
-        targeted_QEBA_pyramidnet272_300=targeted_result["pyramidnet272"]["QEBA-S"][300],
-        targeted_QEBA_pyramidnet272_1000=targeted_result["pyramidnet272"]["QEBA-S"][1000],
-        targeted_QEBA_pyramidnet272_2000=targeted_result["pyramidnet272"]["QEBA-S"][2000],
-        targeted_QEBA_pyramidnet272_5000=targeted_result["pyramidnet272"]["QEBA-S"][5000],
-        targeted_QEBA_pyramidnet272_8000=targeted_result["pyramidnet272"]["QEBA-S"][8000],
-        targeted_QEBA_pyramidnet272_10000=targeted_result["pyramidnet272"]["QEBA-S"][10000],
-
-        untargeted_QEBA_gdas_300=untargeted_result["gdas"]["QEBA-S"][300],
-        untargeted_QEBA_gdas_1000=untargeted_result["gdas"]["QEBA-S"][1000],
-        untargeted_QEBA_gdas_2000=untargeted_result["gdas"]["QEBA-S"][2000],
-        untargeted_QEBA_gdas_5000=untargeted_result["gdas"]["QEBA-S"][5000],
-        untargeted_QEBA_gdas_8000=untargeted_result["gdas"]["QEBA-S"][8000],
-        untargeted_QEBA_gdas_10000=untargeted_result["gdas"]["QEBA-S"][10000],
-
-        targeted_QEBA_gdas_300=targeted_result["gdas"]["QEBA-S"][300],
-        targeted_QEBA_gdas_1000=targeted_result["gdas"]["QEBA-S"][1000],
-        targeted_QEBA_gdas_2000=targeted_result["gdas"]["QEBA-S"][2000],
-        targeted_QEBA_gdas_5000=targeted_result["gdas"]["QEBA-S"][5000],
-        targeted_QEBA_gdas_8000=targeted_result["gdas"]["QEBA-S"][8000],
-        targeted_QEBA_gdas_10000=targeted_result["gdas"]["QEBA-S"][10000],
-
-        untargeted_QEBA_WRN28_300=untargeted_result["WRN-28-10-drop"]["QEBA-S"][300],
-        untargeted_QEBA_WRN28_1000=untargeted_result["WRN-28-10-drop"]["QEBA-S"][1000],
-        untargeted_QEBA_WRN28_2000=untargeted_result["WRN-28-10-drop"]["QEBA-S"][2000],
-        untargeted_QEBA_WRN28_5000=untargeted_result["WRN-28-10-drop"]["QEBA-S"][5000],
-        untargeted_QEBA_WRN28_8000=untargeted_result["WRN-28-10-drop"]["QEBA-S"][8000],
-        untargeted_QEBA_WRN28_10000=untargeted_result["WRN-28-10-drop"]["QEBA-S"][10000],
-
-        targeted_QEBA_WRN28_300=targeted_result["WRN-28-10-drop"]["QEBA-S"][300],
-        targeted_QEBA_WRN28_1000=targeted_result["WRN-28-10-drop"]["QEBA-S"][1000],
-        targeted_QEBA_WRN28_2000=targeted_result["WRN-28-10-drop"]["QEBA-S"][2000],
-        targeted_QEBA_WRN28_5000=targeted_result["WRN-28-10-drop"]["QEBA-S"][5000],
-        targeted_QEBA_WRN28_8000=targeted_result["WRN-28-10-drop"]["QEBA-S"][8000],
-        targeted_QEBA_WRN28_10000=targeted_result["WRN-28-10-drop"]["QEBA-S"][10000],
-
-        untargeted_QEBA_WRN40_300=untargeted_result["WRN-40-10-drop"]["QEBA-S"][300],
-        untargeted_QEBA_WRN40_1000=untargeted_result["WRN-40-10-drop"]["QEBA-S"][1000],
-        untargeted_QEBA_WRN40_2000=untargeted_result["WRN-40-10-drop"]["QEBA-S"][2000],
-        untargeted_QEBA_WRN40_5000=untargeted_result["WRN-40-10-drop"]["QEBA-S"][5000],
-        untargeted_QEBA_WRN40_8000=untargeted_result["WRN-40-10-drop"]["QEBA-S"][8000],
-        untargeted_QEBA_WRN40_10000=untargeted_result["WRN-40-10-drop"]["QEBA-S"][10000],
-
-        targeted_QEBA_WRN40_300=targeted_result["WRN-40-10-drop"]["QEBA-S"][300],
-        targeted_QEBA_WRN40_1000=targeted_result["WRN-40-10-drop"]["QEBA-S"][1000],
-        targeted_QEBA_WRN40_2000=targeted_result["WRN-40-10-drop"]["QEBA-S"][2000],
-        targeted_QEBA_WRN40_5000=targeted_result["WRN-40-10-drop"]["QEBA-S"][5000],
-        targeted_QEBA_WRN40_8000=targeted_result["WRN-40-10-drop"]["QEBA-S"][8000],
-        targeted_QEBA_WRN40_10000=targeted_result["WRN-40-10-drop"]["QEBA-S"][10000],
-
-        targeted_SignOPT_WRN28_300=targeted_result["WRN-28-10-drop"]["Sign-OPT"][300],
-
-        untargeted_SignOPT_WRN40_300=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][300],
-
-        targeted_SignOPT_WRN40_300=targeted_result["WRN-40-10-drop"]["Sign-OPT"][300],
-
-        untargeted_SVMOPT_pyramidnet272_300=untargeted_result["pyramidnet272"]["SVM-OPT"][300],
-
-        targeted_SVMOPT_pyramidnet272_300=targeted_result["pyramidnet272"]["SVM-OPT"][300],
-
-        untargeted_SVMOPT_gdas_300=untargeted_result["gdas"]["SVM-OPT"][300],
-
-        targeted_SVMOPT_gdas_300=targeted_result["gdas"]["SVM-OPT"][300],
-
-        untargeted_SVMOPT_WRN28_300=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][300],
-
-        targeted_SVMOPT_WRN28_300=targeted_result["WRN-28-10-drop"]["SVM-OPT"][300],
-
-        untargeted_SVMOPT_WRN40_300=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][300],
-
-        targeted_SVMOPT_WRN40_300=targeted_result["WRN-40-10-drop"]["SVM-OPT"][300],
-
-        untargeted_Boundary_pyramidnet272_300=untargeted_result["pyramidnet272"]["Boundary Attack"][300],
-
-        targeted_Boundary_pyramidnet272_300=targeted_result["pyramidnet272"]["Boundary Attack"][300],
-
-        untargeted_Boundary_gdas_300=untargeted_result["gdas"]["Boundary Attack"][300],
-
-        targeted_Boundary_gdas_300=targeted_result["gdas"]["Boundary Attack"][300],
-
-        untargeted_Boundary_WRN28_300=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][300],
-
-        targeted_Boundary_WRN28_300=targeted_result["WRN-28-10-drop"]["Boundary Attack"][300],
-
-        untargeted_Boundary_WRN40_300=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][300],
-
-        targeted_Boundary_WRN40_300=targeted_result["WRN-40-10-drop"]["Boundary Attack"][300],
-
-        untargeted_HSJA_pyramidnet272_300=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][300],
-
-        targeted_HSJA_pyramidnet272_300=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][300],
-
-        untargeted_HSJA_gdas_300=untargeted_result["gdas"]["HopSkipJumpAttack"][300],
-
-        targeted_HSJA_gdas_300=targeted_result["gdas"]["HopSkipJumpAttack"][300],
-
-        untargeted_HSJA_WRN28_300=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][300],
-
-        targeted_HSJA_WRN28_300=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][300],
-
-        untargeted_HSJA_WRN40_300=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][300],
-
-        targeted_HSJA_WRN40_300=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][300],
-
-        untargeted_Tangent_pyramidnet272_300=untargeted_result["pyramidnet272"]["Tangent Attack"][300],
-        targeted_Tangent_pyramidnet272_300=targeted_result["pyramidnet272"]["Tangent Attack"][300],
-        untargeted_Tangent_gdas_300=untargeted_result["gdas"]["Tangent Attack"][300],
-        targeted_Tangent_gdas_300=targeted_result["gdas"]["Tangent Attack"][300],
-        untargeted_Tangent_WRN28_300=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][300],
-        targeted_Tangent_WRN28_300=targeted_result["WRN-28-10-drop"]["Tangent Attack"][300],
-        untargeted_Tangent_WRN40_300=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][300],
-        targeted_Tangent_WRN40_300=targeted_result["WRN-40-10-drop"]["Tangent Attack"][300],
-
-        untargeted_Ellipsoid_Tangent_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            1000],
-        untargeted_Ellipsoid_Tangent_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            2000],
-        untargeted_Ellipsoid_Tangent_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            5000],
-        untargeted_Ellipsoid_Tangent_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            8000],
-        untargeted_Ellipsoid_Tangent_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            10000],
-
-        targeted_Ellipsoid_Tangent_pyramidnet272_1000=targeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            1000],
-        targeted_Ellipsoid_Tangent_pyramidnet272_2000=targeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            2000],
-        targeted_Ellipsoid_Tangent_pyramidnet272_5000=targeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            5000],
-        targeted_Ellipsoid_Tangent_pyramidnet272_8000=targeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            8000],
-        targeted_Ellipsoid_Tangent_pyramidnet272_10000=targeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            10000],
-
-        untargeted_Ellipsoid_Tangent_gdas_1000=untargeted_result["gdas"]["Ellipsoid Tangent Attack"][1000],
-        untargeted_Ellipsoid_Tangent_gdas_2000=untargeted_result["gdas"]["Ellipsoid Tangent Attack"][2000],
-        untargeted_Ellipsoid_Tangent_gdas_5000=untargeted_result["gdas"]["Ellipsoid Tangent Attack"][5000],
-        untargeted_Ellipsoid_Tangent_gdas_8000=untargeted_result["gdas"]["Ellipsoid Tangent Attack"][8000],
-        untargeted_Ellipsoid_Tangent_gdas_10000=untargeted_result["gdas"]["Ellipsoid Tangent Attack"][10000],
-
-        targeted_Ellipsoid_Tangent_gdas_1000=targeted_result["gdas"]["Ellipsoid Tangent Attack"][1000],
-        targeted_Ellipsoid_Tangent_gdas_2000=targeted_result["gdas"]["Ellipsoid Tangent Attack"][2000],
-        targeted_Ellipsoid_Tangent_gdas_5000=targeted_result["gdas"]["Ellipsoid Tangent Attack"][5000],
-        targeted_Ellipsoid_Tangent_gdas_8000=targeted_result["gdas"]["Ellipsoid Tangent Attack"][8000],
-        targeted_Ellipsoid_Tangent_gdas_10000=targeted_result["gdas"]["Ellipsoid Tangent Attack"][10000],
-
-        untargeted_Ellipsoid_Tangent_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][1000],
-        untargeted_Ellipsoid_Tangent_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][2000],
-        untargeted_Ellipsoid_Tangent_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][5000],
-        untargeted_Ellipsoid_Tangent_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][8000],
-        untargeted_Ellipsoid_Tangent_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][10000],
-
-        targeted_Ellipsoid_Tangent_WRN28_1000=targeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][1000],
-        targeted_Ellipsoid_Tangent_WRN28_2000=targeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][2000],
-        targeted_Ellipsoid_Tangent_WRN28_5000=targeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][5000],
-        targeted_Ellipsoid_Tangent_WRN28_8000=targeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][8000],
-        targeted_Ellipsoid_Tangent_WRN28_10000=targeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][10000],
-
-        untargeted_Ellipsoid_Tangent_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][1000],
-        untargeted_Ellipsoid_Tangent_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][2000],
-        untargeted_Ellipsoid_Tangent_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][5000],
-        untargeted_Ellipsoid_Tangent_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][8000],
-        untargeted_Ellipsoid_Tangent_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][10000],
-
-        targeted_Ellipsoid_Tangent_WRN40_1000=targeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][1000],
-        targeted_Ellipsoid_Tangent_WRN40_2000=targeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][2000],
-        targeted_Ellipsoid_Tangent_WRN40_5000=targeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][5000],
-        targeted_Ellipsoid_Tangent_WRN40_8000=targeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][8000],
-        targeted_Ellipsoid_Tangent_WRN40_10000=targeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][10000],
-
-        untargeted_Ellipsoid_Tangent_pyramidnet272_300=untargeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][
-            300],
-        targeted_Ellipsoid_Tangent_pyramidnet272_300=targeted_result["pyramidnet272"]["Ellipsoid Tangent Attack"][300],
-        untargeted_Ellipsoid_Tangent_gdas_300=untargeted_result["gdas"]["Ellipsoid Tangent Attack"][300],
-        targeted_Ellipsoid_Tangent_gdas_300=targeted_result["gdas"]["Ellipsoid Tangent Attack"][300],
-        untargeted_Ellipsoid_Tangent_WRN28_300=untargeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][300],
-        targeted_Ellipsoid_Tangent_WRN28_300=targeted_result["WRN-28-10-drop"]["Ellipsoid Tangent Attack"][300],
-        untargeted_Ellipsoid_Tangent_WRN40_300=untargeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][300],
-        targeted_Ellipsoid_Tangent_WRN40_300=targeted_result["WRN-40-10-drop"]["Ellipsoid Tangent Attack"][300],
-
-    )
-    )
-
-def draw_wide_table_CIFAR_with_boundary(untargeted_result, targeted_result):
-
-    print("""
-                    & BA & {targeted_Boundary_pyramidnet272_1000} & {targeted_Boundary_pyramidnet272_2000} & {targeted_Boundary_pyramidnet272_5000} & {targeted_Boundary_pyramidnet272_8000} & {targeted_Boundary_pyramidnet272_10000} & {untargeted_Boundary_pyramidnet272_1000} & {untargeted_Boundary_pyramidnet272_2000} & {untargeted_Boundary_pyramidnet272_5000} & {untargeted_Boundary_pyramidnet272_8000} & {untargeted_Boundary_pyramidnet272_10000}  \\\\
-                    & Sign-OPT & {targeted_SignOPT_pyramidnet272_1000} & {targeted_SignOPT_pyramidnet272_2000} & {targeted_SignOPT_pyramidnet272_5000} & {targeted_SignOPT_pyramidnet272_8000} & {targeted_SignOPT_pyramidnet272_10000} & {untargeted_SignOPT_pyramidnet272_1000} & {untargeted_SignOPT_pyramidnet272_2000} & {untargeted_SignOPT_pyramidnet272_5000} & {untargeted_SignOPT_pyramidnet272_8000} & {untargeted_SignOPT_pyramidnet272_10000}  \\\\
-                    & SVM-OPT & {targeted_SVMOPT_pyramidnet272_1000} & {targeted_SVMOPT_pyramidnet272_2000} & {targeted_SVMOPT_pyramidnet272_5000} & {targeted_SVMOPT_pyramidnet272_8000} & {targeted_SVMOPT_pyramidnet272_10000} & {untargeted_SVMOPT_pyramidnet272_1000} & {untargeted_SVMOPT_pyramidnet272_2000} & {untargeted_SVMOPT_pyramidnet272_5000} & {untargeted_SVMOPT_pyramidnet272_8000} & {untargeted_SVMOPT_pyramidnet272_10000}  \\\\
-                    & HSJA & {targeted_HSJA_pyramidnet272_1000} & {targeted_HSJA_pyramidnet272_2000} & {targeted_HSJA_pyramidnet272_5000} & {targeted_HSJA_pyramidnet272_8000} & {targeted_HSJA_pyramidnet272_10000} & {untargeted_HSJA_pyramidnet272_1000} & {untargeted_HSJA_pyramidnet272_2000} & {untargeted_HSJA_pyramidnet272_5000} & {untargeted_HSJA_pyramidnet272_8000} & {untargeted_HSJA_pyramidnet272_10000}  \\\\
-                    & Ours & {targeted_Tangent_pyramidnet272_1000} & {targeted_Tangent_pyramidnet272_2000} & {targeted_Tangent_pyramidnet272_5000} & {targeted_Tangent_pyramidnet272_8000} & {targeted_Tangent_pyramidnet272_10000} & {untargeted_Tangent_pyramidnet272_1000} & {untargeted_Tangent_pyramidnet272_2000} & {untargeted_Tangent_pyramidnet272_5000} & {untargeted_Tangent_pyramidnet272_8000} & {untargeted_Tangent_pyramidnet272_10000}  \\\\
-                    \\midrule
-                    & BA & {targeted_Boundary_gdas_1000} & {targeted_Boundary_gdas_2000} & {targeted_Boundary_gdas_5000} & {targeted_Boundary_gdas_8000} & {targeted_Boundary_gdas_10000} & {untargeted_Boundary_gdas_1000} & {untargeted_Boundary_gdas_2000} & {untargeted_Boundary_gdas_5000} & {untargeted_Boundary_gdas_8000} & {untargeted_Boundary_gdas_10000}  \\\\
-                    & Sign-OPT & {targeted_SignOPT_gdas_1000} & {targeted_SignOPT_gdas_2000} & {targeted_SignOPT_gdas_5000} & {targeted_SignOPT_gdas_8000} & {targeted_SignOPT_gdas_10000} & {untargeted_SignOPT_gdas_1000} & {untargeted_SignOPT_gdas_2000} & {untargeted_SignOPT_gdas_5000} & {untargeted_SignOPT_gdas_8000} & {untargeted_SignOPT_gdas_10000}  \\\\
-                    & SVM-OPT & {targeted_SVMOPT_gdas_1000} & {targeted_SVMOPT_gdas_2000} & {targeted_SVMOPT_gdas_5000} & {targeted_SVMOPT_gdas_8000} & {targeted_SVMOPT_gdas_10000} & {untargeted_SVMOPT_gdas_1000} & {untargeted_SVMOPT_gdas_2000} & {untargeted_SVMOPT_gdas_5000} & {untargeted_SVMOPT_gdas_8000} & {untargeted_SVMOPT_gdas_10000}  \\\\
-                    & HSJA & {targeted_HSJA_gdas_1000} & {targeted_HSJA_gdas_2000} & {targeted_HSJA_gdas_5000} & {targeted_HSJA_gdas_8000} & {targeted_HSJA_gdas_10000} & {untargeted_HSJA_gdas_1000} & {untargeted_HSJA_gdas_2000} & {untargeted_HSJA_gdas_5000} & {untargeted_HSJA_gdas_8000} & {untargeted_HSJA_gdas_10000}  \\\\
-                    & Ours & {targeted_Tangent_gdas_1000} & {targeted_Tangent_gdas_2000} & {targeted_Tangent_gdas_5000} & {targeted_Tangent_gdas_8000} & {targeted_Tangent_gdas_10000} & {untargeted_Tangent_gdas_1000} & {untargeted_Tangent_gdas_2000} & {untargeted_Tangent_gdas_5000} & {untargeted_Tangent_gdas_8000} & {untargeted_Tangent_gdas_10000}  \\\\
-                    \\midrule
-                    & BA & {targeted_Boundary_WRN28_1000} & {targeted_Boundary_WRN28_2000} & {targeted_Boundary_WRN28_5000} & {targeted_Boundary_WRN28_8000} & {targeted_Boundary_WRN28_10000} & {untargeted_Boundary_WRN28_1000} & {untargeted_Boundary_WRN28_2000} & {untargeted_Boundary_WRN28_5000} & {untargeted_Boundary_WRN28_8000} & {untargeted_Boundary_WRN28_10000}  \\\\
-                    & Sign-OPT & {targeted_SignOPT_WRN28_1000} & {targeted_SignOPT_WRN28_2000} & {targeted_SignOPT_WRN28_5000} & {targeted_SignOPT_WRN28_8000} & {targeted_SignOPT_WRN28_10000} & {untargeted_SignOPT_WRN28_1000} & {untargeted_SignOPT_WRN28_2000} & {untargeted_SignOPT_WRN28_5000} & {untargeted_SignOPT_WRN28_8000} & {untargeted_SignOPT_WRN28_10000}  \\\\
-                    & SVM-OPT & {targeted_SVMOPT_WRN28_1000} & {targeted_SVMOPT_WRN28_2000} & {targeted_SVMOPT_WRN28_5000} & {targeted_SVMOPT_WRN28_8000} & {targeted_SVMOPT_WRN28_10000} & {untargeted_SVMOPT_WRN28_1000} & {untargeted_SVMOPT_WRN28_2000} & {untargeted_SVMOPT_WRN28_5000} & {untargeted_SVMOPT_WRN28_8000} & {untargeted_SVMOPT_WRN28_10000}  \\\\
-                    & HSJA & {targeted_HSJA_WRN28_1000} & {targeted_HSJA_WRN28_2000} & {targeted_HSJA_WRN28_5000} & {targeted_HSJA_WRN28_8000} & {targeted_HSJA_WRN28_10000} & {untargeted_HSJA_WRN28_1000} & {untargeted_HSJA_WRN28_2000} & {untargeted_HSJA_WRN28_5000} & {untargeted_HSJA_WRN28_8000} & {untargeted_HSJA_WRN28_10000}  \\\\
-                    & Ours & {targeted_Tangent_WRN28_1000} & {targeted_Tangent_WRN28_2000} & {targeted_Tangent_WRN28_5000} & {targeted_Tangent_WRN28_8000} & {targeted_Tangent_WRN28_10000} & {untargeted_Tangent_WRN28_1000} & {untargeted_Tangent_WRN28_2000} & {untargeted_Tangent_WRN28_5000} & {untargeted_Tangent_WRN28_8000} & {untargeted_Tangent_WRN28_10000}  \\\\
-                    \\midrule
-                    & BA & {targeted_Boundary_WRN40_1000} & {targeted_Boundary_WRN40_2000} & {targeted_Boundary_WRN40_5000} & {targeted_Boundary_WRN40_8000} & {targeted_Boundary_WRN40_10000} & {untargeted_Boundary_WRN40_1000} & {untargeted_Boundary_WRN40_2000} & {untargeted_Boundary_WRN40_5000} & {untargeted_Boundary_WRN40_8000} & {untargeted_Boundary_WRN40_10000}  \\\\
-                    & Sign-OPT & {targeted_SignOPT_WRN40_1000} & {targeted_SignOPT_WRN40_2000} & {targeted_SignOPT_WRN40_5000} & {targeted_SignOPT_WRN40_8000} & {targeted_SignOPT_WRN40_10000} & {untargeted_SignOPT_WRN40_1000} & {untargeted_SignOPT_WRN40_2000} & {untargeted_SignOPT_WRN40_5000} & {untargeted_SignOPT_WRN40_8000} & {untargeted_SignOPT_WRN40_10000}  \\\\
-                    & SVM-OPT & {targeted_SVMOPT_WRN40_1000} & {targeted_SVMOPT_WRN40_2000} & {targeted_SVMOPT_WRN40_5000} & {targeted_SVMOPT_WRN40_8000} & {targeted_SVMOPT_WRN40_10000} & {untargeted_SVMOPT_WRN40_1000} & {untargeted_SVMOPT_WRN40_2000} & {untargeted_SVMOPT_WRN40_5000} & {untargeted_SVMOPT_WRN40_8000} & {untargeted_SVMOPT_WRN40_10000}  \\\\
-                    & HSJA & {targeted_HSJA_WRN40_1000} & {targeted_HSJA_WRN40_2000} & {targeted_HSJA_WRN40_5000} & {targeted_HSJA_WRN40_8000} & {targeted_HSJA_WRN40_10000} & {untargeted_HSJA_WRN40_1000} & {untargeted_HSJA_WRN40_2000} & {untargeted_HSJA_WRN40_5000} & {untargeted_HSJA_WRN40_8000} & {untargeted_HSJA_WRN40_10000}  \\\\
-                    & Ours & {targeted_Tangent_WRN40_1000} & {targeted_Tangent_WRN40_2000} & {targeted_Tangent_WRN40_5000} & {targeted_Tangent_WRN40_8000} & {targeted_Tangent_WRN40_10000} & {untargeted_Tangent_WRN40_1000} & {untargeted_Tangent_WRN40_2000} & {untargeted_Tangent_WRN40_5000} & {untargeted_Tangent_WRN40_8000} & {untargeted_Tangent_WRN40_10000}  \\\\
-                        """.format(
-
-        untargeted_SignOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        untargeted_SignOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        untargeted_SignOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        untargeted_SignOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        untargeted_SignOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        targeted_SignOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        targeted_SignOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        targeted_SignOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        targeted_SignOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_gdas_1000=untargeted_result["gdas"]["Sign-OPT"][1000],
-        untargeted_SignOPT_gdas_2000=untargeted_result["gdas"]["Sign-OPT"][2000],
-        untargeted_SignOPT_gdas_5000=untargeted_result["gdas"]["Sign-OPT"][5000],
-        untargeted_SignOPT_gdas_8000=untargeted_result["gdas"]["Sign-OPT"][8000],
-        untargeted_SignOPT_gdas_10000=untargeted_result["gdas"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_gdas_1000=targeted_result["gdas"]["Sign-OPT"][1000],
-        targeted_SignOPT_gdas_2000=targeted_result["gdas"]["Sign-OPT"][2000],
-        targeted_SignOPT_gdas_5000=targeted_result["gdas"]["Sign-OPT"][5000],
-        targeted_SignOPT_gdas_8000=targeted_result["gdas"]["Sign-OPT"][8000],
-        targeted_SignOPT_gdas_10000=targeted_result["gdas"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SVMOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        targeted_SVMOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        targeted_SVMOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        targeted_SVMOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        targeted_SVMOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_gdas_1000=untargeted_result["gdas"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_gdas_2000=untargeted_result["gdas"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_gdas_5000=untargeted_result["gdas"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_gdas_8000=untargeted_result["gdas"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_gdas_10000=untargeted_result["gdas"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_gdas_1000=targeted_result["gdas"]["SVM-OPT"][1000],
-        targeted_SVMOPT_gdas_2000=targeted_result["gdas"]["SVM-OPT"][2000],
-        targeted_SVMOPT_gdas_5000=targeted_result["gdas"]["SVM-OPT"][5000],
-        targeted_SVMOPT_gdas_8000=targeted_result["gdas"]["SVM-OPT"][8000],
-        targeted_SVMOPT_gdas_10000=targeted_result["gdas"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_Boundary_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Boundary Attack"][1000],
-        untargeted_Boundary_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Boundary Attack"][2000],
-        untargeted_Boundary_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Boundary Attack"][5000],
-        untargeted_Boundary_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Boundary Attack"][8000],
-        untargeted_Boundary_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Boundary Attack"][10000],
-
-        targeted_Boundary_pyramidnet272_1000=targeted_result["pyramidnet272"]["Boundary Attack"][1000],
-        targeted_Boundary_pyramidnet272_2000=targeted_result["pyramidnet272"]["Boundary Attack"][2000],
-        targeted_Boundary_pyramidnet272_5000=targeted_result["pyramidnet272"]["Boundary Attack"][5000],
-        targeted_Boundary_pyramidnet272_8000=targeted_result["pyramidnet272"]["Boundary Attack"][8000],
-        targeted_Boundary_pyramidnet272_10000=targeted_result["pyramidnet272"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_gdas_1000=untargeted_result["gdas"]["Boundary Attack"][1000],
-        untargeted_Boundary_gdas_2000=untargeted_result["gdas"]["Boundary Attack"][2000],
-        untargeted_Boundary_gdas_5000=untargeted_result["gdas"]["Boundary Attack"][5000],
-        untargeted_Boundary_gdas_8000=untargeted_result["gdas"]["Boundary Attack"][8000],
-        untargeted_Boundary_gdas_10000=untargeted_result["gdas"]["Boundary Attack"][10000],
-
-        targeted_Boundary_gdas_1000=targeted_result["gdas"]["Boundary Attack"][1000],
-        targeted_Boundary_gdas_2000=targeted_result["gdas"]["Boundary Attack"][2000],
-        targeted_Boundary_gdas_5000=targeted_result["gdas"]["Boundary Attack"][5000],
-        targeted_Boundary_gdas_8000=targeted_result["gdas"]["Boundary Attack"][8000],
-        targeted_Boundary_gdas_10000=targeted_result["gdas"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][1000],
-        untargeted_Boundary_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][2000],
-        untargeted_Boundary_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][5000],
-        untargeted_Boundary_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][8000],
-        untargeted_Boundary_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][10000],
-
-        targeted_Boundary_WRN28_1000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][1000],
-        targeted_Boundary_WRN28_2000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][2000],
-        targeted_Boundary_WRN28_5000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][5000],
-        targeted_Boundary_WRN28_8000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][8000],
-        targeted_Boundary_WRN28_10000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][1000],
-        untargeted_Boundary_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][2000],
-        untargeted_Boundary_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][5000],
-        untargeted_Boundary_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][8000],
-        untargeted_Boundary_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][10000],
-
-        targeted_Boundary_WRN40_1000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][1000],
-        targeted_Boundary_WRN40_2000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][2000],
-        targeted_Boundary_WRN40_5000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][5000],
-        targeted_Boundary_WRN40_8000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][8000],
-        targeted_Boundary_WRN40_10000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][10000],
-
-        untargeted_HSJA_pyramidnet272_1000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_pyramidnet272_2000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_pyramidnet272_5000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_pyramidnet272_8000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_pyramidnet272_10000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_pyramidnet272_1000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_pyramidnet272_2000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_pyramidnet272_5000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_pyramidnet272_8000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_pyramidnet272_10000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_gdas_1000=untargeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_gdas_2000=untargeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_gdas_5000=untargeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_gdas_8000=untargeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_gdas_10000=untargeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_gdas_1000=targeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_gdas_2000=targeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_gdas_5000=targeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_gdas_8000=targeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_gdas_10000=targeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN28_1000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN28_2000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN28_5000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN28_8000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN28_10000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN28_1000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN28_2000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN28_5000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN28_8000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN28_10000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN40_1000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN40_2000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN40_5000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN40_8000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN40_10000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN40_1000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN40_2000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN40_5000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN40_8000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN40_10000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_Tangent_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        untargeted_Tangent_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        untargeted_Tangent_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        untargeted_Tangent_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        untargeted_Tangent_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        targeted_Tangent_pyramidnet272_1000=targeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        targeted_Tangent_pyramidnet272_2000=targeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        targeted_Tangent_pyramidnet272_5000=targeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        targeted_Tangent_pyramidnet272_8000=targeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        targeted_Tangent_pyramidnet272_10000=targeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_gdas_1000=untargeted_result["gdas"]["Tangent Attack"][1000],
-        untargeted_Tangent_gdas_2000=untargeted_result["gdas"]["Tangent Attack"][2000],
-        untargeted_Tangent_gdas_5000=untargeted_result["gdas"]["Tangent Attack"][5000],
-        untargeted_Tangent_gdas_8000=untargeted_result["gdas"]["Tangent Attack"][8000],
-        untargeted_Tangent_gdas_10000=untargeted_result["gdas"]["Tangent Attack"][10000],
-
-        targeted_Tangent_gdas_1000=targeted_result["gdas"]["Tangent Attack"][1000],
-        targeted_Tangent_gdas_2000=targeted_result["gdas"]["Tangent Attack"][2000],
-        targeted_Tangent_gdas_5000=targeted_result["gdas"]["Tangent Attack"][5000],
-        targeted_Tangent_gdas_8000=targeted_result["gdas"]["Tangent Attack"][8000],
-        targeted_Tangent_gdas_10000=targeted_result["gdas"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN28_1000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN28_2000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN28_5000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN28_8000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN28_10000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN40_1000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN40_2000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN40_5000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN40_8000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN40_10000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-    )
-    )
-
-
-def draw_wide_table_CIFAR_add_init_batch_size_30(untargeted_result, targeted_result):
-    print("""
-                        & Boundary & {targeted_Boundary_pyramidnet272_1000} & {targeted_Boundary_pyramidnet272_2000} & {targeted_Boundary_pyramidnet272_5000} & {targeted_Boundary_pyramidnet272_8000} & {targeted_Boundary_pyramidnet272_10000} & {untargeted_Boundary_pyramidnet272_1000} & {untargeted_Boundary_pyramidnet272_2000} & {untargeted_Boundary_pyramidnet272_5000} & {untargeted_Boundary_pyramidnet272_8000} & {untargeted_Boundary_pyramidnet272_10000}  \\\\
-                        & Sign-OPT & {targeted_SignOPT_pyramidnet272_1000} & {targeted_SignOPT_pyramidnet272_2000} & {targeted_SignOPT_pyramidnet272_5000} & {targeted_SignOPT_pyramidnet272_8000} & {targeted_SignOPT_pyramidnet272_10000} & {untargeted_SignOPT_pyramidnet272_1000} & {untargeted_SignOPT_pyramidnet272_2000} & {untargeted_SignOPT_pyramidnet272_5000} & {untargeted_SignOPT_pyramidnet272_8000} & {untargeted_SignOPT_pyramidnet272_10000}  \\\\
-                        & SVM-OPT & {targeted_SVMOPT_pyramidnet272_1000} & {targeted_SVMOPT_pyramidnet272_2000} & {targeted_SVMOPT_pyramidnet272_5000} & {targeted_SVMOPT_pyramidnet272_8000} & {targeted_SVMOPT_pyramidnet272_10000} & {untargeted_SVMOPT_pyramidnet272_1000} & {untargeted_SVMOPT_pyramidnet272_2000} & {untargeted_SVMOPT_pyramidnet272_5000} & {untargeted_SVMOPT_pyramidnet272_8000} & {untargeted_SVMOPT_pyramidnet272_10000}  \\\\
-                        & HSJA ($B_0=100$) & {targeted_HSJA_pyramidnet272_1000} & {targeted_HSJA_pyramidnet272_2000} & {targeted_HSJA_pyramidnet272_5000} & {targeted_HSJA_pyramidnet272_8000} & {targeted_HSJA_pyramidnet272_10000} & {untargeted_HSJA_pyramidnet272_1000} & {untargeted_HSJA_pyramidnet272_2000} & {untargeted_HSJA_pyramidnet272_5000} & {untargeted_HSJA_pyramidnet272_8000} & {untargeted_HSJA_pyramidnet272_10000}  \\\\
-                        & Ours ($B_0=100$) & {targeted_Tangent_pyramidnet272_1000} & {targeted_Tangent_pyramidnet272_2000} & {targeted_Tangent_pyramidnet272_5000} & {targeted_Tangent_pyramidnet272_8000} & {targeted_Tangent_pyramidnet272_10000} & {untargeted_Tangent_pyramidnet272_1000} & {untargeted_Tangent_pyramidnet272_2000} & {untargeted_Tangent_pyramidnet272_5000} & {untargeted_Tangent_pyramidnet272_8000} & {untargeted_Tangent_pyramidnet272_10000}  \\\\
-                        & HSJA ($B_0=30$) & {targeted_HSJA30_pyramidnet272_1000} & {targeted_HSJA30_pyramidnet272_2000} & {targeted_HSJA30_pyramidnet272_5000} & {targeted_HSJA30_pyramidnet272_8000} & {targeted_HSJA30_pyramidnet272_10000} & {untargeted_HSJA30_pyramidnet272_1000} & {untargeted_HSJA30_pyramidnet272_2000} & {untargeted_HSJA30_pyramidnet272_5000} & {untargeted_HSJA30_pyramidnet272_8000} & {untargeted_HSJA30_pyramidnet272_10000}  \\\\
-                        & Ours ($B_0=30$) & {targeted_Tangent30_pyramidnet272_1000} & {targeted_Tangent30_pyramidnet272_2000} & {targeted_Tangent30_pyramidnet272_5000} & {targeted_Tangent30_pyramidnet272_8000} & {targeted_Tangent30_pyramidnet272_10000} & {untargeted_Tangent30_pyramidnet272_1000} & {untargeted_Tangent30_pyramidnet272_2000} & {untargeted_Tangent30_pyramidnet272_5000} & {untargeted_Tangent30_pyramidnet272_8000} & {untargeted_Tangent30_pyramidnet272_10000}  \\\\
-                        \\midrule
-                        & Boundary & {targeted_Boundary_gdas_1000} & {targeted_Boundary_gdas_2000} & {targeted_Boundary_gdas_5000} & {targeted_Boundary_gdas_8000} & {targeted_Boundary_gdas_10000} & {untargeted_Boundary_gdas_1000} & {untargeted_Boundary_gdas_2000} & {untargeted_Boundary_gdas_5000} & {untargeted_Boundary_gdas_8000} & {untargeted_Boundary_gdas_10000}  \\\\
-                        & Sign-OPT & {targeted_SignOPT_gdas_1000} & {targeted_SignOPT_gdas_2000} & {targeted_SignOPT_gdas_5000} & {targeted_SignOPT_gdas_8000} & {targeted_SignOPT_gdas_10000} & {untargeted_SignOPT_gdas_1000} & {untargeted_SignOPT_gdas_2000} & {untargeted_SignOPT_gdas_5000} & {untargeted_SignOPT_gdas_8000} & {untargeted_SignOPT_gdas_10000}  \\\\
-                        & SVM-OPT & {targeted_SVMOPT_gdas_1000} & {targeted_SVMOPT_gdas_2000} & {targeted_SVMOPT_gdas_5000} & {targeted_SVMOPT_gdas_8000} & {targeted_SVMOPT_gdas_10000} & {untargeted_SVMOPT_gdas_1000} & {untargeted_SVMOPT_gdas_2000} & {untargeted_SVMOPT_gdas_5000} & {untargeted_SVMOPT_gdas_8000} & {untargeted_SVMOPT_gdas_10000}  \\\\
-                        & HSJA ($B_0=100$) & {targeted_HSJA_gdas_1000} & {targeted_HSJA_gdas_2000} & {targeted_HSJA_gdas_5000} & {targeted_HSJA_gdas_8000} & {targeted_HSJA_gdas_10000} & {untargeted_HSJA_gdas_1000} & {untargeted_HSJA_gdas_2000} & {untargeted_HSJA_gdas_5000} & {untargeted_HSJA_gdas_8000} & {untargeted_HSJA_gdas_10000}  \\\\
-                        & Ours ($B_0=100$) & {targeted_Tangent_gdas_1000} & {targeted_Tangent_gdas_2000} & {targeted_Tangent_gdas_5000} & {targeted_Tangent_gdas_8000} & {targeted_Tangent_gdas_10000} & {untargeted_Tangent_gdas_1000} & {untargeted_Tangent_gdas_2000} & {untargeted_Tangent_gdas_5000} & {untargeted_Tangent_gdas_8000} & {untargeted_Tangent_gdas_10000}  \\\\
-                        & HSJA ($B_0=30$) & {targeted_HSJA30_gdas_1000} & {targeted_HSJA30_gdas_2000} & {targeted_HSJA30_gdas_5000} & {targeted_HSJA30_gdas_8000} & {targeted_HSJA30_gdas_10000} & {untargeted_HSJA30_gdas_1000} & {untargeted_HSJA30_gdas_2000} & {untargeted_HSJA30_gdas_5000} & {untargeted_HSJA30_gdas_8000} & {untargeted_HSJA30_gdas_10000}  \\\\
-                        & Ours ($B_0=30$) & {targeted_Tangent30_gdas_1000} & {targeted_Tangent30_gdas_2000} & {targeted_Tangent30_gdas_5000} & {targeted_Tangent30_gdas_8000} & {targeted_Tangent30_gdas_10000} & {untargeted_Tangent30_gdas_1000} & {untargeted_Tangent30_gdas_2000} & {untargeted_Tangent30_gdas_5000} & {untargeted_Tangent30_gdas_8000} & {untargeted_Tangent30_gdas_10000}  \\\\
-                        \\midrule
-                        & Boundary & {targeted_Boundary_WRN28_1000} & {targeted_Boundary_WRN28_2000} & {targeted_Boundary_WRN28_5000} & {targeted_Boundary_WRN28_8000} & {targeted_Boundary_WRN28_10000} & {untargeted_Boundary_WRN28_1000} & {untargeted_Boundary_WRN28_2000} & {untargeted_Boundary_WRN28_5000} & {untargeted_Boundary_WRN28_8000} & {untargeted_Boundary_WRN28_10000}  \\\\
-                        & Sign-OPT & {targeted_SignOPT_WRN28_1000} & {targeted_SignOPT_WRN28_2000} & {targeted_SignOPT_WRN28_5000} & {targeted_SignOPT_WRN28_8000} & {targeted_SignOPT_WRN28_10000} & {untargeted_SignOPT_WRN28_1000} & {untargeted_SignOPT_WRN28_2000} & {untargeted_SignOPT_WRN28_5000} & {untargeted_SignOPT_WRN28_8000} & {untargeted_SignOPT_WRN28_10000}  \\\\
-                        & SVM-OPT & {targeted_SVMOPT_WRN28_1000} & {targeted_SVMOPT_WRN28_2000} & {targeted_SVMOPT_WRN28_5000} & {targeted_SVMOPT_WRN28_8000} & {targeted_SVMOPT_WRN28_10000} & {untargeted_SVMOPT_WRN28_1000} & {untargeted_SVMOPT_WRN28_2000} & {untargeted_SVMOPT_WRN28_5000} & {untargeted_SVMOPT_WRN28_8000} & {untargeted_SVMOPT_WRN28_10000}  \\\\
-                        & HSJA ($B_0=100$) & {targeted_HSJA_WRN28_1000} & {targeted_HSJA_WRN28_2000} & {targeted_HSJA_WRN28_5000} & {targeted_HSJA_WRN28_8000} & {targeted_HSJA_WRN28_10000} & {untargeted_HSJA_WRN28_1000} & {untargeted_HSJA_WRN28_2000} & {untargeted_HSJA_WRN28_5000} & {untargeted_HSJA_WRN28_8000} & {untargeted_HSJA_WRN28_10000}  \\\\
-                        & Ours ($B_0=100$) & {targeted_Tangent_WRN28_1000} & {targeted_Tangent_WRN28_2000} & {targeted_Tangent_WRN28_5000} & {targeted_Tangent_WRN28_8000} & {targeted_Tangent_WRN28_10000} & {untargeted_Tangent_WRN28_1000} & {untargeted_Tangent_WRN28_2000} & {untargeted_Tangent_WRN28_5000} & {untargeted_Tangent_WRN28_8000} & {untargeted_Tangent_WRN28_10000}  \\\\
-                        & HSJA ($B_0=30$) & {targeted_HSJA30_WRN28_1000} & {targeted_HSJA30_WRN28_2000} & {targeted_HSJA30_WRN28_5000} & {targeted_HSJA30_WRN28_8000} & {targeted_HSJA30_WRN28_10000} & {untargeted_HSJA30_WRN28_1000} & {untargeted_HSJA30_WRN28_2000} & {untargeted_HSJA30_WRN28_5000} & {untargeted_HSJA30_WRN28_8000} & {untargeted_HSJA30_WRN28_10000}  \\\\
-                        & Ours ($B_0=30$) & {targeted_Tangent30_WRN28_1000} & {targeted_Tangent30_WRN28_2000} & {targeted_Tangent30_WRN28_5000} & {targeted_Tangent30_WRN28_8000} & {targeted_Tangent30_WRN28_10000} & {untargeted_Tangent30_WRN28_1000} & {untargeted_Tangent30_WRN28_2000} & {untargeted_Tangent30_WRN28_5000} & {untargeted_Tangent30_WRN28_8000} & {untargeted_Tangent30_WRN28_10000}  \\\\
-                        \\midrule
-                        & Boundary & {targeted_Boundary_WRN40_1000} & {targeted_Boundary_WRN40_2000} & {targeted_Boundary_WRN40_5000} & {targeted_Boundary_WRN40_8000} & {targeted_Boundary_WRN40_10000} & {untargeted_Boundary_WRN40_1000} & {untargeted_Boundary_WRN40_2000} & {untargeted_Boundary_WRN40_5000} & {untargeted_Boundary_WRN40_8000} & {untargeted_Boundary_WRN40_10000}  \\\\
-                        & Sign-OPT & {targeted_SignOPT_WRN40_1000} & {targeted_SignOPT_WRN40_2000} & {targeted_SignOPT_WRN40_5000} & {targeted_SignOPT_WRN40_8000} & {targeted_SignOPT_WRN40_10000} & {untargeted_SignOPT_WRN40_1000} & {untargeted_SignOPT_WRN40_2000} & {untargeted_SignOPT_WRN40_5000} & {untargeted_SignOPT_WRN40_8000} & {untargeted_SignOPT_WRN40_10000}  \\\\
-                        & SVM-OPT & {targeted_SVMOPT_WRN40_1000} & {targeted_SVMOPT_WRN40_2000} & {targeted_SVMOPT_WRN40_5000} & {targeted_SVMOPT_WRN40_8000} & {targeted_SVMOPT_WRN40_10000} & {untargeted_SVMOPT_WRN40_1000} & {untargeted_SVMOPT_WRN40_2000} & {untargeted_SVMOPT_WRN40_5000} & {untargeted_SVMOPT_WRN40_8000} & {untargeted_SVMOPT_WRN40_10000}  \\\\
-                        & HSJA ($B_0=100$) & {targeted_HSJA_WRN40_1000} & {targeted_HSJA_WRN40_2000} & {targeted_HSJA_WRN40_5000} & {targeted_HSJA_WRN40_8000} & {targeted_HSJA_WRN40_10000} & {untargeted_HSJA_WRN40_1000} & {untargeted_HSJA_WRN40_2000} & {untargeted_HSJA_WRN40_5000} & {untargeted_HSJA_WRN40_8000} & {untargeted_HSJA_WRN40_10000}  \\\\
-                        & Ours ($B_0=100$)& {targeted_Tangent_WRN40_1000} & {targeted_Tangent_WRN40_2000} & {targeted_Tangent_WRN40_5000} & {targeted_Tangent_WRN40_8000} & {targeted_Tangent_WRN40_10000} & {untargeted_Tangent_WRN40_1000} & {untargeted_Tangent_WRN40_2000} & {untargeted_Tangent_WRN40_5000} & {untargeted_Tangent_WRN40_8000} & {untargeted_Tangent_WRN40_10000}  \\\\
-                        & HSJA ($B_0=30$) & {targeted_HSJA30_WRN40_1000} & {targeted_HSJA30_WRN40_2000} & {targeted_HSJA30_WRN40_5000} & {targeted_HSJA30_WRN40_8000} & {targeted_HSJA30_WRN40_10000} & {untargeted_HSJA30_WRN40_1000} & {untargeted_HSJA30_WRN40_2000} & {untargeted_HSJA30_WRN40_5000} & {untargeted_HSJA30_WRN40_8000} & {untargeted_HSJA30_WRN40_10000}  \\\\
-                        & Ours ($B_0=30$) & {targeted_Tangent30_WRN40_1000} & {targeted_Tangent30_WRN40_2000} & {targeted_Tangent30_WRN40_5000} & {targeted_Tangent30_WRN40_8000} & {targeted_Tangent30_WRN40_10000} & {untargeted_Tangent30_WRN40_1000} & {untargeted_Tangent30_WRN40_2000} & {untargeted_Tangent30_WRN40_5000} & {untargeted_Tangent30_WRN40_8000} & {untargeted_Tangent30_WRN40_10000}  \\\\
-                            """.format(
-
-        untargeted_SignOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        untargeted_SignOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        untargeted_SignOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        untargeted_SignOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        untargeted_SignOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["Sign-OPT"][1000],
-        targeted_SignOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["Sign-OPT"][2000],
-        targeted_SignOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["Sign-OPT"][5000],
-        targeted_SignOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["Sign-OPT"][8000],
-        targeted_SignOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_gdas_1000=untargeted_result["gdas"]["Sign-OPT"][1000],
-        untargeted_SignOPT_gdas_2000=untargeted_result["gdas"]["Sign-OPT"][2000],
-        untargeted_SignOPT_gdas_5000=untargeted_result["gdas"]["Sign-OPT"][5000],
-        untargeted_SignOPT_gdas_8000=untargeted_result["gdas"]["Sign-OPT"][8000],
-        untargeted_SignOPT_gdas_10000=untargeted_result["gdas"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_gdas_1000=targeted_result["gdas"]["Sign-OPT"][1000],
-        targeted_SignOPT_gdas_2000=targeted_result["gdas"]["Sign-OPT"][2000],
-        targeted_SignOPT_gdas_5000=targeted_result["gdas"]["Sign-OPT"][5000],
-        targeted_SignOPT_gdas_8000=targeted_result["gdas"]["Sign-OPT"][8000],
-        targeted_SignOPT_gdas_10000=targeted_result["gdas"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SignOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        untargeted_SignOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        untargeted_SignOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        untargeted_SignOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        untargeted_SignOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        targeted_SignOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        targeted_SignOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        targeted_SignOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        targeted_SignOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        targeted_SignOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        untargeted_SVMOPT_pyramidnet272_1000=untargeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_pyramidnet272_2000=untargeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_pyramidnet272_5000=untargeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_pyramidnet272_8000=untargeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_pyramidnet272_10000=untargeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_pyramidnet272_1000=targeted_result["pyramidnet272"]["SVM-OPT"][1000],
-        targeted_SVMOPT_pyramidnet272_2000=targeted_result["pyramidnet272"]["SVM-OPT"][2000],
-        targeted_SVMOPT_pyramidnet272_5000=targeted_result["pyramidnet272"]["SVM-OPT"][5000],
-        targeted_SVMOPT_pyramidnet272_8000=targeted_result["pyramidnet272"]["SVM-OPT"][8000],
-        targeted_SVMOPT_pyramidnet272_10000=targeted_result["pyramidnet272"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_gdas_1000=untargeted_result["gdas"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_gdas_2000=untargeted_result["gdas"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_gdas_5000=untargeted_result["gdas"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_gdas_8000=untargeted_result["gdas"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_gdas_10000=untargeted_result["gdas"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_gdas_1000=targeted_result["gdas"]["SVM-OPT"][1000],
-        targeted_SVMOPT_gdas_2000=targeted_result["gdas"]["SVM-OPT"][2000],
-        targeted_SVMOPT_gdas_5000=targeted_result["gdas"]["SVM-OPT"][5000],
-        targeted_SVMOPT_gdas_8000=targeted_result["gdas"]["SVM-OPT"][8000],
-        targeted_SVMOPT_gdas_10000=targeted_result["gdas"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN28_1000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN28_2000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN28_5000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN28_8000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN28_10000=untargeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN28_1000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN28_2000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN28_5000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN28_8000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN28_10000=targeted_result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_SVMOPT_WRN40_1000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        untargeted_SVMOPT_WRN40_2000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        untargeted_SVMOPT_WRN40_5000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        untargeted_SVMOPT_WRN40_8000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        untargeted_SVMOPT_WRN40_10000=untargeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        targeted_SVMOPT_WRN40_1000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        targeted_SVMOPT_WRN40_2000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        targeted_SVMOPT_WRN40_5000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        targeted_SVMOPT_WRN40_8000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        targeted_SVMOPT_WRN40_10000=targeted_result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        untargeted_Boundary_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Boundary Attack"][1000],
-        untargeted_Boundary_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Boundary Attack"][2000],
-        untargeted_Boundary_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Boundary Attack"][5000],
-        untargeted_Boundary_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Boundary Attack"][8000],
-        untargeted_Boundary_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Boundary Attack"][10000],
-
-        targeted_Boundary_pyramidnet272_1000=targeted_result["pyramidnet272"]["Boundary Attack"][1000],
-        targeted_Boundary_pyramidnet272_2000=targeted_result["pyramidnet272"]["Boundary Attack"][2000],
-        targeted_Boundary_pyramidnet272_5000=targeted_result["pyramidnet272"]["Boundary Attack"][5000],
-        targeted_Boundary_pyramidnet272_8000=targeted_result["pyramidnet272"]["Boundary Attack"][8000],
-        targeted_Boundary_pyramidnet272_10000=targeted_result["pyramidnet272"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_gdas_1000=untargeted_result["gdas"]["Boundary Attack"][1000],
-        untargeted_Boundary_gdas_2000=untargeted_result["gdas"]["Boundary Attack"][2000],
-        untargeted_Boundary_gdas_5000=untargeted_result["gdas"]["Boundary Attack"][5000],
-        untargeted_Boundary_gdas_8000=untargeted_result["gdas"]["Boundary Attack"][8000],
-        untargeted_Boundary_gdas_10000=untargeted_result["gdas"]["Boundary Attack"][10000],
-
-        targeted_Boundary_gdas_1000=targeted_result["gdas"]["Boundary Attack"][1000],
-        targeted_Boundary_gdas_2000=targeted_result["gdas"]["Boundary Attack"][2000],
-        targeted_Boundary_gdas_5000=targeted_result["gdas"]["Boundary Attack"][5000],
-        targeted_Boundary_gdas_8000=targeted_result["gdas"]["Boundary Attack"][8000],
-        targeted_Boundary_gdas_10000=targeted_result["gdas"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][1000],
-        untargeted_Boundary_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][2000],
-        untargeted_Boundary_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][5000],
-        untargeted_Boundary_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][8000],
-        untargeted_Boundary_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Boundary Attack"][10000],
-
-        targeted_Boundary_WRN28_1000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][1000],
-        targeted_Boundary_WRN28_2000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][2000],
-        targeted_Boundary_WRN28_5000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][5000],
-        targeted_Boundary_WRN28_8000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][8000],
-        targeted_Boundary_WRN28_10000=targeted_result["WRN-28-10-drop"]["Boundary Attack"][10000],
-
-        untargeted_Boundary_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][1000],
-        untargeted_Boundary_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][2000],
-        untargeted_Boundary_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][5000],
-        untargeted_Boundary_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][8000],
-        untargeted_Boundary_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Boundary Attack"][10000],
-
-        targeted_Boundary_WRN40_1000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][1000],
-        targeted_Boundary_WRN40_2000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][2000],
-        targeted_Boundary_WRN40_5000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][5000],
-        targeted_Boundary_WRN40_8000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][8000],
-        targeted_Boundary_WRN40_10000=targeted_result["WRN-40-10-drop"]["Boundary Attack"][10000],
-
-        untargeted_HSJA_pyramidnet272_1000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_pyramidnet272_2000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_pyramidnet272_5000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_pyramidnet272_8000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_pyramidnet272_10000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_pyramidnet272_1000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_pyramidnet272_2000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_pyramidnet272_5000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_pyramidnet272_8000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_pyramidnet272_10000=targeted_result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_gdas_1000=untargeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_gdas_2000=untargeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_gdas_5000=untargeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_gdas_8000=untargeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_gdas_10000=untargeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_gdas_1000=targeted_result["gdas"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_gdas_2000=targeted_result["gdas"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_gdas_5000=targeted_result["gdas"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_gdas_8000=targeted_result["gdas"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_gdas_10000=targeted_result["gdas"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN28_1000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN28_2000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN28_5000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN28_8000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN28_10000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN28_1000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN28_2000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN28_5000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN28_8000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN28_10000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_HSJA_WRN40_1000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        untargeted_HSJA_WRN40_2000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        untargeted_HSJA_WRN40_5000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        untargeted_HSJA_WRN40_8000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        untargeted_HSJA_WRN40_10000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        targeted_HSJA_WRN40_1000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        targeted_HSJA_WRN40_2000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        targeted_HSJA_WRN40_5000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        targeted_HSJA_WRN40_8000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        targeted_HSJA_WRN40_10000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        untargeted_Tangent_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        untargeted_Tangent_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        untargeted_Tangent_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        untargeted_Tangent_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        untargeted_Tangent_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        targeted_Tangent_pyramidnet272_1000=targeted_result["pyramidnet272"]["Tangent Attack"][1000],
-        targeted_Tangent_pyramidnet272_2000=targeted_result["pyramidnet272"]["Tangent Attack"][2000],
-        targeted_Tangent_pyramidnet272_5000=targeted_result["pyramidnet272"]["Tangent Attack"][5000],
-        targeted_Tangent_pyramidnet272_8000=targeted_result["pyramidnet272"]["Tangent Attack"][8000],
-        targeted_Tangent_pyramidnet272_10000=targeted_result["pyramidnet272"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_gdas_1000=untargeted_result["gdas"]["Tangent Attack"][1000],
-        untargeted_Tangent_gdas_2000=untargeted_result["gdas"]["Tangent Attack"][2000],
-        untargeted_Tangent_gdas_5000=untargeted_result["gdas"]["Tangent Attack"][5000],
-        untargeted_Tangent_gdas_8000=untargeted_result["gdas"]["Tangent Attack"][8000],
-        untargeted_Tangent_gdas_10000=untargeted_result["gdas"]["Tangent Attack"][10000],
-
-        targeted_Tangent_gdas_1000=targeted_result["gdas"]["Tangent Attack"][1000],
-        targeted_Tangent_gdas_2000=targeted_result["gdas"]["Tangent Attack"][2000],
-        targeted_Tangent_gdas_5000=targeted_result["gdas"]["Tangent Attack"][5000],
-        targeted_Tangent_gdas_8000=targeted_result["gdas"]["Tangent Attack"][8000],
-        targeted_Tangent_gdas_10000=targeted_result["gdas"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN28_1000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN28_2000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN28_5000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN28_8000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN28_10000=targeted_result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        untargeted_Tangent_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        untargeted_Tangent_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        untargeted_Tangent_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        untargeted_Tangent_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        untargeted_Tangent_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        targeted_Tangent_WRN40_1000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        targeted_Tangent_WRN40_2000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        targeted_Tangent_WRN40_5000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        targeted_Tangent_WRN40_8000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        targeted_Tangent_WRN40_10000=targeted_result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        untargeted_HSJA30_pyramidnet272_1000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack30"][1000],
-        untargeted_HSJA30_pyramidnet272_2000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack30"][2000],
-        untargeted_HSJA30_pyramidnet272_5000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack30"][5000],
-        untargeted_HSJA30_pyramidnet272_8000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack30"][8000],
-        untargeted_HSJA30_pyramidnet272_10000=untargeted_result["pyramidnet272"]["HopSkipJumpAttack30"][10000],
-
-        targeted_HSJA30_pyramidnet272_1000=targeted_result["pyramidnet272"]["HopSkipJumpAttack30"][1000],
-        targeted_HSJA30_pyramidnet272_2000=targeted_result["pyramidnet272"]["HopSkipJumpAttack30"][2000],
-        targeted_HSJA30_pyramidnet272_5000=targeted_result["pyramidnet272"]["HopSkipJumpAttack30"][5000],
-        targeted_HSJA30_pyramidnet272_8000=targeted_result["pyramidnet272"]["HopSkipJumpAttack30"][8000],
-        targeted_HSJA30_pyramidnet272_10000=targeted_result["pyramidnet272"]["HopSkipJumpAttack30"][10000],
-
-        untargeted_HSJA30_gdas_1000=untargeted_result["gdas"]["HopSkipJumpAttack30"][1000],
-        untargeted_HSJA30_gdas_2000=untargeted_result["gdas"]["HopSkipJumpAttack30"][2000],
-        untargeted_HSJA30_gdas_5000=untargeted_result["gdas"]["HopSkipJumpAttack30"][5000],
-        untargeted_HSJA30_gdas_8000=untargeted_result["gdas"]["HopSkipJumpAttack30"][8000],
-        untargeted_HSJA30_gdas_10000=untargeted_result["gdas"]["HopSkipJumpAttack30"][10000],
-
-        targeted_HSJA30_gdas_1000=targeted_result["gdas"]["HopSkipJumpAttack30"][1000],
-        targeted_HSJA30_gdas_2000=targeted_result["gdas"]["HopSkipJumpAttack30"][2000],
-        targeted_HSJA30_gdas_5000=targeted_result["gdas"]["HopSkipJumpAttack30"][5000],
-        targeted_HSJA30_gdas_8000=targeted_result["gdas"]["HopSkipJumpAttack30"][8000],
-        targeted_HSJA30_gdas_10000=targeted_result["gdas"]["HopSkipJumpAttack30"][10000],
-
-        untargeted_HSJA30_WRN28_1000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][1000],
-        untargeted_HSJA30_WRN28_2000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][2000],
-        untargeted_HSJA30_WRN28_5000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][5000],
-        untargeted_HSJA30_WRN28_8000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][8000],
-        untargeted_HSJA30_WRN28_10000=untargeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][10000],
-
-        targeted_HSJA30_WRN28_1000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][1000],
-        targeted_HSJA30_WRN28_2000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][2000],
-        targeted_HSJA30_WRN28_5000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][5000],
-        targeted_HSJA30_WRN28_8000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][8000],
-        targeted_HSJA30_WRN28_10000=targeted_result["WRN-28-10-drop"]["HopSkipJumpAttack30"][10000],
-
-        untargeted_HSJA30_WRN40_1000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][1000],
-        untargeted_HSJA30_WRN40_2000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][2000],
-        untargeted_HSJA30_WRN40_5000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][5000],
-        untargeted_HSJA30_WRN40_8000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][8000],
-        untargeted_HSJA30_WRN40_10000=untargeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][10000],
-
-        targeted_HSJA30_WRN40_1000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][1000],
-        targeted_HSJA30_WRN40_2000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][2000],
-        targeted_HSJA30_WRN40_5000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][5000],
-        targeted_HSJA30_WRN40_8000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][8000],
-        targeted_HSJA30_WRN40_10000=targeted_result["WRN-40-10-drop"]["HopSkipJumpAttack30"][10000],
-
-        untargeted_Tangent30_pyramidnet272_1000=untargeted_result["pyramidnet272"]["Tangent Attack30"][1000],
-        untargeted_Tangent30_pyramidnet272_2000=untargeted_result["pyramidnet272"]["Tangent Attack30"][2000],
-        untargeted_Tangent30_pyramidnet272_5000=untargeted_result["pyramidnet272"]["Tangent Attack30"][5000],
-        untargeted_Tangent30_pyramidnet272_8000=untargeted_result["pyramidnet272"]["Tangent Attack30"][8000],
-        untargeted_Tangent30_pyramidnet272_10000=untargeted_result["pyramidnet272"]["Tangent Attack30"][10000],
-
-        targeted_Tangent30_pyramidnet272_1000=targeted_result["pyramidnet272"]["Tangent Attack30"][1000],
-        targeted_Tangent30_pyramidnet272_2000=targeted_result["pyramidnet272"]["Tangent Attack30"][2000],
-        targeted_Tangent30_pyramidnet272_5000=targeted_result["pyramidnet272"]["Tangent Attack30"][5000],
-        targeted_Tangent30_pyramidnet272_8000=targeted_result["pyramidnet272"]["Tangent Attack30"][8000],
-        targeted_Tangent30_pyramidnet272_10000=targeted_result["pyramidnet272"]["Tangent Attack30"][10000],
-
-        untargeted_Tangent30_gdas_1000=untargeted_result["gdas"]["Tangent Attack30"][1000],
-        untargeted_Tangent30_gdas_2000=untargeted_result["gdas"]["Tangent Attack30"][2000],
-        untargeted_Tangent30_gdas_5000=untargeted_result["gdas"]["Tangent Attack30"][5000],
-        untargeted_Tangent30_gdas_8000=untargeted_result["gdas"]["Tangent Attack30"][8000],
-        untargeted_Tangent30_gdas_10000=untargeted_result["gdas"]["Tangent Attack30"][10000],
-
-        targeted_Tangent30_gdas_1000=targeted_result["gdas"]["Tangent Attack30"][1000],
-        targeted_Tangent30_gdas_2000=targeted_result["gdas"]["Tangent Attack30"][2000],
-        targeted_Tangent30_gdas_5000=targeted_result["gdas"]["Tangent Attack30"][5000],
-        targeted_Tangent30_gdas_8000=targeted_result["gdas"]["Tangent Attack30"][8000],
-        targeted_Tangent30_gdas_10000=targeted_result["gdas"]["Tangent Attack30"][10000],
-
-        untargeted_Tangent30_WRN28_1000=untargeted_result["WRN-28-10-drop"]["Tangent Attack30"][1000],
-        untargeted_Tangent30_WRN28_2000=untargeted_result["WRN-28-10-drop"]["Tangent Attack30"][2000],
-        untargeted_Tangent30_WRN28_5000=untargeted_result["WRN-28-10-drop"]["Tangent Attack30"][5000],
-        untargeted_Tangent30_WRN28_8000=untargeted_result["WRN-28-10-drop"]["Tangent Attack30"][8000],
-        untargeted_Tangent30_WRN28_10000=untargeted_result["WRN-28-10-drop"]["Tangent Attack30"][10000],
-
-        targeted_Tangent30_WRN28_1000=targeted_result["WRN-28-10-drop"]["Tangent Attack30"][1000],
-        targeted_Tangent30_WRN28_2000=targeted_result["WRN-28-10-drop"]["Tangent Attack30"][2000],
-        targeted_Tangent30_WRN28_5000=targeted_result["WRN-28-10-drop"]["Tangent Attack30"][5000],
-        targeted_Tangent30_WRN28_8000=targeted_result["WRN-28-10-drop"]["Tangent Attack30"][8000],
-        targeted_Tangent30_WRN28_10000=targeted_result["WRN-28-10-drop"]["Tangent Attack30"][10000],
-
-        untargeted_Tangent30_WRN40_1000=untargeted_result["WRN-40-10-drop"]["Tangent Attack30"][1000],
-        untargeted_Tangent30_WRN40_2000=untargeted_result["WRN-40-10-drop"]["Tangent Attack30"][2000],
-        untargeted_Tangent30_WRN40_5000=untargeted_result["WRN-40-10-drop"]["Tangent Attack30"][5000],
-        untargeted_Tangent30_WRN40_8000=untargeted_result["WRN-40-10-drop"]["Tangent Attack30"][8000],
-        untargeted_Tangent30_WRN40_10000=untargeted_result["WRN-40-10-drop"]["Tangent Attack30"][10000],
-
-        targeted_Tangent30_WRN40_1000=targeted_result["WRN-40-10-drop"]["Tangent Attack30"][1000],
-        targeted_Tangent30_WRN40_2000=targeted_result["WRN-40-10-drop"]["Tangent Attack30"][2000],
-        targeted_Tangent30_WRN40_5000=targeted_result["WRN-40-10-drop"]["Tangent Attack30"][5000],
-        targeted_Tangent30_WRN40_8000=targeted_result["WRN-40-10-drop"]["Tangent Attack30"][8000],
-        targeted_Tangent30_WRN40_10000=targeted_result["WRN-40-10-drop"]["Tangent Attack30"][10000],
-
-    )
-    )
-
-
-def draw_tables_for_untargeted_CIFAR_without_BBA(archs_result):
-    result = archs_result
-    print("""
-                    & & Sign-OPT & {SignOPT_pyramidnet272_1000} & {SignOPT_pyramidnet272_2000} & {SignOPT_pyramidnet272_5000} & {SignOPT_pyramidnet272_8000} & {SignOPT_pyramidnet272_10000} & - & - & - & - \\\\
-                    & & SVM-OPT & {SVMOPT_pyramidnet272_1000} & {SVMOPT_pyramidnet272_2000} & {SVMOPT_pyramidnet272_5000} & {SVMOPT_pyramidnet272_8000} & {SVMOPT_pyramidnet272_10000} & - & - & - & - \\\\
-                    & & GeoDA & {GeoDA_pyramidnet272_1000} & {GeoDA_pyramidnet272_2000} & {GeoDA_pyramidnet272_5000} & {GeoDA_pyramidnet272_8000} & {GeoDA_pyramidnet272_10000} & - & - & - & - \\\\
-                    & & RayS & {RayS_pyramidnet272_1000} & {RayS_pyramidnet272_2000} & {RayS_pyramidnet272_5000} & {RayS_pyramidnet272_8000} & {RayS_pyramidnet272_10000} & - & - & - & - \\\\
-                    & & HopSkipJumpAttack & {HSJA_pyramidnet272_1000} & {HSJA_pyramidnet272_2000} & {HSJA_pyramidnet272_5000} & {HSJA_pyramidnet272_8000} & {HSJA_pyramidnet272_10000} & - & - & - & - \\\\
-                    & & Tangent Attack (ours) & {Tangent_pyramidnet272_1000} & {Tangent_pyramidnet272_2000} & {Tangent_pyramidnet272_5000} & {Tangent_pyramidnet272_8000} & {Tangent_pyramidnet272_10000} & - & - & - & - \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & & Sign-OPT & {SignOPT_gdas_1000} & {SignOPT_gdas_2000} & {SignOPT_gdas_5000} & {SignOPT_gdas_8000} & {SignOPT_gdas_10000} & - & - & - & - \\\\
-                    & & SVM-OPT & {SVMOPT_gdas_1000} & {SVMOPT_gdas_2000} & {SVMOPT_gdas_5000} & {SVMOPT_gdas_8000} & {SVMOPT_gdas_10000} & - & - & - & - \\\\
-                    & & GeoDA & {GeoDA_gdas_1000} & {GeoDA_gdas_2000} & {GeoDA_gdas_5000} & {GeoDA_gdas_8000} & {GeoDA_gdas_10000} & - & - & - & - \\\\
-                    & & RayS & {RayS_gdas_1000} & {RayS_gdas_2000} & {RayS_gdas_5000} & {RayS_gdas_8000} & {RayS_gdas_10000} & - & - & - & - \\\\
-                    & & HopSkipJumpAttack & {HSJA_gdas_1000} & {HSJA_gdas_2000} & {HSJA_gdas_5000} & {HSJA_gdas_8000} & {HSJA_gdas_10000} & - & - & - & - \\\\
-                    & & Tangent Attack (ours) & {Tangent_gdas_1000} & {Tangent_gdas_2000} & {Tangent_gdas_5000} & {Tangent_gdas_8000} & {Tangent_gdas_10000} & - & - & - & - \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & & Sign-OPT & {SignOPT_WRN28_1000} & {SignOPT_WRN28_2000} & {SignOPT_WRN28_5000} & {SignOPT_WRN28_8000} & {SignOPT_WRN28_10000} & - & - & - & - \\\\
-                    & & SVM-OPT & {SVMOPT_WRN28_1000} & {SVMOPT_WRN28_2000} & {SVMOPT_WRN28_5000} & {SVMOPT_WRN28_8000} & {SVMOPT_WRN28_10000} & - & - & - & - \\\\
-                    & & GeoDA & {GeoDA_WRN28_1000} & {GeoDA_WRN28_2000} & {GeoDA_WRN28_5000} & {GeoDA_WRN28_8000} & {GeoDA_WRN28_10000} & - & - & - & - \\\\
-                    & & RayS & {RayS_WRN28_1000} & {RayS_WRN28_2000} & {RayS_WRN28_5000} & {RayS_WRN28_8000} & {RayS_WRN28_10000} & - & - & - & - \\\\
-                    & & HopSkipJumpAttack & {HSJA_WRN28_1000} & {HSJA_WRN28_2000} & {HSJA_WRN28_5000} & {HSJA_WRN28_8000} & {HSJA_WRN28_10000} & - & - & - & - \\\\
-                    & & Tangent Attack (ours) & {Tangent_WRN28_1000} & {Tangent_WRN28_2000} & {Tangent_WRN28_5000} & {Tangent_WRN28_8000} & {Tangent_WRN28_10000} & - & - & - & - \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & & Sign-OPT & {SignOPT_WRN40_1000} & {SignOPT_WRN40_2000} & {SignOPT_WRN40_5000} & {SignOPT_WRN40_8000} & {SignOPT_WRN40_10000} & - & - & - & - \\\\
-                    & & SVM-OPT & {SVMOPT_WRN40_1000} & {SVMOPT_WRN40_2000} & {SVMOPT_WRN40_5000} & {SVMOPT_WRN40_8000} & {SVMOPT_WRN40_10000} & - & - & - & - \\\\
-                    & & GeoDA & {GeoDA_WRN40_1000} & {GeoDA_WRN40_2000} & {GeoDA_WRN40_5000} & {GeoDA_WRN40_8000} & {GeoDA_WRN40_10000} & - & - & - & - \\\\
-                    & & RayS & {RayS_WRN40_1000} & {RayS_WRN40_2000} & {RayS_WRN40_5000} & {RayS_WRN40_8000} & {RayS_WRN40_10000} & - & - & - & - \\\\
-                    & & HopSkipJumpAttack & {HSJA_WRN40_1000} & {HSJA_WRN40_2000} & {HSJA_WRN40_5000} & {HSJA_WRN40_8000} & {HSJA_WRN40_10000} & - & - & - & - \\\\
-                    & & Tangent Attack (ours) & {Tangent_WRN40_1000} & {Tangent_WRN40_2000} & {Tangent_WRN40_5000} & {Tangent_WRN40_8000} & {Tangent_WRN40_10000} & - & - & - & - \\\\
-                    \\cmidrule(rl){{2-12}}
-                    & & Sign-OPT & {SignOPT_densenet190_1000} & {SignOPT_densenet190_2000} & {SignOPT_densenet190_5000} & {SignOPT_densenet190_8000} & {SignOPT_densenet190_10000} & - & - & - & - \\\\
-                    & & SVM-OPT & {SVMOPT_densenet190_1000} & {SVMOPT_densenet190_2000} & {SVMOPT_densenet190_5000} & {SVMOPT_densenet190_8000} & {SVMOPT_densenet190_10000} & - & - & - & - \\\\
-                    & & GeoDA & {GeoDA_densenet190_1000} & {GeoDA_densenet190_2000} & {GeoDA_densenet190_5000} & {GeoDA_densenet190_8000} & {GeoDA_densenet190_10000} & - & - & - & - \\\\
-                    & & RayS & {RayS_densenet190_1000} & {RayS_densenet190_2000} & {RayS_densenet190_5000} & {RayS_densenet190_8000} & {RayS_densenet190_10000} & - & - & - & - \\\\
-                    & & HopSkipJumpAttack & {HSJA_densenet190_1000} & {HSJA_densenet190_2000} & {HSJA_densenet190_5000} & {HSJA_densenet190_8000} & {HSJA_densenet190_10000} & - & - & - & - \\\\
-                    & & Tangent Attack (ours) & {Tangent_densenet190_1000} & {Tangent_densenet190_2000} & {Tangent_densenet190_5000} & {Tangent_densenet190_8000} & {Tangent_densenet190_10000} & - & - & - & - \\\\
-                        """.format(
-
-        SignOPT_pyramidnet272_1000=result["pyramidnet272"]["Sign-OPT"][1000],
-        SignOPT_pyramidnet272_2000=result["pyramidnet272"]["Sign-OPT"][2000],
-        SignOPT_pyramidnet272_5000=result["pyramidnet272"]["Sign-OPT"][5000],
-        SignOPT_pyramidnet272_8000=result["pyramidnet272"]["Sign-OPT"][8000],
-        SignOPT_pyramidnet272_10000=result["pyramidnet272"]["Sign-OPT"][10000],
-
-        SignOPT_gdas_1000=result["gdas"]["Sign-OPT"][1000],
-        SignOPT_gdas_2000=result["gdas"]["Sign-OPT"][2000],
-        SignOPT_gdas_5000=result["gdas"]["Sign-OPT"][5000],
-        SignOPT_gdas_8000=result["gdas"]["Sign-OPT"][8000],
-        SignOPT_gdas_10000=result["gdas"]["Sign-OPT"][10000],
-
-        SignOPT_WRN28_1000=result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        SignOPT_WRN28_2000=result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        SignOPT_WRN28_5000=result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        SignOPT_WRN28_8000=result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        SignOPT_WRN28_10000=result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        SignOPT_WRN40_1000=result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        SignOPT_WRN40_2000=result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        SignOPT_WRN40_5000=result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        SignOPT_WRN40_8000=result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        SignOPT_WRN40_10000=result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        SignOPT_densenet190_1000=result["densenet-bc-L190-k40"]["Sign-OPT"][1000],
-        SignOPT_densenet190_2000=result["densenet-bc-L190-k40"]["Sign-OPT"][2000],
-        SignOPT_densenet190_5000=result["densenet-bc-L190-k40"]["Sign-OPT"][5000],
-        SignOPT_densenet190_8000=result["densenet-bc-L190-k40"]["Sign-OPT"][8000],
-        SignOPT_densenet190_10000=result["densenet-bc-L190-k40"]["Sign-OPT"][10000],
-
-        SVMOPT_pyramidnet272_1000=result["pyramidnet272"]["SVM-OPT"][1000],
-        SVMOPT_pyramidnet272_2000=result["pyramidnet272"]["SVM-OPT"][2000],
-        SVMOPT_pyramidnet272_5000=result["pyramidnet272"]["SVM-OPT"][5000],
-        SVMOPT_pyramidnet272_8000=result["pyramidnet272"]["SVM-OPT"][8000],
-        SVMOPT_pyramidnet272_10000=result["pyramidnet272"]["SVM-OPT"][10000],
-
-        SVMOPT_gdas_1000=result["gdas"]["SVM-OPT"][1000],
-        SVMOPT_gdas_2000=result["gdas"]["SVM-OPT"][2000],
-        SVMOPT_gdas_5000=result["gdas"]["SVM-OPT"][5000],
-        SVMOPT_gdas_8000=result["gdas"]["SVM-OPT"][8000],
-        SVMOPT_gdas_10000=result["gdas"]["SVM-OPT"][10000],
-
-        SVMOPT_WRN28_1000=result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        SVMOPT_WRN28_2000=result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        SVMOPT_WRN28_5000=result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        SVMOPT_WRN28_8000=result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        SVMOPT_WRN28_10000=result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        SVMOPT_WRN40_1000=result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        SVMOPT_WRN40_2000=result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        SVMOPT_WRN40_5000=result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        SVMOPT_WRN40_8000=result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        SVMOPT_WRN40_10000=result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        SVMOPT_densenet190_1000=result["densenet-bc-L190-k40"]["SVM-OPT"][1000],
-        SVMOPT_densenet190_2000=result["densenet-bc-L190-k40"]["SVM-OPT"][2000],
-        SVMOPT_densenet190_5000=result["densenet-bc-L190-k40"]["SVM-OPT"][5000],
-        SVMOPT_densenet190_8000=result["densenet-bc-L190-k40"]["SVM-OPT"][8000],
-        SVMOPT_densenet190_10000=result["densenet-bc-L190-k40"]["SVM-OPT"][10000],
-
-        GeoDA_pyramidnet272_1000=result["pyramidnet272"]["GeoDA"][1000],
-        GeoDA_pyramidnet272_2000=result["pyramidnet272"]["GeoDA"][2000],
-        GeoDA_pyramidnet272_5000=result["pyramidnet272"]["GeoDA"][5000],
-        GeoDA_pyramidnet272_8000=result["pyramidnet272"]["GeoDA"][8000],
-        GeoDA_pyramidnet272_10000=result["pyramidnet272"]["GeoDA"][10000],
-
-        GeoDA_gdas_1000=result["gdas"]["GeoDA"][1000],
-        GeoDA_gdas_2000=result["gdas"]["GeoDA"][2000],
-        GeoDA_gdas_5000=result["gdas"]["GeoDA"][5000],
-        GeoDA_gdas_8000=result["gdas"]["GeoDA"][8000],
-        GeoDA_gdas_10000=result["gdas"]["GeoDA"][10000],
-
-        GeoDA_WRN28_1000=result["WRN-28-10-drop"]["GeoDA"][1000],
-        GeoDA_WRN28_2000=result["WRN-28-10-drop"]["GeoDA"][2000],
-        GeoDA_WRN28_5000=result["WRN-28-10-drop"]["GeoDA"][5000],
-        GeoDA_WRN28_8000=result["WRN-28-10-drop"]["GeoDA"][8000],
-        GeoDA_WRN28_10000=result["WRN-28-10-drop"]["GeoDA"][10000],
-
-        GeoDA_WRN40_1000=result["WRN-40-10-drop"]["GeoDA"][1000],
-        GeoDA_WRN40_2000=result["WRN-40-10-drop"]["GeoDA"][2000],
-        GeoDA_WRN40_5000=result["WRN-40-10-drop"]["GeoDA"][5000],
-        GeoDA_WRN40_8000=result["WRN-40-10-drop"]["GeoDA"][8000],
-        GeoDA_WRN40_10000=result["WRN-40-10-drop"]["GeoDA"][10000],
-
-        GeoDA_densenet190_1000=result["densenet-bc-L190-k40"]["GeoDA"][1000],
-        GeoDA_densenet190_2000=result["densenet-bc-L190-k40"]["GeoDA"][2000],
-        GeoDA_densenet190_5000=result["densenet-bc-L190-k40"]["GeoDA"][5000],
-        GeoDA_densenet190_8000=result["densenet-bc-L190-k40"]["GeoDA"][8000],
-        GeoDA_densenet190_10000=result["densenet-bc-L190-k40"]["GeoDA"][10000],
-
-        RayS_pyramidnet272_1000=result["pyramidnet272"]["RayS"][1000],
-        RayS_pyramidnet272_2000=result["pyramidnet272"]["RayS"][2000],
-        RayS_pyramidnet272_5000=result["pyramidnet272"]["RayS"][5000],
-        RayS_pyramidnet272_8000=result["pyramidnet272"]["RayS"][8000],
-        RayS_pyramidnet272_10000=result["pyramidnet272"]["RayS"][10000],
-
-        RayS_gdas_1000=result["gdas"]["RayS"][1000],
-        RayS_gdas_2000=result["gdas"]["RayS"][2000],
-        RayS_gdas_5000=result["gdas"]["RayS"][5000],
-        RayS_gdas_8000=result["gdas"]["RayS"][8000],
-        RayS_gdas_10000=result["gdas"]["RayS"][10000],
-
-        RayS_WRN28_1000=result["WRN-28-10-drop"]["RayS"][1000],
-        RayS_WRN28_2000=result["WRN-28-10-drop"]["RayS"][2000],
-        RayS_WRN28_5000=result["WRN-28-10-drop"]["RayS"][5000],
-        RayS_WRN28_8000=result["WRN-28-10-drop"]["RayS"][8000],
-        RayS_WRN28_10000=result["WRN-28-10-drop"]["RayS"][10000],
-
-        RayS_WRN40_1000=result["WRN-40-10-drop"]["RayS"][1000],
-        RayS_WRN40_2000=result["WRN-40-10-drop"]["RayS"][2000],
-        RayS_WRN40_5000=result["WRN-40-10-drop"]["RayS"][5000],
-        RayS_WRN40_8000=result["WRN-40-10-drop"]["RayS"][8000],
-        RayS_WRN40_10000=result["WRN-40-10-drop"]["RayS"][10000],
-
-        RayS_densenet190_1000=result["densenet-bc-L190-k40"]["RayS"][1000],
-        RayS_densenet190_2000=result["densenet-bc-L190-k40"]["RayS"][2000],
-        RayS_densenet190_5000=result["densenet-bc-L190-k40"]["RayS"][5000],
-        RayS_densenet190_8000=result["densenet-bc-L190-k40"]["RayS"][8000],
-        RayS_densenet190_10000=result["densenet-bc-L190-k40"]["RayS"][10000],
-
-        HSJA_pyramidnet272_1000=result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        HSJA_pyramidnet272_2000=result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        HSJA_pyramidnet272_5000=result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        HSJA_pyramidnet272_8000=result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        HSJA_pyramidnet272_10000=result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        HSJA_gdas_1000=result["gdas"]["HopSkipJumpAttack"][1000],
-        HSJA_gdas_2000=result["gdas"]["HopSkipJumpAttack"][2000],
-        HSJA_gdas_5000=result["gdas"]["HopSkipJumpAttack"][5000],
-        HSJA_gdas_8000=result["gdas"]["HopSkipJumpAttack"][8000],
-        HSJA_gdas_10000=result["gdas"]["HopSkipJumpAttack"][10000],
-
-        HSJA_WRN28_1000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        HSJA_WRN28_2000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        HSJA_WRN28_5000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        HSJA_WRN28_8000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        HSJA_WRN28_10000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        HSJA_WRN40_1000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        HSJA_WRN40_2000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        HSJA_WRN40_5000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        HSJA_WRN40_8000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        HSJA_WRN40_10000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        HSJA_densenet190_1000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][1000],
-        HSJA_densenet190_2000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][2000],
-        HSJA_densenet190_5000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][5000],
-        HSJA_densenet190_8000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][8000],
-        HSJA_densenet190_10000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][10000],
-
-        Tangent_pyramidnet272_1000=result["pyramidnet272"]["Tangent Attack"][1000],
-        Tangent_pyramidnet272_2000=result["pyramidnet272"]["Tangent Attack"][2000],
-        Tangent_pyramidnet272_5000=result["pyramidnet272"]["Tangent Attack"][5000],
-        Tangent_pyramidnet272_8000=result["pyramidnet272"]["Tangent Attack"][8000],
-        Tangent_pyramidnet272_10000=result["pyramidnet272"]["Tangent Attack"][10000],
-
-        Tangent_gdas_1000=result["gdas"]["Tangent Attack"][1000],
-        Tangent_gdas_2000=result["gdas"]["Tangent Attack"][2000],
-        Tangent_gdas_5000=result["gdas"]["Tangent Attack"][5000],
-        Tangent_gdas_8000=result["gdas"]["Tangent Attack"][8000],
-        Tangent_gdas_10000=result["gdas"]["Tangent Attack"][10000],
-
-        Tangent_WRN28_1000=result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        Tangent_WRN28_2000=result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        Tangent_WRN28_5000=result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        Tangent_WRN28_8000=result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        Tangent_WRN28_10000=result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        Tangent_WRN40_1000=result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        Tangent_WRN40_2000=result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        Tangent_WRN40_5000=result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        Tangent_WRN40_8000=result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        Tangent_WRN40_10000=result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        Tangent_densenet190_1000=result["densenet-bc-L190-k40"]["Tangent Attack"][1000],
-        Tangent_densenet190_2000=result["densenet-bc-L190-k40"]["Tangent Attack"][2000],
-        Tangent_densenet190_5000=result["densenet-bc-L190-k40"]["Tangent Attack"][5000],
-        Tangent_densenet190_8000=result["densenet-bc-L190-k40"]["Tangent Attack"][8000],
-        Tangent_densenet190_10000=result["densenet-bc-L190-k40"]["Tangent Attack"][10000],
-    )
-    )
-
-
-def draw_tables_for_targeted_CIFAR_without_BBA(archs_result):
-    result = archs_result
-    print("""
-                & & Sign-OPT & {SignOPT_pyramidnet272_1000} & {SignOPT_pyramidnet272_2000} & {SignOPT_pyramidnet272_5000} & {SignOPT_pyramidnet272_8000} & {SignOPT_pyramidnet272_10000} \\\\
-                & & SVM-OPT & {SVMOPT_pyramidnet272_1000} & {SVMOPT_pyramidnet272_2000} & {SVMOPT_pyramidnet272_5000} & {SVMOPT_pyramidnet272_8000} & {SVMOPT_pyramidnet272_10000} \\\\
-                & & HopSkipJumpAttack & {HSJA_pyramidnet272_1000} & {HSJA_pyramidnet272_2000} & {HSJA_pyramidnet272_5000} & {HSJA_pyramidnet272_8000} & {HSJA_pyramidnet272_10000} \\\\
-                & & Tangent Attack (ours) & {Tangent_pyramidnet272_1000} & {Tangent_pyramidnet272_2000} & {Tangent_pyramidnet272_5000} & {Tangent_pyramidnet272_8000} & {Tangent_pyramidnet272_10000} \\\\
-                \\cmidrule(rl){{2-12}}
-                & & Sign-OPT & {SignOPT_gdas_1000} & {SignOPT_gdas_2000} & {SignOPT_gdas_5000} & {SignOPT_gdas_8000} & {SignOPT_gdas_10000} \\\\
-                & & SVM-OPT & {SVMOPT_gdas_1000} & {SVMOPT_gdas_2000} & {SVMOPT_gdas_5000} & {SVMOPT_gdas_8000} & {SVMOPT_gdas_10000} \\\\
-                & & HopSkipJumpAttack & {HSJA_gdas_1000} & {HSJA_gdas_2000} & {HSJA_gdas_5000} & {HSJA_gdas_8000} & {HSJA_gdas_10000} \\\\
-                & & Tangent Attack (ours) & {Tangent_gdas_1000} & {Tangent_gdas_2000} & {Tangent_gdas_5000} & {Tangent_gdas_8000} & {Tangent_gdas_10000} \\\\
-                \\cmidrule(rl){{2-12}}
-                & & Sign-OPT & {SignOPT_WRN28_1000} & {SignOPT_WRN28_2000} & {SignOPT_WRN28_5000} & {SignOPT_WRN28_8000} & {SignOPT_WRN28_10000} \\\\
-                & & SVM-OPT & {SVMOPT_WRN28_1000} & {SVMOPT_WRN28_2000} & {SVMOPT_WRN28_5000} & {SVMOPT_WRN28_8000} & {SVMOPT_WRN28_10000} \\\\
-                & & HopSkipJumpAttack & {HSJA_WRN28_1000} & {HSJA_WRN28_2000} & {HSJA_WRN28_5000} & {HSJA_WRN28_8000} & {HSJA_WRN28_10000} \\\\
-                & & Tangent Attack (ours) & {Tangent_WRN28_1000} & {Tangent_WRN28_2000} & {Tangent_WRN28_5000} & {Tangent_WRN28_8000} & {Tangent_WRN28_10000} \\\\
-                \\cmidrule(rl){{2-12}}
-                & & Sign-OPT & {SignOPT_WRN40_1000} & {SignOPT_WRN40_2000} & {SignOPT_WRN40_5000} & {SignOPT_WRN40_8000} & {SignOPT_WRN40_10000} \\\\
-                & & SVM-OPT & {SVMOPT_WRN40_1000} & {SVMOPT_WRN40_2000} & {SVMOPT_WRN40_5000} & {SVMOPT_WRN40_8000} & {SVMOPT_WRN40_10000} \\\\
-                & & HopSkipJumpAttack & {HSJA_WRN40_1000} & {HSJA_WRN40_2000} & {HSJA_WRN40_5000} & {HSJA_WRN40_8000} & {HSJA_WRN40_10000} \\\\
-                & & Tangent Attack (ours) & {Tangent_WRN40_1000} & {Tangent_WRN40_2000} & {Tangent_WRN40_5000} & {Tangent_WRN40_8000} & {Tangent_WRN40_10000} \\\\
-                \\cmidrule(rl){{2-12}}
-                & & Sign-OPT & {SignOPT_densenet190_1000} & {SignOPT_densenet190_2000} & {SignOPT_densenet190_5000} & {SignOPT_densenet190_8000} & {SignOPT_densenet190_10000} \\\\
-                & & SVM-OPT & {SVMOPT_densenet190_1000} & {SVMOPT_densenet190_2000} & {SVMOPT_densenet190_5000} & {SVMOPT_densenet190_8000} & {SVMOPT_densenet190_10000} \\\\
-                & & HopSkipJumpAttack & {HSJA_densenet190_1000} & {HSJA_densenet190_2000} & {HSJA_densenet190_5000} & {HSJA_densenet190_8000} & {HSJA_densenet190_10000} \\\\
-                & & Tangent Attack (ours) & {Tangent_densenet190_1000} & {Tangent_densenet190_2000} & {Tangent_densenet190_5000} & {Tangent_densenet190_8000} & {Tangent_densenet190_10000} \\\\
-                    """.format(
-
-        SignOPT_pyramidnet272_1000=result["pyramidnet272"]["Sign-OPT"][1000],
-        SignOPT_pyramidnet272_2000=result["pyramidnet272"]["Sign-OPT"][2000],
-        SignOPT_pyramidnet272_5000=result["pyramidnet272"]["Sign-OPT"][5000],
-        SignOPT_pyramidnet272_8000=result["pyramidnet272"]["Sign-OPT"][8000],
-        SignOPT_pyramidnet272_10000=result["pyramidnet272"]["Sign-OPT"][10000],
-
-        SignOPT_gdas_1000=result["gdas"]["Sign-OPT"][1000],
-        SignOPT_gdas_2000=result["gdas"]["Sign-OPT"][2000],
-        SignOPT_gdas_5000=result["gdas"]["Sign-OPT"][5000],
-        SignOPT_gdas_8000=result["gdas"]["Sign-OPT"][8000],
-        SignOPT_gdas_10000=result["gdas"]["Sign-OPT"][10000],
-
-        SignOPT_WRN28_1000=result["WRN-28-10-drop"]["Sign-OPT"][1000],
-        SignOPT_WRN28_2000=result["WRN-28-10-drop"]["Sign-OPT"][2000],
-        SignOPT_WRN28_5000=result["WRN-28-10-drop"]["Sign-OPT"][5000],
-        SignOPT_WRN28_8000=result["WRN-28-10-drop"]["Sign-OPT"][8000],
-        SignOPT_WRN28_10000=result["WRN-28-10-drop"]["Sign-OPT"][10000],
-
-        SignOPT_WRN40_1000=result["WRN-40-10-drop"]["Sign-OPT"][1000],
-        SignOPT_WRN40_2000=result["WRN-40-10-drop"]["Sign-OPT"][2000],
-        SignOPT_WRN40_5000=result["WRN-40-10-drop"]["Sign-OPT"][5000],
-        SignOPT_WRN40_8000=result["WRN-40-10-drop"]["Sign-OPT"][8000],
-        SignOPT_WRN40_10000=result["WRN-40-10-drop"]["Sign-OPT"][10000],
-
-        SignOPT_densenet190_1000=result["densenet-bc-L190-k40"]["Sign-OPT"][1000],
-        SignOPT_densenet190_2000=result["densenet-bc-L190-k40"]["Sign-OPT"][2000],
-        SignOPT_densenet190_5000=result["densenet-bc-L190-k40"]["Sign-OPT"][5000],
-        SignOPT_densenet190_8000=result["densenet-bc-L190-k40"]["Sign-OPT"][8000],
-        SignOPT_densenet190_10000=result["densenet-bc-L190-k40"]["Sign-OPT"][10000],
-
-        SVMOPT_pyramidnet272_1000=result["pyramidnet272"]["SVM-OPT"][1000],
-        SVMOPT_pyramidnet272_2000=result["pyramidnet272"]["SVM-OPT"][2000],
-        SVMOPT_pyramidnet272_5000=result["pyramidnet272"]["SVM-OPT"][5000],
-        SVMOPT_pyramidnet272_8000=result["pyramidnet272"]["SVM-OPT"][8000],
-        SVMOPT_pyramidnet272_10000=result["pyramidnet272"]["SVM-OPT"][10000],
-
-        SVMOPT_gdas_1000=result["gdas"]["SVM-OPT"][1000],
-        SVMOPT_gdas_2000=result["gdas"]["SVM-OPT"][2000],
-        SVMOPT_gdas_5000=result["gdas"]["SVM-OPT"][5000],
-        SVMOPT_gdas_8000=result["gdas"]["SVM-OPT"][8000],
-        SVMOPT_gdas_10000=result["gdas"]["SVM-OPT"][10000],
-
-        SVMOPT_WRN28_1000=result["WRN-28-10-drop"]["SVM-OPT"][1000],
-        SVMOPT_WRN28_2000=result["WRN-28-10-drop"]["SVM-OPT"][2000],
-        SVMOPT_WRN28_5000=result["WRN-28-10-drop"]["SVM-OPT"][5000],
-        SVMOPT_WRN28_8000=result["WRN-28-10-drop"]["SVM-OPT"][8000],
-        SVMOPT_WRN28_10000=result["WRN-28-10-drop"]["SVM-OPT"][10000],
-
-        SVMOPT_WRN40_1000=result["WRN-40-10-drop"]["SVM-OPT"][1000],
-        SVMOPT_WRN40_2000=result["WRN-40-10-drop"]["SVM-OPT"][2000],
-        SVMOPT_WRN40_5000=result["WRN-40-10-drop"]["SVM-OPT"][5000],
-        SVMOPT_WRN40_8000=result["WRN-40-10-drop"]["SVM-OPT"][8000],
-        SVMOPT_WRN40_10000=result["WRN-40-10-drop"]["SVM-OPT"][10000],
-
-        SVMOPT_densenet190_1000=result["densenet-bc-L190-k40"]["SVM-OPT"][1000],
-        SVMOPT_densenet190_2000=result["densenet-bc-L190-k40"]["SVM-OPT"][2000],
-        SVMOPT_densenet190_5000=result["densenet-bc-L190-k40"]["SVM-OPT"][5000],
-        SVMOPT_densenet190_8000=result["densenet-bc-L190-k40"]["SVM-OPT"][8000],
-        SVMOPT_densenet190_10000=result["densenet-bc-L190-k40"]["SVM-OPT"][10000],
-
-        HSJA_pyramidnet272_1000=result["pyramidnet272"]["HopSkipJumpAttack"][1000],
-        HSJA_pyramidnet272_2000=result["pyramidnet272"]["HopSkipJumpAttack"][2000],
-        HSJA_pyramidnet272_5000=result["pyramidnet272"]["HopSkipJumpAttack"][5000],
-        HSJA_pyramidnet272_8000=result["pyramidnet272"]["HopSkipJumpAttack"][8000],
-        HSJA_pyramidnet272_10000=result["pyramidnet272"]["HopSkipJumpAttack"][10000],
-
-        HSJA_gdas_1000=result["gdas"]["HopSkipJumpAttack"][1000],
-        HSJA_gdas_2000=result["gdas"]["HopSkipJumpAttack"][2000],
-        HSJA_gdas_5000=result["gdas"]["HopSkipJumpAttack"][5000],
-        HSJA_gdas_8000=result["gdas"]["HopSkipJumpAttack"][8000],
-        HSJA_gdas_10000=result["gdas"]["HopSkipJumpAttack"][10000],
-
-        HSJA_WRN28_1000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][1000],
-        HSJA_WRN28_2000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][2000],
-        HSJA_WRN28_5000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][5000],
-        HSJA_WRN28_8000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][8000],
-        HSJA_WRN28_10000=result["WRN-28-10-drop"]["HopSkipJumpAttack"][10000],
-
-        HSJA_WRN40_1000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][1000],
-        HSJA_WRN40_2000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][2000],
-        HSJA_WRN40_5000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][5000],
-        HSJA_WRN40_8000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][8000],
-        HSJA_WRN40_10000=result["WRN-40-10-drop"]["HopSkipJumpAttack"][10000],
-
-        HSJA_densenet190_1000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][1000],
-        HSJA_densenet190_2000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][2000],
-        HSJA_densenet190_5000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][5000],
-        HSJA_densenet190_8000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][8000],
-        HSJA_densenet190_10000=result["densenet-bc-L190-k40"]["HopSkipJumpAttack"][10000],
-
-        Tangent_pyramidnet272_1000=result["pyramidnet272"]["Tangent Attack"][1000],
-        Tangent_pyramidnet272_2000=result["pyramidnet272"]["Tangent Attack"][2000],
-        Tangent_pyramidnet272_5000=result["pyramidnet272"]["Tangent Attack"][5000],
-        Tangent_pyramidnet272_8000=result["pyramidnet272"]["Tangent Attack"][8000],
-        Tangent_pyramidnet272_10000=result["pyramidnet272"]["Tangent Attack"][10000],
-
-        Tangent_gdas_1000=result["gdas"]["Tangent Attack"][1000],
-        Tangent_gdas_2000=result["gdas"]["Tangent Attack"][2000],
-        Tangent_gdas_5000=result["gdas"]["Tangent Attack"][5000],
-        Tangent_gdas_8000=result["gdas"]["Tangent Attack"][8000],
-        Tangent_gdas_10000=result["gdas"]["Tangent Attack"][10000],
-
-        Tangent_WRN28_1000=result["WRN-28-10-drop"]["Tangent Attack"][1000],
-        Tangent_WRN28_2000=result["WRN-28-10-drop"]["Tangent Attack"][2000],
-        Tangent_WRN28_5000=result["WRN-28-10-drop"]["Tangent Attack"][5000],
-        Tangent_WRN28_8000=result["WRN-28-10-drop"]["Tangent Attack"][8000],
-        Tangent_WRN28_10000=result["WRN-28-10-drop"]["Tangent Attack"][10000],
-
-        Tangent_WRN40_1000=result["WRN-40-10-drop"]["Tangent Attack"][1000],
-        Tangent_WRN40_2000=result["WRN-40-10-drop"]["Tangent Attack"][2000],
-        Tangent_WRN40_5000=result["WRN-40-10-drop"]["Tangent Attack"][5000],
-        Tangent_WRN40_8000=result["WRN-40-10-drop"]["Tangent Attack"][8000],
-        Tangent_WRN40_10000=result["WRN-40-10-drop"]["Tangent Attack"][10000],
-
-        Tangent_densenet190_1000=result["densenet-bc-L190-k40"]["Tangent Attack"][1000],
-        Tangent_densenet190_2000=result["densenet-bc-L190-k40"]["Tangent Attack"][2000],
-        Tangent_densenet190_5000=result["densenet-bc-L190-k40"]["Tangent Attack"][5000],
-        Tangent_densenet190_8000=result["densenet-bc-L190-k40"]["Tangent Attack"][8000],
-        Tangent_densenet190_10000=result["densenet-bc-L190-k40"]["Tangent Attack"][10000],
-    )
-    )
-
-
-def draw_tables_for_ImageNet_untargeted(archs_result):
-    result = archs_result
-    print("""
-            & \\multirow{{5}}{{*}}{{Inception-v3}} & Biased Boundary Attack & {BBA_inceptionv3_300} & {BBA_inceptionv3_500} & {BBA_inceptionv3_1000} & {BBA_inceptionv3_5000} & {BBA_inceptionv3_10000} & - & - & - & - \\\\
-            & & Sign-OPT & {SignOPT_inceptionv3_300} & {SignOPT_inceptionv3_500} & {SignOPT_inceptionv3_1000} & {SignOPT_inceptionv3_5000} & {SignOPT_inceptionv3_10000} & - & - & - & - \\\\
-            & & SVM-OPT & {SVMOPT_inceptionv3_300} & {SVMOPT_inceptionv3_500} & {SVMOPT_inceptionv3_1000} & {SVMOPT_inceptionv3_5000} & {SVMOPT_inceptionv3_10000} & - & - & - & - \\\\
-            & & GeoDA & {GeoDA_inceptionv3_300} & {GeoDA_inceptionv3_500} & {GeoDA_inceptionv3_1000} & {GeoDA_inceptionv3_5000} & {GeoDA_inceptionv3_10000} & - & - & - & - \\\\
-            & & RayS & {RayS_inceptionv3_300} & {RayS_inceptionv3_500} & {RayS_inceptionv3_1000} & {RayS_inceptionv3_5000} & {RayS_inceptionv3_10000} & - & - & - & - \\\\
-            & & HopSkipJumpAttack & {HSJA_inceptionv3_300} & {HSJA_inceptionv3_500} & {HSJA_inceptionv3_1000} & {HSJA_inceptionv3_5000} & {HSJA_inceptionv3_10000} & - & - & - & - \\\\
-            & & Tangent Attack (ours) & {Tangent_inceptionv3_300} & {Tangent_inceptionv3_500} & {Tangent_inceptionv3_1000} & {Tangent_inceptionv3_5000} & {Tangent_inceptionv3_10000} & - & - & - & - \\\\
-            \\cmidrule(rl){{2-12}}
-            & \\multirow{{5}}{{*}}{{Inception-v4}} & Biased Boundary Attack & {BBA_inceptionv4_300} & {BBA_inceptionv4_500} & {BBA_inceptionv4_1000} & {BBA_inceptionv4_5000} & {BBA_inceptionv4_10000} & - & - & - & - \\\\
-            & & Sign-OPT & {SignOPT_inceptionv4_300} & {SignOPT_inceptionv4_500} & {SignOPT_inceptionv4_1000} & {SignOPT_inceptionv4_5000} & {SignOPT_inceptionv4_10000} & - & - & - & - \\\\
-            & & SVM-OPT & {SVMOPT_inceptionv4_300} & {SVMOPT_inceptionv4_500} & {SVMOPT_inceptionv4_1000} & {SVMOPT_inceptionv4_5000} & {SVMOPT_inceptionv4_10000} & - & - & - & - \\\\
-            & & GeoDA & {GeoDA_inceptionv4_300} & {GeoDA_inceptionv4_500} & {GeoDA_inceptionv4_1000} & {GeoDA_inceptionv4_5000} & {GeoDA_inceptionv4_10000} & - & - & - & - \\\\
-            & & RayS & {RayS_inceptionv4_300} & {RayS_inceptionv4_500} & {RayS_inceptionv4_1000} & {RayS_inceptionv4_5000} & {RayS_inceptionv4_10000} & - & - & - & - \\\\
-            & & HopSkipJumpAttack & {HSJA_inceptionv4_300} & {HSJA_inceptionv4_500} & {HSJA_inceptionv4_1000} & {HSJA_inceptionv4_5000} & {HSJA_inceptionv4_10000} & - & - & - & - \\\\
-            & & Tangent Attack (ours) & {Tangent_inceptionv4_300} & {Tangent_inceptionv4_500} & {Tangent_inceptionv4_1000} & {Tangent_inceptionv4_5000} & {Tangent_inceptionv4_10000} & - & - & - & - \\\\
-            \\cmidrule(rl){{2-12}}
-            & \\multirow{{5}}{{*}}{{SENet-154}} & Biased Boundary Attack & {BBA_senet154_300} & {BBA_senet154_500} & {BBA_senet154_1000} & {BBA_senet154_5000} & {BBA_senet154_10000} & - & - & - & - \\\\
-            & & Sign-OPT & {SignOPT_senet154_300} & {SignOPT_senet154_500} & {SignOPT_senet154_1000} & {SignOPT_senet154_5000} & {SignOPT_senet154_10000} & - & - & - & - \\\\
-            & & SVM-OPT & {SVMOPT_senet154_300} & {SVMOPT_senet154_500} & {SVMOPT_senet154_1000} & {SVMOPT_senet154_5000} & {SVMOPT_senet154_10000} & - & - & - & - \\\\
-            & & GeoDA & {GeoDA_senet154_300} & {GeoDA_senet154_500} & {GeoDA_senet154_1000} & {GeoDA_senet154_5000} & {GeoDA_senet154_10000} & - & - & - & - \\\\
-            & & RayS & {RayS_senet154_300} & {RayS_senet154_500} & {RayS_senet154_1000} & {RayS_senet154_5000} & {RayS_senet154_10000} & - & - & - & - \\\\
-            & & HopSkipJumpAttack & {HSJA_senet154_300} & {HSJA_senet154_500} & {HSJA_senet154_1000} & {HSJA_senet154_5000} & {HSJA_senet154_10000} & - & - & - & - \\\\
-            & & Tangent Attack (ours) & {Tangent_senet154_300} & {Tangent_senet154_500} & {Tangent_senet154_1000} & {Tangent_senet154_5000} & {Tangent_senet154_10000} & - & - & - & - \\\\
-            \\cmidrule(rl){{2-12}}
-            & \\multirow{{5}}{{*}}{{ResNet-101}} & Biased Boundary Attack & {BBA_resnet101_300} & {BBA_resnet101_500} & {BBA_resnet101_1000} & {BBA_resnet101_5000} & {BBA_resnet101_10000} & - & - & - & - \\\\
-            & & Sign-OPT & {SignOPT_resnet101_300} & {SignOPT_resnet101_500} & {SignOPT_resnet101_1000} & {SignOPT_resnet101_5000} & {SignOPT_resnet101_10000} & - & - & - & - \\\\
-            & & SVM-OPT & {SVMOPT_resnet101_300} & {SVMOPT_resnet101_500} & {SVMOPT_resnet101_1000} & {SVMOPT_resnet101_5000} & {SVMOPT_resnet101_10000} & - & - & - & - \\\\
-            & & GeoDA & {GeoDA_resnet101_300} & {GeoDA_resnet101_500} & {GeoDA_resnet101_1000} & {GeoDA_resnet101_5000} & {GeoDA_resnet101_10000} & - & - & - & - \\\\
-            & & RayS & {RayS_resnet101_300} & {RayS_resnet101_500} & {RayS_resnet101_1000} & {RayS_resnet101_5000} & {RayS_resnet101_10000} & - & - & - & - \\\\
-            & & HopSkipJumpAttack & {HSJA_resnet101_300} & {HSJA_resnet101_500} & {HSJA_resnet101_1000} & {HSJA_resnet101_5000} & {HSJA_resnet101_10000} & - & - & - & - \\\\
-            & & Tangent Attack (ours) & {Tangent_resnet101_300} & {Tangent_resnet101_500} & {Tangent_resnet101_1000} & {Tangent_resnet101_5000} & {Tangent_resnet101_10000} & - & - & - & - \\\\
-            \\cmidrule(rl){{2-12}}
-            & \\multirow{{5}}{{*}}{{ResNeXt-101}} & Biased Boundary Attack & {BBA_resnext101_300} & {BBA_resnext101_500} & {BBA_resnext101_1000} & {BBA_resnext101_5000} & {BBA_resnext101_10000} & - & - & - & - \\\\
-            & & Sign-OPT & {SignOPT_resnext101_300} & {SignOPT_resnext101_500} & {SignOPT_resnext101_1000} & {SignOPT_resnext101_5000} & {SignOPT_resnext101_10000} & - & - & - & - \\\\
-            & & SVM-OPT & {SVMOPT_resnext101_300} & {SVMOPT_resnext101_500} & {SVMOPT_resnext101_1000} & {SVMOPT_resnext101_5000} & {SVMOPT_resnext101_10000} & - & - & - & - \\\\
-            & & GeoDA & {GeoDA_resnext101_300} & {GeoDA_resnext101_500} & {GeoDA_resnext101_1000} & {GeoDA_resnext101_5000} & {GeoDA_resnext101_10000} & - & - & - & - \\\\
-            & & RayS & {RayS_resnext101_300} & {RayS_resnext101_500} & {RayS_resnext101_1000} & {RayS_resnext101_5000} & {RayS_resnext101_10000} & - & - & - & - \\\\
-            & & HopSkipJumpAttack & {HSJA_resnext101_300} & {HSJA_resnext101_500} & {HSJA_resnext101_1000} & {HSJA_resnext101_5000} & {HSJA_resnext101_10000} & - & - & - & - \\\\
-            & & Tangent Attack (ours) & {Tangent_resnext101_300} & {Tangent_resnext101_500} & {Tangent_resnext101_1000} & {Tangent_resnext101_5000} & {Tangent_resnext101_10000} & - & - & - & - \\\\
+                & Sign-OPT \\cite{{cheng2019sign}}& no prior & {SignOPT_1000_victim_model_1} & {SignOPT_2000_victim_model_1} & {SignOPT_5000_victim_model_1} & {SignOPT_8000_victim_model_1} & {SignOPT_10000_victim_model_1}  & {SignOPT_1000_victim_model_2} & {SignOPT_2000_victim_model_2} & {SignOPT_5000_victim_model_2} & {SignOPT_8000_victim_model_2} & {SignOPT_10000_victim_model_2} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}}} & 1 prior & {PriorSignOPT_1prior_1000_victim_model_1} & {PriorSignOPT_1prior_2000_victim_model_1} & {PriorSignOPT_1prior_5000_victim_model_1} & {PriorSignOPT_1prior_8000_victim_model_1} & {PriorSignOPT_1prior_10000_victim_model_1}  & {PriorSignOPT_1prior_1000_victim_model_2} & {PriorSignOPT_1prior_2000_victim_model_2} & {PriorSignOPT_1prior_5000_victim_model_2} & {PriorSignOPT_1prior_8000_victim_model_2} & {PriorSignOPT_1prior_10000_victim_model_2} \\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & 2 priors  & {PriorSignOPT_2prior_1000_victim_model_1} & {PriorSignOPT_2prior_2000_victim_model_1} & {PriorSignOPT_2prior_5000_victim_model_1} & {PriorSignOPT_2prior_8000_victim_model_1} & {PriorSignOPT_2prior_10000_victim_model_1}  & {PriorSignOPT_2prior_1000_victim_model_2} & {PriorSignOPT_2prior_2000_victim_model_2} & {PriorSignOPT_2prior_5000_victim_model_2} & {PriorSignOPT_2prior_8000_victim_model_2} & {PriorSignOPT_2prior_10000_victim_model_2} \\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}}} & 3 priors & {PriorSignOPT_3prior_1000_victim_model_1} & {PriorSignOPT_3prior_2000_victim_model_1} & {PriorSignOPT_3prior_5000_victim_model_1} & {PriorSignOPT_3prior_8000_victim_model_1} & {PriorSignOPT_3prior_10000_victim_model_1}  & {PriorSignOPT_3prior_1000_victim_model_2} & {PriorSignOPT_3prior_2000_victim_model_2} & {PriorSignOPT_3prior_5000_victim_model_2} & {PriorSignOPT_3prior_8000_victim_model_2} & {PriorSignOPT_3prior_10000_victim_model_2} \\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}}} & 4 priors & {PriorSignOPT_4prior_1000_victim_model_1} & {PriorSignOPT_4prior_2000_victim_model_1} & {PriorSignOPT_4prior_5000_victim_model_1} & {PriorSignOPT_4prior_8000_victim_model_1} & {PriorSignOPT_4prior_10000_victim_model_1}  & {PriorSignOPT_4prior_1000_victim_model_2} & {PriorSignOPT_4prior_2000_victim_model_2} & {PriorSignOPT_4prior_5000_victim_model_2} & {PriorSignOPT_4prior_8000_victim_model_2} & {PriorSignOPT_4prior_10000_victim_model_2} \\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}\&{surrogate_5}}} & 5 priors & {PriorSignOPT_5prior_1000_victim_model_1} & {PriorSignOPT_5prior_2000_victim_model_1} & {PriorSignOPT_5prior_5000_victim_model_1} & {PriorSignOPT_5prior_8000_victim_model_1} & {PriorSignOPT_5prior_10000_victim_model_1}  & {PriorSignOPT_5prior_1000_victim_model_2} & {PriorSignOPT_5prior_2000_victim_model_2} & {PriorSignOPT_5prior_5000_victim_model_2} & {PriorSignOPT_5prior_8000_victim_model_2} & {PriorSignOPT_5prior_10000_victim_model_2} \\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}}} & 1 prior & {PriorOPT_1prior_1000_victim_model_1} & {PriorOPT_1prior_2000_victim_model_1} & {PriorOPT_1prior_5000_victim_model_1} & {PriorOPT_1prior_8000_victim_model_1} & {PriorOPT_1prior_10000_victim_model_1}  & {PriorOPT_1prior_1000_victim_model_2} & {PriorOPT_1prior_2000_victim_model_2} & {PriorOPT_1prior_5000_victim_model_2} & {PriorOPT_1prior_8000_victim_model_2} & {PriorOPT_1prior_10000_victim_model_2}\\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & 2 priors & {PriorOPT_2prior_1000_victim_model_1} & {PriorOPT_2prior_2000_victim_model_1} & {PriorOPT_2prior_5000_victim_model_1} & {PriorOPT_2prior_8000_victim_model_1} & {PriorOPT_2prior_10000_victim_model_1}  & {PriorOPT_2prior_1000_victim_model_2} & {PriorOPT_2prior_2000_victim_model_2} & {PriorOPT_2prior_5000_victim_model_2} & {PriorOPT_2prior_8000_victim_model_2} & {PriorOPT_2prior_10000_victim_model_2} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}}} & 3 priors & {PriorOPT_3prior_1000_victim_model_1} & {PriorOPT_3prior_2000_victim_model_1} & {PriorOPT_3prior_5000_victim_model_1} & {PriorOPT_3prior_8000_victim_model_1} & {PriorOPT_3prior_10000_victim_model_1}  & {PriorOPT_3prior_1000_victim_model_2} & {PriorOPT_3prior_2000_victim_model_2} & {PriorOPT_3prior_5000_victim_model_2} & {PriorOPT_3prior_8000_victim_model_2} & {PriorOPT_3prior_10000_victim_model_2} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}}} & 4 priors & {PriorOPT_4prior_1000_victim_model_1} & {PriorOPT_4prior_2000_victim_model_1} & {PriorOPT_4prior_5000_victim_model_1} & {PriorOPT_4prior_8000_victim_model_1} & {PriorOPT_4prior_10000_victim_model_1}  & {PriorOPT_4prior_1000_victim_model_2} & {PriorOPT_4prior_2000_victim_model_2} & {PriorOPT_4prior_5000_victim_model_2} & {PriorOPT_4prior_8000_victim_model_2} & {PriorOPT_4prior_10000_victim_model_2} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}\&{surrogate_5}}} & 5 priors & {PriorOPT_5prior_1000_victim_model_1} & {PriorOPT_5prior_2000_victim_model_1} & {PriorOPT_5prior_5000_victim_model_1} & {PriorOPT_5prior_8000_victim_model_1} & {PriorOPT_5prior_10000_victim_model_1}  & {PriorOPT_5prior_1000_victim_model_2} & {PriorOPT_5prior_2000_victim_model_2} & {PriorOPT_5prior_5000_victim_model_2} & {PriorOPT_5prior_8000_victim_model_2} & {PriorOPT_5prior_10000_victim_model_2} \\\\
                 """.format(
-        BBA_inceptionv3_300=result["inceptionv3"]["Biased Boundary Attack"][300],
-        BBA_inceptionv3_500=result["inceptionv3"]["Biased Boundary Attack"][500],
-        BBA_inceptionv3_1000=result["inceptionv3"]["Biased Boundary Attack"][1000],
-        BBA_inceptionv3_5000=result["inceptionv3"]["Biased Boundary Attack"][5000],
-        BBA_inceptionv3_10000=result["inceptionv3"]["Biased Boundary Attack"][10000],
+        surrogate_1=surrogate_1,
+        surrogate_2=surrogate_2,
+        surrogate_3=surrogate_3,
+        surrogate_4=surrogate_4,
+        surrogate_5=surrogate_5,
 
-        BBA_inceptionv4_300=result["inceptionv4"]["Biased Boundary Attack"][300],
-        BBA_inceptionv4_500=result["inceptionv4"]["Biased Boundary Attack"][500],
-        BBA_inceptionv4_1000=result["inceptionv4"]["Biased Boundary Attack"][1000],
-        BBA_inceptionv4_5000=result["inceptionv4"]["Biased Boundary Attack"][5000],
-        BBA_inceptionv4_10000=result["inceptionv4"]["Biased Boundary Attack"][10000],
+        SignOPT_1000_victim_model_1=result[False]["Sign-OPT"][1000],
+        SignOPT_2000_victim_model_1=result[False]["Sign-OPT"][2000],
+        SignOPT_5000_victim_model_1=result[False]["Sign-OPT"][5000],
+        SignOPT_8000_victim_model_1=result[False]["Sign-OPT"][8000],
+        SignOPT_10000_victim_model_1=result[False]["Sign-OPT"][10000],
 
-        BBA_senet154_300=result["senet154"]["Biased Boundary Attack"][300],
-        BBA_senet154_500=result["senet154"]["Biased Boundary Attack"][500],
-        BBA_senet154_1000=result["senet154"]["Biased Boundary Attack"][1000],
-        BBA_senet154_5000=result["senet154"]["Biased Boundary Attack"][5000],
-        BBA_senet154_10000=result["senet154"]["Biased Boundary Attack"][10000],
 
-        BBA_resnet101_300=result["resnet101"]["Biased Boundary Attack"][300],
-        BBA_resnet101_500=result["resnet101"]["Biased Boundary Attack"][500],
-        BBA_resnet101_1000=result["resnet101"]["Biased Boundary Attack"][1000],
-        BBA_resnet101_5000=result["resnet101"]["Biased Boundary Attack"][5000],
-        BBA_resnet101_10000=result["resnet101"]["Biased Boundary Attack"][10000],
+        PriorSignOPT_1prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][1000],
+        PriorSignOPT_1prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][2000],
+        PriorSignOPT_1prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][5000],
+        PriorSignOPT_1prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][8000],
+        PriorSignOPT_1prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][10000],
 
-        BBA_resnext101_300=result["resnext101_64x4d"]["Biased Boundary Attack"][300],
-        BBA_resnext101_500=result["resnext101_64x4d"]["Biased Boundary Attack"][500],
-        BBA_resnext101_1000=result["resnext101_64x4d"]["Biased Boundary Attack"][1000],
-        BBA_resnext101_5000=result["resnext101_64x4d"]["Biased Boundary Attack"][5000],
-        BBA_resnext101_10000=result["resnext101_64x4d"]["Biased Boundary Attack"][10000],
+        PriorSignOPT_2prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][1000],
+        PriorSignOPT_2prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][2000],
+        PriorSignOPT_2prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][5000],
+        PriorSignOPT_2prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][8000],
+        PriorSignOPT_2prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][10000],
 
-        SignOPT_inceptionv3_300=result["inceptionv3"]["Sign-OPT"][300],
-        SignOPT_inceptionv3_500=result["inceptionv3"]["Sign-OPT"][500],
-        SignOPT_inceptionv3_1000=result["inceptionv3"]["Sign-OPT"][1000],
-        SignOPT_inceptionv3_5000=result["inceptionv3"]["Sign-OPT"][5000],
-        SignOPT_inceptionv3_10000=result["inceptionv3"]["Sign-OPT"][10000],
+        PriorSignOPT_3prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][1000],
+        PriorSignOPT_3prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][2000],
+        PriorSignOPT_3prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][5000],
+        PriorSignOPT_3prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][8000],
+        PriorSignOPT_3prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][10000],
 
-        SignOPT_inceptionv4_300=result["inceptionv4"]["Sign-OPT"][300],
-        SignOPT_inceptionv4_500=result["inceptionv4"]["Sign-OPT"][500],
-        SignOPT_inceptionv4_1000=result["inceptionv4"]["Sign-OPT"][1000],
-        SignOPT_inceptionv4_5000=result["inceptionv4"]["Sign-OPT"][5000],
-        SignOPT_inceptionv4_10000=result["inceptionv4"]["Sign-OPT"][10000],
+        PriorSignOPT_4prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][1000],
+        PriorSignOPT_4prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][2000],
+        PriorSignOPT_4prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][5000],
+        PriorSignOPT_4prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][8000],
+        PriorSignOPT_4prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][10000],
 
-        SignOPT_senet154_300=result["senet154"]["Sign-OPT"][300],
-        SignOPT_senet154_500=result["senet154"]["Sign-OPT"][500],
-        SignOPT_senet154_1000=result["senet154"]["Sign-OPT"][1000],
-        SignOPT_senet154_5000=result["senet154"]["Sign-OPT"][5000],
-        SignOPT_senet154_10000=result["senet154"]["Sign-OPT"][10000],
+        PriorSignOPT_5prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][1000],
+        PriorSignOPT_5prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][2000],
+        PriorSignOPT_5prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][5000],
+        PriorSignOPT_5prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][8000],
+        PriorSignOPT_5prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][10000],
 
-        SignOPT_resnet101_300=result["resnet101"]["Sign-OPT"][300],
-        SignOPT_resnet101_500=result["resnet101"]["Sign-OPT"][500],
-        SignOPT_resnet101_1000=result["resnet101"]["Sign-OPT"][1000],
-        SignOPT_resnet101_5000=result["resnet101"]["Sign-OPT"][5000],
-        SignOPT_resnet101_10000=result["resnet101"]["Sign-OPT"][10000],
+        PriorOPT_1prior_1000_victim_model_1=result[False]["Prior-OPT-1prior"][1000],
+        PriorOPT_1prior_2000_victim_model_1=result[False]["Prior-OPT-1prior"][2000],
+        PriorOPT_1prior_5000_victim_model_1=result[False]["Prior-OPT-1prior"][5000],
+        PriorOPT_1prior_8000_victim_model_1=result[False]["Prior-OPT-1prior"][8000],
+        PriorOPT_1prior_10000_victim_model_1=result[False]["Prior-OPT-1prior"][10000],
 
-        SignOPT_resnext101_300=result["resnext101_64x4d"]["Sign-OPT"][300],
-        SignOPT_resnext101_500=result["resnext101_64x4d"]["Sign-OPT"][500],
-        SignOPT_resnext101_1000=result["resnext101_64x4d"]["Sign-OPT"][1000],
-        SignOPT_resnext101_5000=result["resnext101_64x4d"]["Sign-OPT"][5000],
-        SignOPT_resnext101_10000=result["resnext101_64x4d"]["Sign-OPT"][10000],
+        PriorOPT_2prior_1000_victim_model_1=result[False]["Prior-OPT-2prior"][1000],
+        PriorOPT_2prior_2000_victim_model_1=result[False]["Prior-OPT-2prior"][2000],
+        PriorOPT_2prior_5000_victim_model_1=result[False]["Prior-OPT-2prior"][5000],
+        PriorOPT_2prior_8000_victim_model_1=result[False]["Prior-OPT-2prior"][8000],
+        PriorOPT_2prior_10000_victim_model_1=result[False]["Prior-OPT-2prior"][10000],
 
-        SVMOPT_inceptionv3_300=result["inceptionv3"]["SVM-OPT"][300],
-        SVMOPT_inceptionv3_500=result["inceptionv3"]["SVM-OPT"][500],
-        SVMOPT_inceptionv3_1000=result["inceptionv3"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv3_5000=result["inceptionv3"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv3_10000=result["inceptionv3"]["SVM-OPT"][10000],
+        PriorOPT_3prior_1000_victim_model_1=result[False]["Prior-OPT-3prior"][1000],
+        PriorOPT_3prior_2000_victim_model_1=result[False]["Prior-OPT-3prior"][2000],
+        PriorOPT_3prior_5000_victim_model_1=result[False]["Prior-OPT-3prior"][5000],
+        PriorOPT_3prior_8000_victim_model_1=result[False]["Prior-OPT-3prior"][8000],
+        PriorOPT_3prior_10000_victim_model_1=result[False]["Prior-OPT-3prior"][10000],
 
-        SVMOPT_inceptionv4_300=result["inceptionv4"]["SVM-OPT"][300],
-        SVMOPT_inceptionv4_500=result["inceptionv4"]["SVM-OPT"][500],
-        SVMOPT_inceptionv4_1000=result["inceptionv4"]["SVM-OPT"][1000],
-        SVMOPT_inceptionv4_5000=result["inceptionv4"]["SVM-OPT"][5000],
-        SVMOPT_inceptionv4_10000=result["inceptionv4"]["SVM-OPT"][10000],
+        PriorOPT_4prior_1000_victim_model_1=result[False]["Prior-OPT-4prior"][1000],
+        PriorOPT_4prior_2000_victim_model_1=result[False]["Prior-OPT-4prior"][2000],
+        PriorOPT_4prior_5000_victim_model_1=result[False]["Prior-OPT-4prior"][5000],
+        PriorOPT_4prior_8000_victim_model_1=result[False]["Prior-OPT-4prior"][8000],
+        PriorOPT_4prior_10000_victim_model_1=result[False]["Prior-OPT-4prior"][10000],
 
-        SVMOPT_senet154_300=result["senet154"]["SVM-OPT"][300],
-        SVMOPT_senet154_500=result["senet154"]["SVM-OPT"][500],
-        SVMOPT_senet154_1000=result["senet154"]["SVM-OPT"][1000],
-        SVMOPT_senet154_5000=result["senet154"]["SVM-OPT"][5000],
-        SVMOPT_senet154_10000=result["senet154"]["SVM-OPT"][10000],
+        PriorOPT_5prior_1000_victim_model_1=result[False]["Prior-OPT-5prior"][1000],
+        PriorOPT_5prior_2000_victim_model_1=result[False]["Prior-OPT-5prior"][2000],
+        PriorOPT_5prior_5000_victim_model_1=result[False]["Prior-OPT-5prior"][5000],
+        PriorOPT_5prior_8000_victim_model_1=result[False]["Prior-OPT-5prior"][8000],
+        PriorOPT_5prior_10000_victim_model_1=result[False]["Prior-OPT-5prior"][10000],
 
-        SVMOPT_resnet101_300=result["resnet101"]["SVM-OPT"][300],
-        SVMOPT_resnet101_500=result["resnet101"]["SVM-OPT"][500],
-        SVMOPT_resnet101_1000=result["resnet101"]["SVM-OPT"][1000],
-        SVMOPT_resnet101_5000=result["resnet101"]["SVM-OPT"][5000],
-        SVMOPT_resnet101_10000=result["resnet101"]["SVM-OPT"][10000],
 
-        SVMOPT_resnext101_300=result["resnext101_64x4d"]["SVM-OPT"][300],
-        SVMOPT_resnext101_500=result["resnext101_64x4d"]["SVM-OPT"][500],
-        SVMOPT_resnext101_1000=result["resnext101_64x4d"]["SVM-OPT"][1000],
-        SVMOPT_resnext101_5000=result["resnext101_64x4d"]["SVM-OPT"][5000],
-        SVMOPT_resnext101_10000=result["resnext101_64x4d"]["SVM-OPT"][10000],
+        SignOPT_1000_victim_model_2=result[True]["Sign-OPT"][1000],
+        SignOPT_2000_victim_model_2=result[True]["Sign-OPT"][2000],
+        SignOPT_5000_victim_model_2=result[True]["Sign-OPT"][5000],
+        SignOPT_8000_victim_model_2=result[True]["Sign-OPT"][8000],
+        SignOPT_10000_victim_model_2=result[True]["Sign-OPT"][10000],
 
-        GeoDA_inceptionv3_300=result["inceptionv3"]["GeoDA"][300],
-        GeoDA_inceptionv3_500=result["inceptionv3"]["GeoDA"][500],
-        GeoDA_inceptionv3_1000=result["inceptionv3"]["GeoDA"][1000],
-        GeoDA_inceptionv3_5000=result["inceptionv3"]["GeoDA"][5000],
-        GeoDA_inceptionv3_10000=result["inceptionv3"]["GeoDA"][10000],
 
-        GeoDA_inceptionv4_300=result["inceptionv4"]["GeoDA"][300],
-        GeoDA_inceptionv4_500=result["inceptionv4"]["GeoDA"][500],
-        GeoDA_inceptionv4_1000=result["inceptionv4"]["GeoDA"][1000],
-        GeoDA_inceptionv4_5000=result["inceptionv4"]["GeoDA"][5000],
-        GeoDA_inceptionv4_10000=result["inceptionv4"]["GeoDA"][10000],
+        PriorSignOPT_1prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][1000],
+        PriorSignOPT_1prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][2000],
+        PriorSignOPT_1prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][5000],
+        PriorSignOPT_1prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][8000],
+        PriorSignOPT_1prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][10000],
 
-        GeoDA_senet154_300=result["senet154"]["GeoDA"][300],
-        GeoDA_senet154_500=result["senet154"]["GeoDA"][500],
-        GeoDA_senet154_1000=result["senet154"]["GeoDA"][1000],
-        GeoDA_senet154_5000=result["senet154"]["GeoDA"][5000],
-        GeoDA_senet154_10000=result["senet154"]["GeoDA"][10000],
+        PriorSignOPT_2prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][1000],
+        PriorSignOPT_2prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][2000],
+        PriorSignOPT_2prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][5000],
+        PriorSignOPT_2prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][8000],
+        PriorSignOPT_2prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][10000],
 
-        GeoDA_resnet101_300=result["resnet101"]["GeoDA"][300],
-        GeoDA_resnet101_500=result["resnet101"]["GeoDA"][500],
-        GeoDA_resnet101_1000=result["resnet101"]["GeoDA"][1000],
-        GeoDA_resnet101_5000=result["resnet101"]["GeoDA"][5000],
-        GeoDA_resnet101_10000=result["resnet101"]["GeoDA"][10000],
+        PriorSignOPT_3prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][1000],
+        PriorSignOPT_3prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][2000],
+        PriorSignOPT_3prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][5000],
+        PriorSignOPT_3prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][8000],
+        PriorSignOPT_3prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][10000],
 
-        GeoDA_resnext101_300=result["resnext101_64x4d"]["GeoDA"][300],
-        GeoDA_resnext101_500=result["resnext101_64x4d"]["GeoDA"][500],
-        GeoDA_resnext101_1000=result["resnext101_64x4d"]["GeoDA"][1000],
-        GeoDA_resnext101_5000=result["resnext101_64x4d"]["GeoDA"][5000],
-        GeoDA_resnext101_10000=result["resnext101_64x4d"]["GeoDA"][10000],
+        PriorSignOPT_4prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][1000],
+        PriorSignOPT_4prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][2000],
+        PriorSignOPT_4prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][5000],
+        PriorSignOPT_4prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][8000],
+        PriorSignOPT_4prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][10000],
 
-        RayS_inceptionv3_300=result["inceptionv3"]["RayS"][300],
-        RayS_inceptionv3_500=result["inceptionv3"]["RayS"][500],
-        RayS_inceptionv3_1000=result["inceptionv3"]["RayS"][1000],
-        RayS_inceptionv3_5000=result["inceptionv3"]["RayS"][5000],
-        RayS_inceptionv3_10000=result["inceptionv3"]["RayS"][10000],
+        PriorSignOPT_5prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][1000],
+        PriorSignOPT_5prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][2000],
+        PriorSignOPT_5prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][5000],
+        PriorSignOPT_5prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][8000],
+        PriorSignOPT_5prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][10000],
 
-        RayS_inceptionv4_300=result["inceptionv4"]["RayS"][300],
-        RayS_inceptionv4_500=result["inceptionv4"]["RayS"][500],
-        RayS_inceptionv4_1000=result["inceptionv4"]["RayS"][1000],
-        RayS_inceptionv4_5000=result["inceptionv4"]["RayS"][5000],
-        RayS_inceptionv4_10000=result["inceptionv4"]["RayS"][10000],
+        PriorOPT_1prior_1000_victim_model_2=result[True]["Prior-OPT-1prior"][1000],
+        PriorOPT_1prior_2000_victim_model_2=result[True]["Prior-OPT-1prior"][2000],
+        PriorOPT_1prior_5000_victim_model_2=result[True]["Prior-OPT-1prior"][5000],
+        PriorOPT_1prior_8000_victim_model_2=result[True]["Prior-OPT-1prior"][8000],
+        PriorOPT_1prior_10000_victim_model_2=result[True]["Prior-OPT-1prior"][10000],
 
-        RayS_senet154_300=result["senet154"]["RayS"][300],
-        RayS_senet154_500=result["senet154"]["RayS"][500],
-        RayS_senet154_1000=result["senet154"]["RayS"][1000],
-        RayS_senet154_5000=result["senet154"]["RayS"][5000],
-        RayS_senet154_10000=result["senet154"]["RayS"][10000],
+        PriorOPT_2prior_1000_victim_model_2=result[True]["Prior-OPT-2prior"][1000],
+        PriorOPT_2prior_2000_victim_model_2=result[True]["Prior-OPT-2prior"][2000],
+        PriorOPT_2prior_5000_victim_model_2=result[True]["Prior-OPT-2prior"][5000],
+        PriorOPT_2prior_8000_victim_model_2=result[True]["Prior-OPT-2prior"][8000],
+        PriorOPT_2prior_10000_victim_model_2=result[True]["Prior-OPT-2prior"][10000],
 
-        RayS_resnet101_300=result["resnet101"]["RayS"][300],
-        RayS_resnet101_500=result["resnet101"]["RayS"][500],
-        RayS_resnet101_1000=result["resnet101"]["RayS"][1000],
-        RayS_resnet101_5000=result["resnet101"]["RayS"][5000],
-        RayS_resnet101_10000=result["resnet101"]["RayS"][10000],
+        PriorOPT_3prior_1000_victim_model_2=result[True]["Prior-OPT-3prior"][1000],
+        PriorOPT_3prior_2000_victim_model_2=result[True]["Prior-OPT-3prior"][2000],
+        PriorOPT_3prior_5000_victim_model_2=result[True]["Prior-OPT-3prior"][5000],
+        PriorOPT_3prior_8000_victim_model_2=result[True]["Prior-OPT-3prior"][8000],
+        PriorOPT_3prior_10000_victim_model_2=result[True]["Prior-OPT-3prior"][10000],
 
-        RayS_resnext101_300=result["resnext101_64x4d"]["RayS"][300],
-        RayS_resnext101_500=result["resnext101_64x4d"]["RayS"][500],
-        RayS_resnext101_1000=result["resnext101_64x4d"]["RayS"][1000],
-        RayS_resnext101_5000=result["resnext101_64x4d"]["RayS"][5000],
-        RayS_resnext101_10000=result["resnext101_64x4d"]["RayS"][10000],
+        PriorOPT_4prior_1000_victim_model_2=result[True]["Prior-OPT-4prior"][1000],
+        PriorOPT_4prior_2000_victim_model_2=result[True]["Prior-OPT-4prior"][2000],
+        PriorOPT_4prior_5000_victim_model_2=result[True]["Prior-OPT-4prior"][5000],
+        PriorOPT_4prior_8000_victim_model_2=result[True]["Prior-OPT-4prior"][8000],
+        PriorOPT_4prior_10000_victim_model_2=result[True]["Prior-OPT-4prior"][10000],
 
-        HSJA_inceptionv3_300=result["inceptionv3"]["HopSkipJumpAttack"][300],
-        HSJA_inceptionv3_500=result["inceptionv3"]["HopSkipJumpAttack"][500],
-        HSJA_inceptionv3_1000=result["inceptionv3"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv3_5000=result["inceptionv3"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv3_10000=result["inceptionv3"]["HopSkipJumpAttack"][10000],
-
-        HSJA_inceptionv4_300=result["inceptionv4"]["HopSkipJumpAttack"][300],
-        HSJA_inceptionv4_500=result["inceptionv4"]["HopSkipJumpAttack"][500],
-        HSJA_inceptionv4_1000=result["inceptionv4"]["HopSkipJumpAttack"][1000],
-        HSJA_inceptionv4_5000=result["inceptionv4"]["HopSkipJumpAttack"][5000],
-        HSJA_inceptionv4_10000=result["inceptionv4"]["HopSkipJumpAttack"][10000],
-
-        HSJA_senet154_300=result["senet154"]["HopSkipJumpAttack"][300],
-        HSJA_senet154_500=result["senet154"]["HopSkipJumpAttack"][500],
-        HSJA_senet154_1000=result["senet154"]["HopSkipJumpAttack"][1000],
-        HSJA_senet154_5000=result["senet154"]["HopSkipJumpAttack"][5000],
-        HSJA_senet154_10000=result["senet154"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnet101_300=result["resnet101"]["HopSkipJumpAttack"][300],
-        HSJA_resnet101_500=result["resnet101"]["HopSkipJumpAttack"][500],
-        HSJA_resnet101_1000=result["resnet101"]["HopSkipJumpAttack"][1000],
-        HSJA_resnet101_5000=result["resnet101"]["HopSkipJumpAttack"][5000],
-        HSJA_resnet101_10000=result["resnet101"]["HopSkipJumpAttack"][10000],
-
-        HSJA_resnext101_300=result["resnext101_64x4d"]["HopSkipJumpAttack"][300],
-        HSJA_resnext101_500=result["resnext101_64x4d"]["HopSkipJumpAttack"][500],
-        HSJA_resnext101_1000=result["resnext101_64x4d"]["HopSkipJumpAttack"][1000],
-        HSJA_resnext101_5000=result["resnext101_64x4d"]["HopSkipJumpAttack"][5000],
-        HSJA_resnext101_10000=result["resnext101_64x4d"]["HopSkipJumpAttack"][10000],
-
-        Tangent_inceptionv3_300=result["inceptionv3"]["Tangent Attack"][300],
-        Tangent_inceptionv3_500=result["inceptionv3"]["Tangent Attack"][500],
-        Tangent_inceptionv3_1000=result["inceptionv3"]["Tangent Attack"][1000],
-        Tangent_inceptionv3_5000=result["inceptionv3"]["Tangent Attack"][5000],
-        Tangent_inceptionv3_10000=result["inceptionv3"]["Tangent Attack"][10000],
-
-        Tangent_inceptionv4_300=result["inceptionv4"]["Tangent Attack"][300],
-        Tangent_inceptionv4_500=result["inceptionv4"]["Tangent Attack"][500],
-        Tangent_inceptionv4_1000=result["inceptionv4"]["Tangent Attack"][1000],
-        Tangent_inceptionv4_5000=result["inceptionv4"]["Tangent Attack"][5000],
-        Tangent_inceptionv4_10000=result["inceptionv4"]["Tangent Attack"][10000],
-
-        Tangent_senet154_300=result["senet154"]["Tangent Attack"][300],
-        Tangent_senet154_500=result["senet154"]["Tangent Attack"][500],
-        Tangent_senet154_1000=result["senet154"]["Tangent Attack"][1000],
-        Tangent_senet154_5000=result["senet154"]["Tangent Attack"][5000],
-        Tangent_senet154_10000=result["senet154"]["Tangent Attack"][10000],
-
-        Tangent_resnet101_300=result["resnet101"]["Tangent Attack"][300],
-        Tangent_resnet101_500=result["resnet101"]["Tangent Attack"][500],
-        Tangent_resnet101_1000=result["resnet101"]["Tangent Attack"][1000],
-        Tangent_resnet101_5000=result["resnet101"]["Tangent Attack"][5000],
-        Tangent_resnet101_10000=result["resnet101"]["Tangent Attack"][10000],
-
-        Tangent_resnext101_300=result["resnext101_64x4d"]["Tangent Attack"][300],
-        Tangent_resnext101_500=result["resnext101_64x4d"]["Tangent Attack"][500],
-        Tangent_resnext101_1000=result["resnext101_64x4d"]["Tangent Attack"][1000],
-        Tangent_resnext101_5000=result["resnext101_64x4d"]["Tangent Attack"][5000],
-        Tangent_resnext101_10000=result["resnext101_64x4d"]["Tangent Attack"][10000],
+        PriorOPT_5prior_1000_victim_model_2=result[True]["Prior-OPT-5prior"][1000],
+        PriorOPT_5prior_2000_victim_model_2=result[True]["Prior-OPT-5prior"][2000],
+        PriorOPT_5prior_5000_victim_model_2=result[True]["Prior-OPT-5prior"][5000],
+        PriorOPT_5prior_8000_victim_model_2=result[True]["Prior-OPT-5prior"][8000],
+        PriorOPT_5prior_10000_victim_model_2=result[True]["Prior-OPT-5prior"][10000],
     )
     )
+
+
+
+def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
+    print("""
+                & HSJA \\cite{{chen2019hopskipjumpattack}} & {HSJA_1000_untargeted} & {HSJA_2000_untargeted} & {HSJA_5000_untargeted} & {HSJA_8000_untargeted} & {HSJA_10000_untargeted}  & {HSJA_1000_targeted} & {HSJA_2000_targeted} & {HSJA_5000_targeted} & {HSJA_8000_targeted} & {HSJA_10000_targeted} & {HSJA_15000_targeted} & {HSJA_20000_targeted}\\\\
+				& TA \\cite{{ma2021finding}} & {TA_1000_untargeted} & {TA_2000_untargeted} & {TA_5000_untargeted} & {TA_8000_untargeted} & {TA_10000_untargeted}  & {TA_1000_targeted} & {TA_2000_targeted} & {TA_5000_targeted} & {TA_8000_targeted} & {TA_10000_targeted}& {TA_15000_targeted} & {TA_20000_targeted}\\\\
+				& G-TA \\cite{{ma2021finding}}  & {GTA_1000_untargeted} & {GTA_2000_untargeted} & {GTA_5000_untargeted} & {GTA_8000_untargeted} & {GTA_10000_untargeted}  & {GTA_1000_targeted} & {GTA_2000_targeted} & {GTA_5000_targeted} & {GTA_8000_targeted} & {GTA_10000_targeted} & {GTA_15000_targeted} & {GTA_20000_targeted}\\\\
+				& QEBA \\cite{{li2020qeba}} & {QEBA_1000_untargeted} & {QEBA_2000_untargeted} & {QEBA_5000_untargeted} & {QEBA_8000_untargeted} & {QEBA_10000_untargeted}  & {QEBA_1000_targeted} & {QEBA_2000_targeted} & {QEBA_5000_targeted} & {QEBA_8000_targeted} & {QEBA_10000_targeted} & {QEBA_15000_targeted} & {QEBA_20000_targeted}\\\\
+                & Sign-OPT \\cite{{cheng2019sign}} & {SignOPT_1000_untargeted} & {SignOPT_2000_untargeted} & {SignOPT_5000_untargeted} & {SignOPT_8000_untargeted} & {SignOPT_10000_untargeted}  & {SignOPT_1000_targeted} & {SignOPT_2000_targeted} & {SignOPT_5000_targeted} & {SignOPT_8000_targeted} & {SignOPT_10000_targeted} & {SignOPT_15000_targeted} & {SignOPT_20000_targeted}\\\\
+				& SVM-OPT \\cite{{cheng2019sign}} & {SVMOPT_1000_untargeted} & {SVMOPT_2000_untargeted} & {SVMOPT_5000_untargeted} & {SVMOPT_8000_untargeted} & {SVMOPT_10000_untargeted}  & {SVMOPT_1000_targeted} & {SVMOPT_2000_targeted} & {SVMOPT_5000_targeted} & {SVMOPT_8000_targeted} & {SVMOPT_10000_targeted}& {SVMOPT_15000_targeted} & {SVMOPT_20000_targeted}\\\\
+                & GeoDA \\cite{{rahmati2020geoda}} & {GeoDA_1000_untargeted} & {GeoDA_2000_untargeted} & {GeoDA_5000_untargeted} & {GeoDA_8000_untargeted} & {GeoDA_10000_untargeted}  & {GeoDA_1000_targeted} & {GeoDA_2000_targeted} & {GeoDA_5000_targeted} & {GeoDA_8000_targeted} & {GeoDA_10000_targeted} & {GeoDA_15000_targeted} & {GeoDA_20000_targeted}\\\\
+                & Evolutionary \\cite{{dong2019efficient}} & {Evolutionary_1000_untargeted} & {Evolutionary_2000_untargeted} & {Evolutionary_5000_untargeted} & {Evolutionary_8000_untargeted} & {Evolutionary_10000_untargeted}  & {Evolutionary_1000_targeted} & {Evolutionary_2000_targeted} & {Evolutionary_5000_targeted} & {Evolutionary_8000_targeted} & {Evolutionary_10000_targeted}  & {Evolutionary_15000_targeted} & {Evolutionary_20000_targeted}\\\\
+                & SurFree \\cite{{maho2021surfree}}  & {SurFree_1000_untargeted} & {SurFree_2000_untargeted} & {SurFree_5000_untargeted} & {SurFree_8000_untargeted} & {SurFree_10000_untargeted}  & {SurFree_1000_targeted} & {SurFree_2000_targeted} & {SurFree_5000_targeted} & {SurFree_8000_targeted} & {SurFree_10000_targeted}  & {SurFree_15000_targeted} & {SurFree_20000_targeted}\\\\
+                & Triangle Attack \\cite{{wang2022triangle}} & {TriangleAttack_1000_untargeted} & {TriangleAttack_2000_untargeted} & {TriangleAttack_5000_untargeted} & {TriangleAttack_8000_untargeted} & {TriangleAttack_10000_untargeted}  & {TriangleAttack_1000_targeted} & {TriangleAttack_2000_targeted} & {TriangleAttack_5000_targeted} & {TriangleAttack_8000_targeted} & {TriangleAttack_10000_targeted} & {TriangleAttack_15000_targeted} & {TriangleAttack_20000_targeted}\\\\
+                & SQBA \\cite{{Park_2024_sqba}} & {SQBA_1000_untargeted} & {SQBA_2000_untargeted} & {SQBA_5000_untargeted} & {SQBA_8000_untargeted} & {SQBA_10000_untargeted}  & {SQBA_1000_targeted} & {SQBA_2000_targeted} & {SQBA_5000_targeted} & {SQBA_8000_targeted} & {SQBA_10000_targeted}  & {SQBA_15000_targeted} & {SQBA_20000_targeted}\\\\
+                & BBA \\cite{{brunner2019guessing}}  & {BBA_1000_untargeted} & {BBA_2000_untargeted} & {BBA_5000_untargeted} & {BBA_8000_untargeted} & {BBA_10000_untargeted}  & {BBA_1000_targeted} & {BBA_2000_targeted} & {BBA_5000_targeted} & {BBA_8000_targeted} & {BBA_10000_targeted}  & {BBA_15000_targeted} & {BBA_20000_targeted}\\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}}} & {PriorSignOPT_1prior_1000_untargeted} & {PriorSignOPT_1prior_2000_untargeted} & {PriorSignOPT_1prior_5000_untargeted} & {PriorSignOPT_1prior_8000_untargeted} & {PriorSignOPT_1prior_10000_untargeted}  & {PriorSignOPT_1prior_1000_targeted} & {PriorSignOPT_1prior_2000_targeted} & {PriorSignOPT_1prior_5000_targeted} & {PriorSignOPT_1prior_8000_targeted} & {PriorSignOPT_1prior_10000_targeted} & {PriorSignOPT_1prior_15000_targeted} & {PriorSignOPT_1prior_20000_targeted} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}}   & {PriorSignOPT_2prior_1000_untargeted} & {PriorSignOPT_2prior_2000_untargeted} & {PriorSignOPT_2prior_5000_untargeted} & {PriorSignOPT_2prior_8000_untargeted} & {PriorSignOPT_2prior_10000_untargeted}  & {PriorSignOPT_2prior_1000_targeted} & {PriorSignOPT_2prior_2000_targeted} & {PriorSignOPT_2prior_5000_targeted} & {PriorSignOPT_2prior_8000_targeted} & {PriorSignOPT_2prior_10000_targeted} & {PriorSignOPT_2prior_15000_targeted} & {PriorSignOPT_2prior_20000_targeted} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny $\\theta_0^\\text{{PGD}}$ + {surrogate_1}}}  & {PriorSignOPT_PGD_init_theta_1000_untargeted} & {PriorSignOPT_PGD_init_theta_2000_untargeted} & {PriorSignOPT_PGD_init_theta_5000_untargeted} & {PriorSignOPT_PGD_init_theta_8000_untargeted} & {PriorSignOPT_PGD_init_theta_10000_untargeted}  & {PriorSignOPT_PGD_init_theta_1000_targeted} & {PriorSignOPT_PGD_init_theta_2000_targeted} & {PriorSignOPT_PGD_init_theta_5000_targeted} & {PriorSignOPT_PGD_init_theta_8000_targeted} & {PriorSignOPT_PGD_init_theta_10000_targeted}  & {PriorSignOPT_PGD_init_theta_15000_targeted} & {PriorSignOPT_PGD_init_theta_20000_targeted} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}}} & {PriorOPT_1prior_1000_untargeted} & {PriorOPT_1prior_2000_untargeted} & {PriorOPT_1prior_5000_untargeted} & {PriorOPT_1prior_8000_untargeted} & {PriorOPT_1prior_10000_untargeted}  & {PriorOPT_1prior_1000_targeted} & {PriorOPT_1prior_2000_targeted} & {PriorOPT_1prior_5000_targeted} & {PriorOPT_1prior_8000_targeted} & {PriorOPT_1prior_10000_targeted} & {PriorOPT_1prior_15000_targeted} & {PriorOPT_1prior_20000_targeted}\\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & {PriorOPT_2prior_1000_untargeted} & {PriorOPT_2prior_2000_untargeted} & {PriorOPT_2prior_5000_untargeted} & {PriorOPT_2prior_8000_untargeted} & {PriorOPT_2prior_10000_untargeted}  & {PriorOPT_2prior_1000_targeted} & {PriorOPT_2prior_2000_targeted} & {PriorOPT_2prior_5000_targeted} & {PriorOPT_2prior_8000_targeted} & {PriorOPT_2prior_10000_targeted} & {PriorOPT_2prior_15000_targeted} & {PriorOPT_2prior_20000_targeted} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny $\\theta_0^\\text{{PGD}}$ + {surrogate_1}}} & {PriorOPT_PGD_init_theta_1000_untargeted} & {PriorOPT_PGD_init_theta_2000_untargeted} & {PriorOPT_PGD_init_theta_5000_untargeted} & {PriorOPT_PGD_init_theta_8000_untargeted} & {PriorOPT_PGD_init_theta_10000_untargeted}  & {PriorOPT_PGD_init_theta_1000_targeted} & {PriorOPT_PGD_init_theta_2000_targeted} & {PriorOPT_PGD_init_theta_5000_targeted} & {PriorOPT_PGD_init_theta_8000_targeted} & {PriorOPT_PGD_init_theta_10000_targeted} & {PriorOPT_PGD_init_theta_15000_targeted} & {PriorOPT_PGD_init_theta_20000_targeted} \\\\ 
+                """.format(
+        surrogate_1=surrogate_1,
+        surrogate_2=surrogate_2,
+
+        BBA_1000_untargeted=result[False]["BBA"][1000],
+        BBA_2000_untargeted=result[False]["BBA"][2000],
+        BBA_5000_untargeted=result[False]["BBA"][5000],
+        BBA_8000_untargeted=result[False]["BBA"][8000],
+        BBA_10000_untargeted=result[False]["BBA"][10000],
+
+        HSJA_1000_untargeted=result[False]["HSJA"][1000],
+        HSJA_2000_untargeted=result[False]["HSJA"][2000],
+        HSJA_5000_untargeted=result[False]["HSJA"][5000],
+        HSJA_8000_untargeted=result[False]["HSJA"][8000],
+        HSJA_10000_untargeted=result[False]["HSJA"][10000],
+
+        TA_1000_untargeted=result[False]["TA"][1000],
+        TA_2000_untargeted=result[False]["TA"][2000],
+        TA_5000_untargeted=result[False]["TA"][5000],
+        TA_8000_untargeted=result[False]["TA"][8000],
+        TA_10000_untargeted=result[False]["TA"][10000],
+
+        GTA_1000_untargeted=result[False]["G-TA"][1000],
+        GTA_2000_untargeted=result[False]["G-TA"][2000],
+        GTA_5000_untargeted=result[False]["G-TA"][5000],
+        GTA_8000_untargeted=result[False]["G-TA"][8000],
+        GTA_10000_untargeted=result[False]["G-TA"][10000],
+
+        QEBA_1000_untargeted=result[False]["QEBA"][1000],
+        QEBA_2000_untargeted=result[False]["QEBA"][2000],
+        QEBA_5000_untargeted=result[False]["QEBA"][5000],
+        QEBA_8000_untargeted=result[False]["QEBA"][8000],
+        QEBA_10000_untargeted=result[False]["QEBA"][10000],
+
+        SignOPT_1000_untargeted=result[False]["Sign-OPT"][1000],
+        SignOPT_2000_untargeted=result[False]["Sign-OPT"][2000],
+        SignOPT_5000_untargeted=result[False]["Sign-OPT"][5000],
+        SignOPT_8000_untargeted=result[False]["Sign-OPT"][8000],
+        SignOPT_10000_untargeted=result[False]["Sign-OPT"][10000],
+
+        SVMOPT_1000_untargeted=result[False]["SVM-OPT"][1000],
+        SVMOPT_2000_untargeted=result[False]["SVM-OPT"][2000],
+        SVMOPT_5000_untargeted=result[False]["SVM-OPT"][5000],
+        SVMOPT_8000_untargeted=result[False]["SVM-OPT"][8000],
+        SVMOPT_10000_untargeted=result[False]["SVM-OPT"][10000],
+
+        GeoDA_1000_untargeted=result[False]["GeoDA"][1000],
+        GeoDA_2000_untargeted=result[False]["GeoDA"][2000],
+        GeoDA_5000_untargeted=result[False]["GeoDA"][5000],
+        GeoDA_8000_untargeted=result[False]["GeoDA"][8000],
+        GeoDA_10000_untargeted=result[False]["GeoDA"][10000],
+
+        Evolutionary_1000_untargeted=result[False]["Evolutionary"][1000],
+        Evolutionary_2000_untargeted=result[False]["Evolutionary"][2000],
+        Evolutionary_5000_untargeted=result[False]["Evolutionary"][5000],
+        Evolutionary_8000_untargeted=result[False]["Evolutionary"][8000],
+        Evolutionary_10000_untargeted=result[False]["Evolutionary"][10000],
+
+        SurFree_1000_untargeted=result[False]["SurFree"][1000],
+        SurFree_2000_untargeted=result[False]["SurFree"][2000],
+        SurFree_5000_untargeted=result[False]["SurFree"][5000],
+        SurFree_8000_untargeted=result[False]["SurFree"][8000],
+        SurFree_10000_untargeted=result[False]["SurFree"][10000],
+
+        TriangleAttack_1000_untargeted=result[False]["Triangle Attack"][1000],
+        TriangleAttack_2000_untargeted=result[False]["Triangle Attack"][2000],
+        TriangleAttack_5000_untargeted=result[False]["Triangle Attack"][5000],
+        TriangleAttack_8000_untargeted=result[False]["Triangle Attack"][8000],
+        TriangleAttack_10000_untargeted=result[False]["Triangle Attack"][10000],
+
+        SQBA_1000_untargeted=result[False]["SQBA"][1000],
+        SQBA_2000_untargeted=result[False]["SQBA"][2000],
+        SQBA_5000_untargeted=result[False]["SQBA"][5000],
+        SQBA_8000_untargeted=result[False]["SQBA"][8000],
+        SQBA_10000_untargeted=result[False]["SQBA"][10000],
+
+        PriorSignOPT_1prior_1000_untargeted=result[False]["Prior-Sign-OPT-1prior"][1000],
+        PriorSignOPT_1prior_2000_untargeted=result[False]["Prior-Sign-OPT-1prior"][2000],
+        PriorSignOPT_1prior_5000_untargeted=result[False]["Prior-Sign-OPT-1prior"][5000],
+        PriorSignOPT_1prior_8000_untargeted=result[False]["Prior-Sign-OPT-1prior"][8000],
+        PriorSignOPT_1prior_10000_untargeted=result[False]["Prior-Sign-OPT-1prior"][10000],
+
+        PriorSignOPT_2prior_1000_untargeted=result[False]["Prior-Sign-OPT-2prior"][1000],
+        PriorSignOPT_2prior_2000_untargeted=result[False]["Prior-Sign-OPT-2prior"][2000],
+        PriorSignOPT_2prior_5000_untargeted=result[False]["Prior-Sign-OPT-2prior"][5000],
+        PriorSignOPT_2prior_8000_untargeted=result[False]["Prior-Sign-OPT-2prior"][8000],
+        PriorSignOPT_2prior_10000_untargeted=result[False]["Prior-Sign-OPT-2prior"][10000],
+
+        PriorSignOPT_PGD_init_theta_1000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][1000],
+        PriorSignOPT_PGD_init_theta_2000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][2000],
+        PriorSignOPT_PGD_init_theta_5000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][5000],
+        PriorSignOPT_PGD_init_theta_8000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][8000],
+        PriorSignOPT_PGD_init_theta_10000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][10000],
+
+        PriorOPT_1prior_1000_untargeted=result[False]["Prior-OPT-1prior"][1000],
+        PriorOPT_1prior_2000_untargeted=result[False]["Prior-OPT-1prior"][2000],
+        PriorOPT_1prior_5000_untargeted=result[False]["Prior-OPT-1prior"][5000],
+        PriorOPT_1prior_8000_untargeted=result[False]["Prior-OPT-1prior"][8000],
+        PriorOPT_1prior_10000_untargeted=result[False]["Prior-OPT-1prior"][10000],
+
+        PriorOPT_2prior_1000_untargeted=result[False]["Prior-OPT-2prior"][1000],
+        PriorOPT_2prior_2000_untargeted=result[False]["Prior-OPT-2prior"][2000],
+        PriorOPT_2prior_5000_untargeted=result[False]["Prior-OPT-2prior"][5000],
+        PriorOPT_2prior_8000_untargeted=result[False]["Prior-OPT-2prior"][8000],
+        PriorOPT_2prior_10000_untargeted=result[False]["Prior-OPT-2prior"][10000],
+
+        PriorOPT_PGD_init_theta_1000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][1000],
+        PriorOPT_PGD_init_theta_2000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][2000],
+        PriorOPT_PGD_init_theta_5000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][5000],
+        PriorOPT_PGD_init_theta_8000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][8000],
+        PriorOPT_PGD_init_theta_10000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][10000],
+
+        BBA_1000_targeted=result[True]["BBA"][1000],
+        BBA_2000_targeted=result[True]["BBA"][2000],
+        BBA_5000_targeted=result[True]["BBA"][5000],
+        BBA_8000_targeted=result[True]["BBA"][8000],
+        BBA_10000_targeted=result[True]["BBA"][10000],
+        BBA_15000_targeted=result[True]["BBA"][15000],
+        BBA_20000_targeted=result[True]["BBA"][20000],
+
+        HSJA_1000_targeted=result[True]["HSJA"][1000],
+        HSJA_2000_targeted=result[True]["HSJA"][2000],
+        HSJA_5000_targeted=result[True]["HSJA"][5000],
+        HSJA_8000_targeted=result[True]["HSJA"][8000],
+        HSJA_10000_targeted=result[True]["HSJA"][10000],
+        HSJA_15000_targeted=result[True]["HSJA"][15000],
+        HSJA_20000_targeted=result[True]["HSJA"][20000],
+
+        TA_1000_targeted=result[True]["TA"][1000],
+        TA_2000_targeted=result[True]["TA"][2000],
+        TA_5000_targeted=result[True]["TA"][5000],
+        TA_8000_targeted=result[True]["TA"][8000],
+        TA_10000_targeted=result[True]["TA"][10000],
+        TA_15000_targeted=result[True]["TA"][15000],
+        TA_20000_targeted=result[True]["TA"][20000],
+
+        GTA_1000_targeted=result[True]["G-TA"][1000],
+        GTA_2000_targeted=result[True]["G-TA"][2000],
+        GTA_5000_targeted=result[True]["G-TA"][5000],
+        GTA_8000_targeted=result[True]["G-TA"][8000],
+        GTA_10000_targeted=result[True]["G-TA"][10000],
+        GTA_15000_targeted=result[True]["G-TA"][15000],
+        GTA_20000_targeted=result[True]["G-TA"][20000],
+
+        QEBA_1000_targeted=result[True]["QEBA"][1000],
+        QEBA_2000_targeted=result[True]["QEBA"][2000],
+        QEBA_5000_targeted=result[True]["QEBA"][5000],
+        QEBA_8000_targeted=result[True]["QEBA"][8000],
+        QEBA_10000_targeted=result[True]["QEBA"][10000],
+        QEBA_15000_targeted=result[True]["QEBA"][15000],
+        QEBA_20000_targeted=result[True]["QEBA"][20000],
+
+        SignOPT_1000_targeted=result[True]["Sign-OPT"][1000],
+        SignOPT_2000_targeted=result[True]["Sign-OPT"][2000],
+        SignOPT_5000_targeted=result[True]["Sign-OPT"][5000],
+        SignOPT_8000_targeted=result[True]["Sign-OPT"][8000],
+        SignOPT_10000_targeted=result[True]["Sign-OPT"][10000],
+        SignOPT_15000_targeted=result[True]["Sign-OPT"][15000],
+        SignOPT_20000_targeted=result[True]["Sign-OPT"][20000],
+
+        SVMOPT_1000_targeted=result[True]["SVM-OPT"][1000],
+        SVMOPT_2000_targeted=result[True]["SVM-OPT"][2000],
+        SVMOPT_5000_targeted=result[True]["SVM-OPT"][5000],
+        SVMOPT_8000_targeted=result[True]["SVM-OPT"][8000],
+        SVMOPT_10000_targeted=result[True]["SVM-OPT"][10000],
+        SVMOPT_15000_targeted=result[True]["SVM-OPT"][15000],
+        SVMOPT_20000_targeted=result[True]["SVM-OPT"][20000],
+
+        GeoDA_1000_targeted=result[True]["GeoDA"][1000],
+        GeoDA_2000_targeted=result[True]["GeoDA"][2000],
+        GeoDA_5000_targeted=result[True]["GeoDA"][5000],
+        GeoDA_8000_targeted=result[True]["GeoDA"][8000],
+        GeoDA_10000_targeted=result[True]["GeoDA"][10000],
+        GeoDA_15000_targeted=result[True]["GeoDA"][15000],
+        GeoDA_20000_targeted=result[True]["GeoDA"][20000],
+
+        Evolutionary_1000_targeted=result[True]["Evolutionary"][1000],
+        Evolutionary_2000_targeted=result[True]["Evolutionary"][2000],
+        Evolutionary_5000_targeted=result[True]["Evolutionary"][5000],
+        Evolutionary_8000_targeted=result[True]["Evolutionary"][8000],
+        Evolutionary_10000_targeted=result[True]["Evolutionary"][10000],
+        Evolutionary_15000_targeted=result[True]["Evolutionary"][15000],
+        Evolutionary_20000_targeted=result[True]["Evolutionary"][20000],
+
+        SurFree_1000_targeted=result[True]["SurFree"][1000],
+        SurFree_2000_targeted=result[True]["SurFree"][2000],
+        SurFree_5000_targeted=result[True]["SurFree"][5000],
+        SurFree_8000_targeted=result[True]["SurFree"][8000],
+        SurFree_10000_targeted=result[True]["SurFree"][10000],
+        SurFree_15000_targeted=result[True]["SurFree"][15000],
+        SurFree_20000_targeted=result[True]["SurFree"][20000],
+
+        TriangleAttack_1000_targeted=result[True]["Triangle Attack"][1000],
+        TriangleAttack_2000_targeted=result[True]["Triangle Attack"][2000],
+        TriangleAttack_5000_targeted=result[True]["Triangle Attack"][5000],
+        TriangleAttack_8000_targeted=result[True]["Triangle Attack"][8000],
+        TriangleAttack_10000_targeted=result[True]["Triangle Attack"][10000],
+        TriangleAttack_15000_targeted=result[True]["Triangle Attack"][15000],
+        TriangleAttack_20000_targeted=result[True]["Triangle Attack"][20000],
+
+        SQBA_1000_targeted=result[True]["SQBA"][1000],
+        SQBA_2000_targeted=result[True]["SQBA"][2000],
+        SQBA_5000_targeted=result[True]["SQBA"][5000],
+        SQBA_8000_targeted=result[True]["SQBA"][8000],
+        SQBA_10000_targeted=result[True]["SQBA"][10000],
+        SQBA_15000_targeted=result[True]["SQBA"][15000],
+        SQBA_20000_targeted=result[True]["SQBA"][20000],
+
+        PriorSignOPT_1prior_1000_targeted=result[True]["Prior-Sign-OPT-1prior"][1000],
+        PriorSignOPT_1prior_2000_targeted=result[True]["Prior-Sign-OPT-1prior"][2000],
+        PriorSignOPT_1prior_5000_targeted=result[True]["Prior-Sign-OPT-1prior"][5000],
+        PriorSignOPT_1prior_8000_targeted=result[True]["Prior-Sign-OPT-1prior"][8000],
+        PriorSignOPT_1prior_10000_targeted=result[True]["Prior-Sign-OPT-1prior"][10000],
+        PriorSignOPT_1prior_15000_targeted=result[True]["Prior-Sign-OPT-1prior"][15000],
+        PriorSignOPT_1prior_20000_targeted=result[True]["Prior-Sign-OPT-1prior"][20000],
+
+        PriorSignOPT_2prior_1000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+            1000],
+        PriorSignOPT_2prior_2000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+            2000],
+        PriorSignOPT_2prior_5000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+            5000],
+        PriorSignOPT_2prior_8000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+            8000],
+        PriorSignOPT_2prior_10000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+            10000],
+        PriorSignOPT_2prior_15000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+            15000],
+        PriorSignOPT_2prior_20000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+            20000],
+
+        PriorSignOPT_PGD_init_theta_1000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
+            1000],
+        PriorSignOPT_PGD_init_theta_2000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
+            2000],
+        PriorSignOPT_PGD_init_theta_5000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
+            5000],
+        PriorSignOPT_PGD_init_theta_8000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
+            8000],
+        PriorSignOPT_PGD_init_theta_10000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
+            10000],
+        PriorSignOPT_PGD_init_theta_15000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
+            15000],
+        PriorSignOPT_PGD_init_theta_20000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
+            20000],
+
+        PriorOPT_1prior_1000_targeted=result[True]["Prior-OPT-1prior"][1000],
+        PriorOPT_1prior_2000_targeted=result[True]["Prior-OPT-1prior"][2000],
+        PriorOPT_1prior_5000_targeted=result[True]["Prior-OPT-1prior"][5000],
+        PriorOPT_1prior_8000_targeted=result[True]["Prior-OPT-1prior"][8000],
+        PriorOPT_1prior_10000_targeted=result[True]["Prior-OPT-1prior"][10000],
+        PriorOPT_1prior_15000_targeted=result[True]["Prior-OPT-1prior"][15000],
+        PriorOPT_1prior_20000_targeted=result[True]["Prior-OPT-1prior"][20000],
+
+        PriorOPT_2prior_1000_targeted=result[True]["Prior-OPT-2prior"][1000],
+        PriorOPT_2prior_2000_targeted=result[True]["Prior-OPT-2prior"][2000],
+        PriorOPT_2prior_5000_targeted=result[True]["Prior-OPT-2prior"][5000],
+        PriorOPT_2prior_8000_targeted=result[True]["Prior-OPT-2prior"][8000],
+        PriorOPT_2prior_10000_targeted=result[True]["Prior-OPT-2prior"][10000],
+        PriorOPT_2prior_15000_targeted=result[True]["Prior-OPT-2prior"][15000],
+        PriorOPT_2prior_20000_targeted=result[True]["Prior-OPT-2prior"][20000],
+
+        PriorOPT_PGD_init_theta_1000_targeted=result[True]["Prior-OPT_PGD_init_theta"][1000],
+        PriorOPT_PGD_init_theta_2000_targeted=result[True]["Prior-OPT_PGD_init_theta"][2000],
+        PriorOPT_PGD_init_theta_5000_targeted=result[True]["Prior-OPT_PGD_init_theta"][5000],
+        PriorOPT_PGD_init_theta_8000_targeted=result[True]["Prior-OPT_PGD_init_theta"][8000],
+        PriorOPT_PGD_init_theta_10000_targeted=result[True]["Prior-OPT_PGD_init_theta"][10000],
+        PriorOPT_PGD_init_theta_15000_targeted=result[True]["Prior-OPT_PGD_init_theta"][15000],
+        PriorOPT_PGD_init_theta_20000_targeted=result[True]["Prior-OPT_PGD_init_theta"][20000],
+    )
+    )
+
+
 if __name__ == "__main__":
     dataset = "ImageNet"
     norm = "l2"
     if "CIFAR" in dataset:
         archs = ['pyramidnet272',"gdas","WRN-28-10-drop", "WRN-40-10-drop"]
     else:
-        archs = ["inceptionv3","inceptionv4","senet154","resnet101"]
-    query_budgets = [300, 1000,2000,5000,8000,10000]
-    # if targeted:
-    #     query_budgets.extend([12000,15000,18000,20000])
+        wanted_one_prior_list = ["inceptionresnetv2", "resnet50"]
+        wanted_two_priors_list = [('xception', 'inceptionresnetv2'), ('resnet50', 'convit_base')]
+
+
     if "CIFAR" in dataset:
         targeted_result = {}
         for arch in archs:
@@ -3278,15 +740,27 @@ if __name__ == "__main__":
             result = fetch_all_json_content_given_contraint(dataset, norm, False, arch, query_budgets, "mean_distortion")
             untargeted_result[arch] = result
 
-        draw_wide_table_CIFAR_with_ellipsoid(untargeted_result, targeted_result)
     else:
-        result_archs = {}
-        targeted_result_archs = {}
-        for arch in archs:
-            result = fetch_all_json_content_given_contraint(dataset, norm, False, arch, query_budgets, "mean_distortion")
-            result_archs[arch] = result
-            result = fetch_all_json_content_given_contraint(dataset, norm, True, arch, query_budgets,
-                                                            "mean_distortion")
-            targeted_result_archs[arch] = result
+        result_archs = defaultdict(dict)
+        # arch = "jx_vit"
+        # surrogate_1 = "ResNet50"
+        # surrogate_2 = "ConViT"
+        # query_budgets = [1000, 2000, 5000, 8000, 10000]
+        # result = fetch_all_json_content_given_contraint(dataset, norm, False, arch, query_budgets, wanted_one_prior_list,
+        #                                                 wanted_two_priors_list, "mean_distortion")
+        # result_archs[False] = result
+        # query_budgets = [1000, 2000, 5000, 8000, 10000, 15000, 20000]
+        # result = fetch_all_json_content_given_contraint(dataset, norm, True, arch, query_budgets,wanted_one_prior_list,
+        #                                                 wanted_two_priors_list, "mean_distortion")
+        # result_archs[True] = result
+        #
+        # draw_tables_for_ImageNet(result_archs, surrogate_1, surrogate_2)
 
-        draw_targeted_first_tables_for_ImageNet_with_300_query(result_archs, targeted_result_archs)
+        arch = "resnet101"
+        query_budgets = [1000, 2000, 5000, 8000, 10000]
+        result = fetch_json_content_for_multiple_priors(dataset, norm, False, arch, query_budgets, "mean_distortion")
+        result_archs[False] = result
+        arch = "swin_base_patch4_window7_224"
+        result = fetch_json_content_for_multiple_priors(dataset, norm, False, arch, query_budgets, "mean_distortion")
+        result_archs[True] = result
+        draw_tables_for_multi_priors(result_archs, "ResNet50","ConViT","CrossViT","MaxViT","ViT")

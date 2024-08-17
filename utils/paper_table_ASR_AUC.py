@@ -11,14 +11,13 @@ from models.standard_model import StandardModel
 method_name_to_paper = {"tangent_attack":"TA",
                         "ellipsoid_tangent_attack":"G-TA", "GeoDA":"GeoDA",
                         "HSJA":"HSJA",  "SignOPT":"Sign-OPT", "SVMOPT":"SVM-OPT",
-                         "Evolutionary":"Evolutionary", "SurFree":"SurFree",
-                        "TriangleAttack":"Triangle Attack", "PriorSignOPT":"Prior-Sign-OPT",
-                        "PriorOPT":"Prior-OPT", "RayS":"RayS"
-                        #"QEBA":"QEBA", "CGBA_H":"CGBA-H"
+                         "Evolutionary":"Evolutionary", "SurFree":"SurFree","SQBA":"SQBA","biased_boundary_attack":"BBA",
+                        "TriangleAttack":"Triangle Attack", "PriorSignOPT":"Prior-Sign-OPT","PriorSignOPT_PGD_init_theta":"Prior-Sign-OPT_PGD_init_theta",
+                        "PriorOPT":"Prior-OPT",
+                        "PriorOPT_PGD_init_theta":"Prior-OPT_PGD_init_theta",
                         }
 surrogate_arch_name_to_paper = {"inceptionresnetv2":"IncResV2", "xception":"Xception", "resnet50":"ResNet50","convit_base":"ConViT",
-                                "jx_vit":"ViT", "resnet-110":"ResNet110", "senet154":"SENet154", "densenet-bc-100-12":"DenseNetBC100"}
-
+                                "jx_vit":"ViT", "resnet-110":"ResNet110"}
 def longest_common_subsequence(x: str, y: str):
     """
     Finds the longest common subsequence between two strings. Also returns the
@@ -122,8 +121,6 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "boundary_attack":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
-    # elif method == "RayS":
-    #     path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "SignOPT":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "SVMOPT":
@@ -152,6 +149,15 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     elif method == "QEBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "SQBA":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorOPT_PGD_init_theta":
+        path = "PriorOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format( dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorSignOPT_PGD_init_theta":
+        path = "PriorSignOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format( dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
     return path
 
 def read_json_data(json_path):
@@ -171,7 +177,7 @@ def read_json_data(json_path):
     return distortion_dict, surrogate_archs
 
 def get_all_exists_folder(dataset, methods, norm, targeted, is_defense_model):
-    root_dir = "F:/logs/hard_label_attack_complete/"
+    root_dir = "H:/logs/hard_label_attack_complete/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     for method in methods:
         if is_defense_model:
@@ -190,16 +196,23 @@ def read_query_distortion_data(dataset_path_dict, arch, query_budgets, success_d
     data_info = {}
     for (dataset, norm, targeted, method), dir_path in dataset_path_dict.items():
         for file_path in os.listdir(dir_path):
-            condition = longest_common_subsequence(arch, file_path)[1] == arch if is_defense else file_path.startswith(arch)
-            if condition and file_path.endswith(".json"):
+            if file_path.startswith(arch) and file_path.endswith(".json"):
                 file_path = dir_path + "/" + file_path
                 print("read file_path {}".format(file_path))
                 distortion_dict, surrogate_archs = read_json_data(file_path)
                 if "resnet50" in surrogate_archs and "jx_vit" in surrogate_archs:
                     continue
+                must_skip_this = False
+                for surrogate_arch in surrogate_archs:
+                    if surrogate_arch not in surrogate_arch_name_to_paper:
+                        must_skip_this = True
+                        break
+                if must_skip_this:
+                    continue
+
                 x = []
                 y_distortions = []
-                y_sucess_rates = []
+                y_success_rates = []
                 for query_budget in query_budgets:
                     distortion_list = []
                     for image_id, query_distortion_dict in distortion_dict.items():
@@ -223,14 +236,14 @@ def read_query_distortion_data(dataset_path_dict, arch, query_budgets, success_d
                     success_list = distortion_list <= success_distortion_threshold
                     success_list = success_list.astype(np.float32)
                     success_rate = np.mean(success_list) * 100.0
-                    y_sucess_rates.append(success_rate)
+                    y_success_rates.append(success_rate)
 
                 x = np.array(x)
                 y_distortions = np.array(y_distortions)
-                y_sucess_rates = np.array(y_sucess_rates)
+                y_success_rates = np.array(y_success_rates)
                 # print("final ASR:{}".format(y_sucess_rates[-1]))
                 surrogate_archs_new = [surrogate_arch_name_to_paper[surrogate_arch] for surrogate_arch in surrogate_archs]
-                data_info[(dataset, arch, norm, targeted, method, "\&".join(surrogate_archs_new))] = (x, y_distortions, y_sucess_rates)
+                data_info[(dataset, arch, norm, targeted, method, "\&".join(surrogate_archs_new))] = (x, y_distortions, y_success_rates)
     return data_info
 
 
@@ -240,10 +253,16 @@ def draw_wide_table(table_data):
         for (dataset, arch, norm, targeted), (ASR, AUC, mean_l2) in arch_data_info_dict.items():
             arch_new_dict[arch] = (mean_l2,AUC,ASR)
 
-        print("{0} & {1:.3f} & {2:.1f} & {3:.1f}\% & {4:.3f} & {5:.1f} & {6:.1f}\% & {7:.3f} & {8:.1f} & {9:.1f}\% \\\\".format(method,
-                arch_new_dict["jx_vit"][0],arch_new_dict["jx_vit"][1],arch_new_dict["jx_vit"][2],
-                arch_new_dict["gcvit_base"][0],arch_new_dict["gcvit_base"][1],arch_new_dict["gcvit_base"][2],
-                arch_new_dict["swin_base_patch4_window7_224"][0],arch_new_dict["swin_base_patch4_window7_224"][1],arch_new_dict["swin_base_patch4_window7_224"][2]))
+        # print("{0} & {1:.3f} & {2:.1f} & {3:.1f}\% & {4:.3f} & {5:.1f} & {6:.1f}\% & {7:.3f} & {8:.1f} & {9:.1f}\% \\\\".format(method,
+        #         arch_new_dict["resnet101"][0],arch_new_dict["resnet101"][1],arch_new_dict["resnet101"][2],
+        #         arch_new_dict["resnext101_64x4d"][0],arch_new_dict["resnext101_64x4d"][1],arch_new_dict["resnext101_64x4d"][2],
+        #         arch_new_dict["senet154"][0],arch_new_dict["senet154"][1],arch_new_dict["senet154"][2])
+        print(
+            "{0} & {1:.3f} & {2:.1f} & {3:.1f}\% & {4:.3f} & {5:.1f} & {6:.1f}\% \\\\".format(
+                method,
+                arch_new_dict["inceptionv3"][0], arch_new_dict["inceptionv3"][1], arch_new_dict["inceptionv3"][2],
+                arch_new_dict["inceptionv4"][0], arch_new_dict["inceptionv4"][1],
+                arch_new_dict["inceptionv4"][2]))
 def draw_narrow_table(table_data):
     for method, arch_data_info_dict in table_data.items():
         arch_new_dict = {}
@@ -305,13 +324,13 @@ def collect_AUC_ASR_table(table_data, dataset, norm, targeted, arch, is_defense_
 
 
 if __name__ == "__main__":
-    is_defense_model = True
-    for dataset in ["CIFAR-10"]:
+    is_defense_model = False
+    for dataset in ["ImageNet"]:
         if "CIFAR" in dataset:
             archs = ["pyramidnet272","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40","gdas"]
         else:
-            archs = [#"inceptionv4","senet154","resnet101","inceptionv3","resnext101_64x4d",
-                     "jx_vit","gcvit_base","swin_base_patch4_window7_224"]
+            archs = ["inceptionv3","inceptionv4"]
+                     # "jx_vit","gcvit_base","swin_base_patch4_window7_224"]
         if is_defense_model:
             archs = ['resnet-50_TRADES', "resnet-50_feature_scatter", "resnet-50_adv_train"]
         targeted_list = [False]
@@ -322,8 +341,10 @@ if __name__ == "__main__":
                 if dataset == "CIFAR-10":
                     dim = 32 * 32 * 3
                 else:
-                    model = StandardModel(dataset=dataset, arch=arch, no_grad=True, load_pretrained=True)
-                    dim = np.prod(np.array([each_dim for each_dim in model.input_size])).item()
+                    if "inception" in arch:
+                        dim = 299 * 299 * 3
+                    else:
+                        dim = 224 * 224 * 3
                 success_distortion_threshold = math.sqrt(0.001 * dim)
                 print("arch:{}, dim:{}, Success distortion threshold:{}".format(arch, dim, success_distortion_threshold))
                 collect_AUC_ASR_table(table_data, dataset, norm, targeted, arch, is_defense_model, success_distortion_threshold)

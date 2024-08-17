@@ -10,8 +10,8 @@ import numpy as np
 import os.path as osp
 import glog as log
 from config import MODELS_TEST_STANDARD
-from PriorOPT.prior_opt_l2_norm_attack import PriorOptL2Norm
-from PriorOPT.prior_opt_linf_norm_attack import PriorOptLinfNorm
+from PARS_OPT.pars_opt_l2_norm_attack import ParsOptL2Norm
+from PARS_OPT.pars_opt_linf_norm_attack import ParsOptLinfNorm
 from models.defensive_model import DefensiveModel
 from models.standard_model import StandardModel
 
@@ -22,35 +22,33 @@ def get_exp_dir_name(dataset,  norm, targeted, target_type, args):
     target_str = "untargeted" if not targeted else "targeted_{}".format(target_type)
     if args.ablation_study:
         if args.sign:
-            dirname = 'PriorSignOPT-{}-{}-{}/ablation_study'.format(dataset, norm, target_str)
+            dirname = 'ParsSignOPT-{}-{}-{}/ablation_study'.format(dataset, norm, target_str)
         else:
-            dirname = 'PriorOPT-{}-{}-{}/ablation_study'.format(dataset, norm, target_str)
+            dirname = 'ParsOPT-{}-{}-{}/ablation_study'.format(dataset, norm, target_str)
         return dirname
 
     if args.best_initial_target_sample:
         if args.sign:
             if args.attack_defense:
-                dirname = 'PriorSignOPT_best_start_initial_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
+                dirname = 'ParsSignOPT_best_start_initial_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
             else:
-                dirname = 'PriorSignOPT_best_start_initial-{}-{}-{}'.format(dataset, norm, target_str)
+                dirname = 'ParsSignOPT_best_start_initial-{}-{}-{}'.format(dataset, norm, target_str)
         else:
             if args.attack_defense:
-                dirname = 'PriorOPT_best_start_initial_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
+                dirname = 'ParsOPT_best_start_initial_on_defensive_model-{}-{}-{}'.format(dataset, norm, target_str)
             else:
-                dirname = 'PriorOPT_best_start_initial-{}-{}-{}'.format(dataset, norm, target_str)
+                dirname = 'ParsOPT_best_start_initial-{}-{}-{}'.format(dataset, norm, target_str)
         return dirname
     if args.sign:
         if args.attack_defense:
-            dirname = 'PriorSignOPT_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
+            dirname = 'ParsSignOPT_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
         else:
-            dirname = 'PriorSignOPT-{}-{}-{}'.format(dataset, norm, target_str)
+            dirname = 'ParsSignOPT-{}-{}-{}'.format(dataset, norm, target_str)
     else:
         if args.attack_defense:
-            dirname = 'PriorOPT_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
+            dirname = 'ParsOPT_on_defensive_model-{}-{}-{}'.format(dataset,  norm, target_str)
         else:
-            dirname = 'PriorOPT-{}-{}-{}'.format(dataset, norm, target_str)
-    if args.PGD_init_theta:
-        dirname += '_with_PGD_init_theta'
+            dirname = 'ParsOPT-{}-{}-{}'.format(dataset, norm, target_str)
     return dirname
 
 def print_args(args):
@@ -87,7 +85,9 @@ def get_parse_args():
     parser.add_argument('--target_type', type=str, default='increment', choices=['random','load_random', 'least_likely', "increment"])
     parser.add_argument('--load-random-class-image', action='store_true',
                         help='load a random image from the target class')  # npz {"0":, "1": ,"2": }
+    parser.add_argument('--history',action='store_true',help='whether to use History-PARS-OPT')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
+    parser.add_argument('--lr',type=float, default=0.1, help='learning rate')
     parser.add_argument('--max_queries', type=int, default=10000)
     parser.add_argument('--gpu', type=int, required=True, help='which GPU ID will be used')
     parser.add_argument('--attack-defense', action="store_true")
@@ -103,7 +103,6 @@ def get_parse_args():
     parser.add_argument('--tol',type=float,)
     parser.add_argument('--ablation-study',action='store_true')
     parser.add_argument('--prior-grad-bs-tol', type=float,default=0.01, help="the binary search's stopping threshold for estimating gradient")
-    parser.add_argument('--PGD-init-theta', action="store_true")
 
     # parser.add_argument('--alpha', type=float)
     args = parser.parse_args()
@@ -152,7 +151,7 @@ if __name__ == "__main__":
             log_file_path = osp.join(args.exp_dir, 'run.log')
     elif args.arch is not None:
         if args.attack_defense:
-            if args.dataset == "ImageNet":
+            if args.defense_model == "adv_train_on_ImageNet":
                 log_file_path = osp.join(args.exp_dir,
                                          "run_defense_{}_{}_{}_{}.log".format(args.arch, args.defense_model,
                                                                                args.defense_norm, args.defense_eps))
@@ -162,7 +161,7 @@ if __name__ == "__main__":
             log_file_path = osp.join(args.exp_dir, 'run_{}.log'.format(args.arch))
     if args.surrogate_archs is not None:
         if args.attack_defense:
-            if args.dataset == "ImageNet":
+            if args.defense_model == "adv_train_on_ImageNet":
                 log_file_path = osp.join(args.exp_dir,
                                          "run_{}_surrogates_{}_defense_{}_{}_{}.log".format(args.arch, ",".join(args.surrogate_archs),
                                                                  args.defense_model, args.defense_norm, args.defense_eps))
@@ -234,17 +233,16 @@ if __name__ == "__main__":
         if args.tol is not None and args.tol != 0.0:
             tol = args.tol
         if args.norm == "l2":
-            attacker = PriorOptL2Norm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
-                                      args.batch_size, args.est_grad_samples,
-                                      maximum_queries=args.max_queries, sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm,
-                                      tol=tol, prior_grad_binary_search_tol=args.prior_grad_bs_tol, best_initial_target_sample=args.best_initial_target_sample,
-                                      PGD_init_theta=args.PGD_init_theta)
+            attacker = ParsOptL2Norm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
+                                     args.batch_size, args.est_grad_samples,
+                                     maximum_queries=args.max_queries, sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm,
+                                     tol=tol, prior_grad_binary_search_tol=args.prior_grad_bs_tol, best_initial_target_sample=args.best_initial_target_sample)
             attacker.attack_all_images(args, arch, save_result_path)
         elif args.norm == "linf":
-            attacker = PriorOptLinfNorm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
-                                        args.batch_size, args.est_grad_samples, maximum_queries=args.max_queries,
-                                         sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm, tol=tol,
-                                        prior_grad_binary_search_tol=args.prior_grad_bs_tol, best_initial_target_sample=args.best_initial_target_sample)
+            attacker = ParsOptLinfNorm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
+                                       args.batch_size, args.est_grad_samples, maximum_queries=args.max_queries,
+                                       sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm, tol=tol,
+                                       prior_grad_binary_search_tol=args.prior_grad_bs_tol, best_initial_target_sample=args.best_initial_target_sample)
             attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()
 

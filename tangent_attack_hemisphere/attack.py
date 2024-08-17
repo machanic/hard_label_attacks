@@ -155,8 +155,7 @@ class TangentAttack(object):
             ) for perturbed_image in perturbed_images])
         # Choose upper thresholds in binary searchs based on constraint.
         if self.norm == "linf":
-            highs = dists_post_update
-            # Stopping criteria.
+            highs = dists_post_update # Stopping criteria.
             thresholds = torch.clamp_max(dists_post_update * self.theta, max=self.theta)
         else:
             highs = torch.ones(perturbed_images.size(0))
@@ -632,6 +631,15 @@ if __name__ == "__main__":
     assert args.batch_size == 1, "Tangent attack only supports mini-batch size equals 1!"
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    torch.backends.cudnn.enabled = True
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
     args_dict = None
     if not args.json_config:
         # If there is no json file, all of the args must be given

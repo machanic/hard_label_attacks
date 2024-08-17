@@ -41,18 +41,8 @@ for dir_name, count in all_source_folders.items():
                 if os.path.exists(source_root_folder_2 + "/" + rest_file):
                     os.symlink(source_root_folder_2 + "/" + rest_file, target_file_path, False)
     else:
-        if os.path.exists(source_root_folder_1 + "/" + dir_name):
+        if os.path.exists(source_root_folder_1 + "/" + dir_name) and not os.path.exists(target_root_folder + "/" + dir_name):
             os.symlink(source_root_folder_1 + "/" + dir_name, target_root_folder + "/" + dir_name, target_is_directory=True)
-            # for file in os.listdir(source_root_folder_1 + "/" + dir_name):
-            #     source_file_path = source_root_folder_1 + "/" + dir_name + "/" + file
-            #     target_file_path = target_root_folder + "/" + dir_name + "/" +file
-            #     os.makedirs(os.path.dirname(target_file_path), exist_ok=True)
-            #     os.symlink(source_file_path, target_file_path, False)
-        if os.path.exists(source_root_folder_2 + "/" + dir_name):
+        if os.path.exists(source_root_folder_2 + "/" + dir_name) and not os.path.exists(target_root_folder + "/" + dir_name):
             os.symlink(source_root_folder_2 + "/" + dir_name, target_root_folder + "/" + dir_name,
                        target_is_directory=True)
-            # for file in os.listdir(source_root_folder_2 + "/" + dir_name):
-            #     source_file_path = source_root_folder_2 + "/" + dir_name + "/" + file
-            #     target_file_path = target_root_folder + "/" + dir_name + "/" +file
-            #     os.makedirs(os.path.dirname(target_file_path), exist_ok=True)
-            #     os.symlink(source_file_path, target_file_path, False)

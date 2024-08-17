@@ -9,31 +9,16 @@ from sklearn.decomposition import PCA, KernelPCA
 def g_function_newton(model, image, theta, create_graph=True):
     theta = normalize(theta)
     with torch.enable_grad():
-        lmdb = torch.tensor(0.5, requires_grad=True)  # 初始化lmdb为0.0，设置为可求导张量
+        lmdb = torch.tensor(0.5, requires_grad=True)  # initialize lmdb as 0.5
         perturbed = image + lmdb * theta
         loss = model(perturbed)[:,1]
         while torch.abs(loss) > 1e-3:
-            grad_lmdb = torch.autograd.grad(loss, lmdb, create_graph=create_graph)[0]
+            grad_lmdb = torch.autograd.grad(loss, lmdb, create_graph=create_graph)[0] # note that it should use True for high-order gradient
             lmdb = lmdb - loss / grad_lmdb
             perturbed = image + lmdb * theta
             loss = model(perturbed)[:,1]
     return lmdb
 #
-# # 可以作为soft label attack使用
-# def g_function_newton_with_est_grad_lmdb(model, theta, bound, sigma=0.001):
-#     lmdb = torch.tensor(0.5, requires_grad=True)  # 初始化lmdb为0.0，设置为可求导张量
-#     perturbed = lmdb * theta
-#     Lp_distance = model(perturbed)
-#     loss = Lp_distance - bound
-#     while torch.abs(loss) > 1e-3:
-#         # grad_lmdb = torch.autograd.grad(loss, lmdb, create_graph=create_graph)[0]
-#         loss_2 = model((lmdb + sigma) * theta) - bound
-#         est_grad_lmdb = (loss_2 - loss) / sigma
-#         lmdb = lmdb - loss / est_grad_lmdb
-#         perturbed = lmdb * theta
-#         Lp_distance = model(perturbed)
-#         loss = Lp_distance - bound
-#     return lmdb
 
 def cw_loss(logit, label, target=None):
     if target is not None:
@@ -52,48 +37,6 @@ def cw_loss(logit, label, target=None):
         gt_logit = logit[torch.arange(logit.shape[0]), label]
         second_max_logit = logit[torch.arange(logit.shape[0]), second_max_index]
         return second_max_logit - gt_logit
-
-#
-# def fine_grained_binary_search(model, x0, y0, theta, initial_lbd=1.0, max_high_bound=100, tol=1e-5):
-#     nquery = 1
-#     lbd = initial_lbd
-#
-#     # still inside boundary
-#     if model(x0 + lbd * theta).max(1)[1].item() == y0:
-#         if lbd > max_high_bound:
-#             max_high_bound = lbd + 50
-#         lbd_lo = lbd
-#         lbd_hi = lbd * 1.01
-#         nquery += 1
-#         while model(x0 + lbd_hi * theta).max(1)[1].item() == y0:
-#             lbd_hi = lbd_hi * 1.01
-#             nquery += 1
-#             if lbd_hi > max_high_bound:
-#                 return float('inf'), nquery - 1
-#     else:
-#         lbd_hi = lbd
-#         lbd_lo = lbd * 0.99
-#         nquery += 1
-#         while model(x0 + lbd_lo * theta).max(1)[1].item() != y0:
-#             lbd_lo = lbd_lo * 0.99
-#             nquery += 1
-#     tot_count = 0
-#     old_lbd_mid = lbd_hi
-#     while (lbd_hi - lbd_lo) > tol:
-#         tot_count+=1
-#         lbd_mid = (lbd_lo + lbd_hi) / 2.0
-#         nquery += 1
-#         if model(x0 + lbd_mid * theta).max(1)[1].item() != y0:
-#             lbd_hi = lbd_mid
-#         else:
-#             lbd_lo = lbd_mid
-#         if old_lbd_mid == lbd_mid or tot_count > 200:
-#             print(
-#                 "binary search's lowest numerical precision warn: tol is {:.2e} and the while loop is executed {} times, break!".format(
-#                     tol, tot_count))
-#             break
-#         old_lbd_mid = lbd_mid
-#     return lbd_hi, nquery
 
 def get_g_grad(model, image, theta, use_lambda_grad=False):
     with torch.enable_grad():

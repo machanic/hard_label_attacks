@@ -3,7 +3,7 @@ import threading
 import randomgen
 import numpy as np
 
-from biased_boundary_attack.utils.sampling.perlin import create_perlin_noise, calc_fade
+from biased_boundary_attack.bba_utils.sampling.perlin import create_perlin_noise, calc_fade
 
 
 class SamplingProvider:

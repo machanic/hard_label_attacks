@@ -15,6 +15,13 @@ import json
 from scipy.interpolate import make_interp_spline
 import seaborn as sns
 from matplotlib.ticker import StrMethodFormatter
+import matplotlib.colors as pltc
+
+
+
+all_colors = [k for k,v in pltc.cnames.items()]
+
+
 
 linestyle_dict = OrderedDict(
     [('solid',               (0, ())),
@@ -52,6 +59,7 @@ def read_json_data(json_path):
             surrogate_archs.extend(data_json["args"]["surrogate_archs"])
     return distortion_dict, surrogate_archs
 
+
 surrogate_arch_name_to_paper = {"inceptionresnetv2":"IncResV2", "xception":"Xception", "resnet50":"ResNet50","convit_base":"ConViT",
                                 "jx_vit":"ViT", "resnet-110":"ResNet110"}
 
@@ -59,51 +67,60 @@ def read_all_data(dataset_path_dict, arch, query_budgets, success_distortion_thr
     # dataset_path_dict {("CIFAR-10","l2","untargeted"): "/.../"， }
     data_info = {}
     for (dataset, norm, targeted, method), dir_path in dataset_path_dict.items():
-        for file_path in os.listdir(dir_path):
-            if file_path.startswith(arch) and file_path.endswith(".json"):
-                file_path = dir_path + "/" + file_path
-                distortion_dict, surrogate_archs = read_json_data(file_path)
-                if "resnet50" in surrogate_archs and "jx_vit" in surrogate_archs:
-                    continue
-                x = []
-                y = []
-                for query_budget in query_budgets:
-                    distortion_list = []
-                    for image_id, query_distortion_dict in distortion_dict.items():
-                        query_distortion_dict = {int(float(query)): float(dist) for query, dist in query_distortion_dict.items()}
-                        queries = np.array(list(query_distortion_dict.keys()))
-                        queries = np.sort(queries)
-                        find_index = np.searchsorted(queries, query_budget, side='right') - 1
-                        if query_budget < queries[find_index]:
-                            print(
-                                "query budget is {}, find query is {}, min query is {}, len query_distortion is {}".format(
-                                    query_budget, queries[find_index], np.min(queries).item(),
-                                    len(query_distortion_dict)))
-                            continue
-                        distortion_list.append(query_distortion_dict[queries[find_index]])
-                    distortion_list = np.array(distortion_list)
-                    distortion_list = distortion_list[~np.isnan(distortion_list)]  # 去掉nan的值
-                    success_list = distortion_list <= success_distortion_threshold
-                    success_list = success_list.astype(np.float32)
-                    success_rate = np.mean(success_list) * 100.0
-                    x.append(query_budget)
-                    y.append(success_rate)
+     for file_path in os.listdir(dir_path):
+         if file_path.startswith(arch) and file_path.endswith(".json"):
+            file_path = dir_path + "/" + file_path
+            distortion_dict, surrogate_archs = read_json_data(file_path)
+            if "resnet50" in surrogate_archs and "jx_vit" in surrogate_archs:
+                continue
+            x = []
+            y = []
+            for query_budget in query_budgets:
+                distortion_list = []
+                for image_id, query_distortion_dict in distortion_dict.items():
+                    query_distortion_dict = {int(float(query)): float(dist) for query, dist in query_distortion_dict.items()}
+                    queries = np.array(list(query_distortion_dict.keys()))
+                    queries = np.sort(queries)
+                    find_index = np.searchsorted(queries, query_budget, side='right') - 1
+                    if query_budget < queries[find_index]:
+                        print(
+                            "query budget is {}, find query is {}, min query is {}, len query_distortion is {}".format(
+                                query_budget, queries[find_index], np.min(queries).item(),
+                                len(query_distortion_dict)))
+                        continue
+                    distortion_list.append(query_distortion_dict[queries[find_index]])
+                distortion_list = np.array(distortion_list)
+                distortion_list = distortion_list[~np.isnan(distortion_list)]  # 去掉nan的值
+                success_list = distortion_list <= success_distortion_threshold
+                success_list = success_list.astype(np.float32)
+                success_rate = np.mean(success_list) * 100.0
+                x.append(query_budget)
+                y.append(success_rate)
 
-                x = np.array(x)
-                y = np.array(y)
-                surrogate_archs_new = [surrogate_arch_name_to_paper[surrogate_arch] for surrogate_arch in surrogate_archs]
-                data_info[(dataset, norm, targeted, method, "&".join(surrogate_archs_new))] = (x, y)
+            x = np.array(x)
+            y = np.array(y)
+            must_skip_this = False
+            for surrogate_arch in surrogate_archs:
+                if surrogate_arch not in surrogate_arch_name_to_paper:
+                    must_skip_this = True
+                    break
+            if must_skip_this:
+                continue
+            surrogate_archs_new = [surrogate_arch_name_to_paper[surrogate_arch] for surrogate_arch in
+                                   surrogate_archs]
+            data_info[(dataset, norm, targeted, method, "&".join(surrogate_archs_new))] = (x, y)
     return data_info
 
 
-method_name_to_paper = {"tangent_attack":"TA",
-                        "ellipsoid_tangent_attack":"G-TA", "GeoDA":"GeoDA",
-                        "HSJA":"HSJA",  "SignOPT":"Sign-OPT", "SVMOPT":"SVM-OPT",
-                         "Evolutionary":"Evolutionary", "SurFree":"SurFree",
-                        "TriangleAttack":"Triangle Attack", "PriorSignOPT":"Prior-Sign-OPT",
-                        "PriorOPT":"Prior-OPT", "RayS":"RayS"
-                        #"QEBA":"QEBA", "CGBA_H":"CGBA-H"
-                        }
+method_name_to_paper = OrderedDict([("HSJA","HSJA"),
+                                    ("tangent_attack","TA"),
+                                    ("ellipsoid_tangent_attack","G-TA"), ("GeoDA","GeoDA"),
+                                    ("Evolutionary","Evolutionary"), ("SurFree","SurFree"),
+                                    ("TriangleAttack","Triangle Attack"),  ("biased_boundary_attack","BBA"), ("SQBA","SQBA"),
+                                    ("SignOPT","Sign-OPT"), ("SVMOPT","SVM-OPT"),
+                                    ("PriorSignOPT","Prior-Sign-OPT"), ("PriorSignOPT_PGD_init_theta","Prior-Sign-OPT_PGD_init_theta"),
+                                    ("PriorOPT","Prior-OPT"),("PriorOPT_PGD_init_theta","Prior-OPT_PGD_init_theta"),
+                        ])
 
 def from_method_to_dir_path(dataset, method, norm, targeted):
     if method == "tangent_attack":
@@ -113,6 +130,9 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "HSJA":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
+                                                                norm=norm,  target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "SQBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm,  target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "GeoDA":
@@ -153,6 +173,12 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     elif method == "PriorSignOPT":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorSignOPT_PGD_init_theta":
+        path = "PriorSignOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format(dataset=dataset, norm=norm,
+                                                                                   target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorOPT_PGD_init_theta":
+        path = "PriorOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format(dataset=dataset, norm=norm,
+                                                                                   target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "QEBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
@@ -160,7 +186,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
 
 
 def get_all_exists_folder(dataset, methods, norm, targeted):
-    root_dir = "F:/logs/hard_label_attack_complete/"
+    root_dir = "H:/logs/hard_label_attack_complete/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     for method in methods:
         file_name = from_method_to_dir_path(dataset, method, norm, targeted)
@@ -189,15 +215,22 @@ def draw_query_success_rate_figure(dataset, norm, targeted, arch, success_distor
     if norm == "l2":
         if "RayS" in methods:
             methods.remove("RayS")
+    elif norm =="linf":
+        if "Evolutionary" in methods:
+            methods.remove("Evolutionary")
+        if "SurFree" in methods:
+            methods.remove("SurFree")
+        if "TriangleAttack" in methods:
+            methods.remove("TriangleAttack")
+        if "GeoDA" in methods:
+            methods.remove("GeoDA")
+        if "RayS" in methods:
+            methods.remove("RayS")
+        if "biased_boundary_attack" in methods:
+            methods.remove("biased_boundary_attack")
     if dataset == "CIFAR-10":
-        # if "TriangleAttack" in methods:
-        #     methods.remove("TriangleAttack")
-        if "HSJA" in methods:
-            methods.remove("HSJA")
-        if "tangent_attack" in methods:
-            methods.remove("tangent_attack")
-        if "ellipsoid_tangent_attack" in methods:
-            methods.remove("ellipsoid_tangent_attack")
+        if "SQBA" in methods:
+            methods.remove("SQBA")
 
     dataset_path_dict= get_all_exists_folder(dataset, methods, norm, targeted)
     max_query = 10000
@@ -205,7 +238,7 @@ def draw_query_success_rate_figure(dataset, norm, targeted, arch, success_distor
         max_query = 20000
     query_budgets = np.arange(1000, max_query+1, 1000)
     data_info = read_all_data(dataset_path_dict, arch, query_budgets, success_distortion_threshold)  # fig_type can be mean_distortion or median_distortion
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
@@ -216,23 +249,35 @@ def draw_query_success_rate_figure(dataset, norm, targeted, arch, success_distor
     xtick = np.array([0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000])
     if max_query == 20000:
         xtick = np.array([0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,11000,12000,13000,14000,15000,16000,17000,18000,19000,20000])
-
+    all_used_colors = set()
     for idx, ((dataset, norm, targeted, method, surrogate_archs), (x,y)) in enumerate(data_info.items()):
         x = np.asarray(x)
         y = np.asarray(y)
+
         if surrogate_archs:
-            method = method + "$_{\mathrm{"+ surrogate_archs + "}}$"
+            if "PGD_init_theta" in method:
+                method = method.replace("_PGD_init_theta", "")
+                method = method + "$_{\\theta_0^{\\mathrm{PGD}} + \\mathrm{" + surrogate_archs + "}}$"
+            else:
+                method = method + "$_{\mathrm{"+ surrogate_archs + "}}$"
+
+
         if method not in method_linestyle_mark_dict:
             linestyle = linestyle_dict[linestyles[idx%len(linestyles)]]
             mark = markers[idx]
             color = colors[idx]
+
+            # color = colors[idx]
 
             for_loop_count = 0
             all_use_color = False
             all_use_mark = False
             while color in [tuple_value[2] for tuple_value in
                             method_linestyle_mark_dict.values()]:
-                color = colors[random.randint(0, len(colors) - 1)]
+                color = random.choice(colors)
+                while color in all_used_colors:
+                    color = random.choice(colors)
+
                 for_loop_count += 1
                 if for_loop_count > 1000:
                     all_use_color = True
@@ -240,7 +285,7 @@ def draw_query_success_rate_figure(dataset, norm, targeted, arch, success_distor
             for_loop_count = 0
             while mark in [tuple_value[1] for tuple_value in
                            method_linestyle_mark_dict.values()]:
-                mark = markers[random.randint(0, len(colors) - 1)]
+                mark = random.choice(markers)
                 for_loop_count += 1
                 if for_loop_count > 1000:
                     all_use_mark = True
@@ -248,13 +293,20 @@ def draw_query_success_rate_figure(dataset, norm, targeted, arch, success_distor
             if all_use_color or all_use_mark:
                 while (mark, color) in [(tuple_value[1], tuple_value[2]) for tuple_value in
                                         method_linestyle_mark_dict.values()]:
-                    color = colors[random.randint(0, len(colors) - 1)]
-                    mark = markers[random.randint(0, len(markers) - 1)]
+                    color = random.choice(colors)
+                    while color in all_used_colors:
+                        color = random.choice(colors)
+                    mark = random.choice(markers)
 
             method_linestyle_mark_dict[method] = (linestyle, mark, color)
-        plt.plot(x, y, label=method, color=method_linestyle_mark_dict[method][2],
-                         linestyle=method_linestyle_mark_dict[method][0], linewidth=1.5,
-                         marker=method_linestyle_mark_dict[method][1], markersize=6)
+        selected_color = method_linestyle_mark_dict[method][2]
+        while selected_color in all_used_colors:
+            selected_color = random.choice(colors)
+        method_linestyle_mark_dict[method]= (method_linestyle_mark_dict[method][0], method_linestyle_mark_dict[method][1], selected_color)
+        all_used_colors.add(selected_color)
+        plt.plot(x, y, label=method, color=selected_color,
+                 linestyle=method_linestyle_mark_dict[method][0], linewidth=1.5,
+                 marker=method_linestyle_mark_dict[method][1], markersize=6, alpha=0.8)
 
     plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
     if max_query > 10000:
@@ -274,9 +326,11 @@ def draw_query_success_rate_figure(dataset, norm, targeted, arch, success_distor
         plt.xticks(xtick, x_ticks_label, fontsize=20)
     yticks = np.arange(0, 101, 10)
     plt.yticks(yticks, fontsize=20)
-    plt.xlabel(xlabel, fontsize=25)
-    plt.ylabel(ylabel, fontsize=25)
-    plt.legend(loc='lower right' if not  targeted else 'upper left', prop={'size': 15},handlelength=4,framealpha=0.5,fancybox=True,frameon=True)
+    plt.xlabel(xlabel, fontsize=24)
+    plt.ylabel(ylabel, fontsize=24)
+    location = 'lower right' if not targeted else 'upper left'
+    plt.legend(loc=location,
+               prop={'size': 15},handlelength=4,framealpha=0.5,fancybox=True,frameon=True)
     plt.savefig(dump_file_path, dpi=200)
     plt.close()
     print("save to {}".format(dump_file_path))
@@ -294,17 +348,17 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/icml2024/figures/query_vs_success_rate/"
+    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/NeurIPS 2024/figures/query_vs_success_rate/"
     os.makedirs(dump_folder, exist_ok=True)
 
-    for dataset in [ "CIFAR-10"]:
+    for dataset in ["CIFAR-10"]:
         args.dataset = dataset
         if "CIFAR" in args.dataset:
-            archs = ["pyramidnet272","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40","gdas"]
+            archs = ["pyramidnet272","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40"]
         else:
             archs = ["senet154", "resnet101", "inceptionv3", "resnext101_64x4d", "inceptionv4",
                      "jx_vit", "gcvit_base", "swin_base_patch4_window7_224"]
-        targeted_list = [False,True]
+        targeted_list = [False]
         for targeted in targeted_list:
             args.targeted = targeted
             for arch in archs:
@@ -312,11 +366,16 @@ if __name__ == "__main__":
                               model=arch, norm=args.norm, target_str="untargeted" if not args.targeted else "targeted")
                 x_label = "Number of Queries"
                 y_label = "Attack Success Rate"
-                model = StandardModel(dataset=args.dataset, arch=arch, no_grad=True, load_pretrained=True)
-                dim = np.prod(np.array([each_dim for each_dim in model.input_size])).item()
+
                 if dataset == "CIFAR-10":
                     success_distortion_threshold = 1.0
+                    dim = 32*32*3
                 else:
+                    if "inception" in arch or "xception" in arch or "ception" in arch:
+                        dim = 3 * 299 * 299
+                        print("{} is 299!".format(arch))
+                    else:
+                        dim = 3*224*224
                     success_distortion_threshold = math.sqrt(0.001 * dim)
                 print("arch:{}, dim:{}, Success distortion threshold:{}".format(arch, dim, success_distortion_threshold))
                 draw_query_success_rate_figure(args.dataset, args.norm, args.targeted, arch, success_distortion_threshold, file_path, x_label, y_label)

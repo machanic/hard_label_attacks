@@ -36,8 +36,10 @@ def sign_opt_expectation_gamma(q, d):
 
 def prior_sign_opt_expectation_gamma(alpha,q,d):
     expectation_gamma = 1/math.sqrt(q) * (abs(alpha) + (q-1) * math.sqrt(1-alpha ** 2) * np.exp(gammaln((d - 1) / 2) - (gammaln(d / 2))) * (1/ math.sqrt(math.pi)))
-    # expectation_gamma_square = 1/float(q) * (alpha**2 + (q-1)/float(d-1) *(2/math.pi*(q-2)+1)*(1-alpha**2)
-    #                                          + 2*abs(alpha)*(q-1)*math.sqrt(1-alpha**2)*gamma((d-1)/2)/(gamma(d/2)*math.sqrt(math.pi)))
+    expectation_gamma_square = 1 / float(q) * (
+            alpha ** 2 + (q - 1) / float(d - 1) * (2 / math.pi * (q - 2) + 1) * (1 - alpha ** 2)
+            + 2 * abs(alpha) * (q - 1) * math.sqrt(1 - alpha ** 2) *
+            np.exp(gammaln((d - 1) / 2) - (gammaln(d / 2))) / math.sqrt(math.pi))
 
     return expectation_gamma, expectation_gamma_square
 
@@ -68,7 +70,7 @@ if __name__ == '__main__':
     y_sign_opt = np.array([sign_opt_gamma_square for _ in alpha_list])
     y_prior_sign_opt = np.array(prior_sign_opt_gamma_square_list)
     y_prior_opt = np.array(prior_opt_gamma_square_list)
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'r', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
@@ -151,7 +153,7 @@ if __name__ == '__main__':
     axins.set_xticklabels(axins.get_xticks(),color='steelblue')
     axins.set_yticklabels(axins.get_yticks(), color='steelblue')
     mark_inset(ax, axins, loc1=3, loc2=4, fc="none", ec='k', lw=1)
-    plt.savefig("D:\\黑盒攻击论文\\hard-label attacks\\Prior-OPT\\icml2024\\figures\\ablation_study\\alpha_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
+    plt.savefig("D:\\黑盒攻击论文\\hard-label attacks\\Prior-OPT\\NeurIPS 2024\\figures\\ablation_study\\E_gamma_square\\alpha_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
     plt.close()
 
 

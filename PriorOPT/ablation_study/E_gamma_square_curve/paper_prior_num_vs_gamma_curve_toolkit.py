@@ -96,7 +96,7 @@ if __name__ == '__main__':
     y_prior_opt = np.array(prior_opt_gamma_square_list)
     y_prior_sign_opt_sorted = np.array(sorted_prior_sign_opt_gamma_square_list)
     y_prior_opt_sorted = np.array(sorted_prior_opt_gamma_square_list)
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'r', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
@@ -117,10 +117,10 @@ if __name__ == '__main__':
     plt.plot(x, y_prior_opt, label=r"Prior-OPT$_{\mathregular{Shuffle}\{\alpha_1,\alpha_2,\cdots,\alpha_s\}}$", color=colors[2],
              linestyle=linestyle_dict[linestyles[2]], linewidth=1.5,
              marker=markers[2], markersize=5)
-    plt.plot(x, y_prior_sign_opt_sorted, label=r"Prior-Sign-OPT$_{\alpha_1\geq\alpha_2\cdots\geq\alpha_s}$", color=colors[3],
+    plt.plot(x, y_prior_sign_opt_sorted, label=r"Prior-Sign-OPT$_{\alpha_1\geq\alpha_2\geq\cdots\geq\alpha_s}$", color=colors[3],
              linestyle=linestyle_dict[linestyles[3]], linewidth=1.5,
              marker=markers[3], markersize=5)
-    plt.plot(x, y_prior_opt_sorted, label=r"Prior-OPT$_{\alpha_1\geq\alpha_2\cdots\geq\alpha_s}$", color=colors[4],
+    plt.plot(x, y_prior_opt_sorted, label=r"Prior-OPT$_{\alpha_1\geq\alpha_2\geq\cdots\geq\alpha_s}$", color=colors[4],
              linestyle=linestyle_dict[linestyles[4]], linewidth=1.5,
              marker=markers[4], markersize=5)
 
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     # axins.set_xticklabels(axins.get_xticks(),color='steelblue')
     # axins.set_yticklabels(axins.get_yticks(), color='steelblue')
     # mark_inset(ax, axins, loc1=3, loc2=4, fc="none", ec='k', lw=1)
-    plt.savefig("D:\\黑盒攻击论文\\hard-label attacks\\Prior-OPT\\icml2024\\figures\\ablation_study\\prior_number_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
+    plt.savefig("D:\\黑盒攻击论文\\hard-label attacks\\Prior-OPT\\NeurIPS 2024\\figures\\ablation_study\\E_gamma_square\\prior_num_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
     plt.close()
 
 

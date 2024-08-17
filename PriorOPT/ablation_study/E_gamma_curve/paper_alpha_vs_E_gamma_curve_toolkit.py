@@ -80,7 +80,7 @@ if __name__ == '__main__':
     y_prior_opt_upper_bound = np.array(prior_opt_gamma_upper_bound_list)
     y_prior_opt_lower_bound = np.array(prior_opt_gamma_lower_bound_list)
     print(y_prior_opt_upper_bound-y_prior_opt_lower_bound)
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'r', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",

@@ -14,7 +14,7 @@ from config import PROJECT_PATH
 sys.path.append('../cifar10-fast/')
 from adversarial_defense.fast_adv_training.utils import *
 from dataset.dataset_loader_maker import DataLoaderMaker
-from dataset.standard_model import StandardModel
+from models.standard_model import StandardModel
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(

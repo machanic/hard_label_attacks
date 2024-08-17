@@ -675,6 +675,10 @@ if __name__ == "__main__":
     parser.add_argument('--arch', default=None, type=str, help='network architecture')
     parser.add_argument('--all-archs', action="store_true")
     parser.add_argument('--surrogate-arch', type=str)
+    parser.add_argument("--surrogate-defense-model", type=str, help="the defense method of the surrogate model")
+    parser.add_argument('--surrogate-defense-norm', type=str, choices=["l2", "linf"],
+                        help="defense norms of multiple surrogate defense models, e.g., l2, linf")
+    parser.add_argument('--surrogate-defense-eps', type=str, choices=["8_div_255", "4_div_255", "3"],  help="defense epsilon of multiple surrogate defense models, e.g., 3,4_div_255,8_div_255")
     parser.add_argument('--targeted', action="store_true")
     parser.add_argument('--target_type',type=str, default='increment', choices=['random', 'least_likely',"increment"])
     parser.add_argument('--load-random-class-image', action='store_true',
@@ -721,6 +725,10 @@ if __name__ == "__main__":
                             get_exp_dir_name(args.dataset, args.norm, args.targeted, args.target_type,
                                              args))  # 随机产生一个目录用于实验
     os.makedirs(args.exp_dir, exist_ok=True)
+    if not args.surrogate_defense_norm:
+        args.surrogate_defense_norm = args.defense_norm
+    if not args.surrogate_defense_eps:
+        args.surrogate_defense_eps = args.defense_eps
 
     if args.all_archs:
         if args.attack_defense:
@@ -729,19 +737,26 @@ if __name__ == "__main__":
             log_file_path = osp.join(args.exp_dir, 'run.log')
     elif args.arch is not None:
         if args.attack_defense:
-            if args.dataset == "ImageNet":
-                log_file_path = osp.join(args.exp_dir,
-                                         "run_{arch}({arch_defense_model}_{arch_defense_norm}_{arch_defense_eps})_surrogate_{surrogate_arch}.log".format(
-                                             arch=args.arch, arch_defense_model="AT" if args.defense_model.startswith(
-                                                 "adv_train") else args.defense_model,
-                                             arch_defense_norm=args.defense_norm, arch_defense_eps=args.defense_eps,
-                                             surrogate_arch=args.surrogate_arch))
+            if args.surrogate_defense_model.startswith(
+                    "adv_train") or args.surrogate_defense_model == "TRADES" or args.surrogate_defense_model == "feature_scatter":
+                surrogate_str = "{surrogate_arch}({surrogate_defense_model}_{surrogate_defense_norm}_{surrogate_defense_eps})".format(
+                    surrogate_arch=args.surrogate_arch,
+                    surrogate_defense_model="AT" if args.surrogate_defense_model.startswith(
+                        "adv_train") else args.surrogate_defense_model,
+                    surrogate_defense_norm=args.surrogate_defense_norm,
+                    surrogate_defense_eps=args.surrogate_defense_eps)
             else:
-                log_file_path = osp.join(args.exp_dir,
-                                         "run_{arch}({arch_defense_model})_surrogate_{surrogate_arch}.log".format(
-                                             arch=args.arch, arch_defense_model="AT" if args.defense_model.startswith(
-                                                 "adv_train") else args.defense_model,
-                                             surrogate_arch=args.surrogate_arch))
+                surrogate_str = "{surrogate_arch}({surrogate_defense_model})".format(
+                    surrogate_arch=args.surrogate_arch,
+                    surrogate_defense_model="AT" if args.surrogate_defense_model.startswith(
+                        "adv_train") else args.surrogate_defense_model)
+            if args.defense_model.startswith("adv_train") or args.defense_model == "TRADES" or args.defense_model == "feature_scatter":
+                log_file_path = osp.join(args.exp_dir, "run_{arch}({arch_defense_model}_{arch_defense_norm}_{arch_defense_eps})_surrogate_{surrogate_arch}.log".format(
+                    arch=args.arch, arch_defense_model="AT" if args.defense_model.startswith("adv_train") else args.defense_model, arch_defense_norm=args.defense_norm,
+                    arch_defense_eps=args.defense_eps, surrogate_arch=surrogate_str))
+            else:
+                log_file_path = osp.join(args.exp_dir, "run_{arch}({arch_defense_model})_surrogate_{surrogate_arch}.log".format(
+                    arch=args.arch, arch_defense_model="AT" if args.defense_model.startswith("adv_train") else args.defense_model, surrogate_arch=surrogate_str))
         else:
             log_file_path = osp.join(args.exp_dir, 'run_{}_surrogate_{}.log'.format(args.arch, args.surrogate_arch))
     set_log_file(log_file_path)
@@ -765,26 +780,35 @@ if __name__ == "__main__":
     print_args(args)
     substitude_model = None
     if args.use_surrogate_bias:
-        substitude_model = StandardModel(args.dataset,args.surrogate_arch,no_grad=False,load_pretrained=True)
+        substitude_model = DefensiveModel(args.dataset, args.surrogate_arch, no_grad=False, defense_model=args.surrogate_defense_model, norm=args.surrogate_defense_norm, eps=args.surrogate_defense_eps)
         substitude_model.cuda()
         substitude_model.eval()
 
     for arch in archs:
         if args.attack_defense:
-            if args.dataset == "ImageNet":
+            if args.surrogate_defense_model.startswith(
+                    "adv_train") or args.surrogate_defense_model == "TRADES" or args.surrogate_defense_model == "feature_scatter":
+                surrogate_str = "{surrogate_arch}({surrogate_defense_model}_{surrogate_defense_norm}_{surrogate_defense_eps})".format(
+                    surrogate_arch=args.surrogate_arch,
+                    surrogate_defense_model="AT" if args.surrogate_defense_model.startswith(
+                        "adv_train") else args.surrogate_defense_model,
+                    surrogate_defense_norm=args.surrogate_defense_norm,
+                    surrogate_defense_eps=args.surrogate_defense_eps)
+            else:
+                surrogate_str = "{surrogate_arch}({surrogate_defense_model})".format(
+                    surrogate_arch=args.surrogate_arch,
+                    surrogate_defense_model="AT" if args.surrogate_defense_model.startswith(
+                        "adv_train") else args.surrogate_defense_model)
+            if args.defense_model.startswith("adv_train") or args.defense_model == "TRADES" or args.defense_model == "feature_scatter":
                 save_result_path = args.exp_dir + "/{arch}({arch_defense_model}_{arch_defense_norm}_{arch_defense_eps})_surrogate_{surrogate_arch}.json".format(
-                    arch=args.arch,
-                    arch_defense_model="AT" if args.defense_model.startswith("adv_train") else args.defense_model,
-                    arch_defense_norm=args.defense_norm,
-                    arch_defense_eps=args.defense_eps, surrogate_arch=args.surrogate_arch)
+                    arch=args.arch, arch_defense_model="AT" if args.defense_model.startswith("adv_train") else args.defense_model, arch_defense_norm=args.defense_norm,
+                    arch_defense_eps=args.defense_eps, surrogate_arch=surrogate_str)
             else:
                 save_result_path = args.exp_dir + "/{arch}({arch_defense_model})_surrogate_{surrogate_arch}.json".format(
-                    arch=args.arch,
-                    arch_defense_model="AT" if args.defense_model.startswith("adv_train") else args.defense_model,
-                    surrogate_arch=args.surrogate_arch)
+                    arch=args.arch, arch_defense_model="AT" if args.defense_model.startswith("adv_train") else args.defense_model, surrogate_arch=surrogate_str)
         else:
-            save_result_path = args.exp_dir + "/{arch}_surrogate_{surrogate_arch}.json".format(arch=arch,
-                                                                                               surrogate_arch=args.surrogate_arch)
+            save_result_path = args.exp_dir + "/{arch}_surrogate_{surrogate_arch}_result.json".format(arch=arch,
+                                                                                                      surrogate_arch=args.surrogate_arch)
         if os.path.exists(save_result_path):
             continue
         log.info("Begin attack {} on {}, result will be saved to {}".format(arch, args.dataset, save_result_path))

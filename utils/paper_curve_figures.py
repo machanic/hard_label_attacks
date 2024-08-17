@@ -88,19 +88,27 @@ def read_all_data(dataset_path_dict, arch, query_budgets, stats="mean_distortion
                         y.append(median_distortion)
                 x = np.array(x)
                 y = np.array(y)
+                must_skip_this = False
+                for surrogate_arch in surrogate_archs:
+                    if surrogate_arch not in surrogate_arch_name_to_paper:
+                        must_skip_this = True
+                        break
+                if must_skip_this:
+                    continue
                 surrogate_archs_new = [surrogate_arch_name_to_paper[surrogate_arch] for surrogate_arch in surrogate_archs]
                 data_info[(dataset, norm, targeted, method, "&".join(surrogate_archs_new))] = (x, y)
     return data_info
 
 
-method_name_to_paper = {"tangent_attack":"TA",
-                        "ellipsoid_tangent_attack":"G-TA", "GeoDA":"GeoDA",
-                        "HSJA":"HSJA",  "SignOPT":"Sign-OPT", "SVMOPT":"SVM-OPT",
-                         "Evolutionary":"Evolutionary", "SurFree":"SurFree",
-                        "TriangleAttack":"Triangle Attack", "PriorSignOPT":"Prior-Sign-OPT",
-                        "PriorOPT":"Prior-OPT", "RayS":"RayS"
-                        #"QEBA":"QEBA", "CGBA_H":"CGBA-H"
-                        }
+method_name_to_paper = OrderedDict([("HSJA","HSJA"),
+                                    ("tangent_attack","TA"),
+                                    ("ellipsoid_tangent_attack","G-TA"), ("GeoDA","GeoDA"),
+                                    ("Evolutionary","Evolutionary"), ("SurFree","SurFree"),
+                                    ("TriangleAttack","Triangle Attack"),  ("biased_boundary_attack","BBA"), ("SQBA","SQBA"),
+                                    ("SignOPT","Sign-OPT"), ("SVMOPT","SVM-OPT"),
+                                    ("PriorSignOPT","Prior-Sign-OPT"), ("PriorSignOPT_PGD_init_theta","Prior-Sign-OPT_PGD_init_theta"),
+                                    ("PriorOPT","Prior-OPT"),("PriorOPT_PGD_init_theta","Prior-OPT_PGD_init_theta"),
+                        ])
 
 def from_method_to_dir_path(dataset, method, norm, targeted):
     if method == "tangent_attack":
@@ -110,6 +118,9 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "HSJA":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
+                                                                norm=norm,  target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "SQBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm,  target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "GeoDA":
@@ -150,14 +161,19 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     elif method == "PriorSignOPT":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorSignOPT_PGD_init_theta":
+        path = "PriorSignOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format(dataset=dataset, norm=norm,
+                                                                                   target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "PriorOPT_PGD_init_theta":
+        path = "PriorOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format(dataset=dataset, norm=norm,
+                                                                                   target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "QEBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
     return path
 
-
 def get_all_exists_folder(dataset, methods, norm, targeted):
-    root_dir = "F:/logs/hard_label_attack_complete/"
+    root_dir = "H:/logs/hard_label_attack_complete/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     for method in methods:
         file_name = from_method_to_dir_path(dataset, method, norm, targeted)
@@ -183,14 +199,12 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
             methods.remove("RayS")
         if "GeoDA" in methods:
             methods.remove("GeoDA")
+        if "biased_boundary_attack" in methods:
+            methods.remove("biased_boundary_attack")
     if norm == "l2":
         if "RayS" in methods:
             methods.remove("RayS")
     elif norm =="linf":
-        if "tangent_attack" in methods:
-            methods.remove("tangent_attack")
-        if "ellipsoid_tangent_attack" in methods:
-            methods.remove("ellipsoid_tangent_attack")
         if "Evolutionary" in methods:
             methods.remove("Evolutionary")
         if "SurFree" in methods:
@@ -201,13 +215,14 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
             methods.remove("GeoDA")
         if "RayS" in methods:
             methods.remove("RayS")
-    if dataset == "CIFAR-10":
-        if "HSJA" in methods:
-            methods.remove("HSJA")
+        if "biased_boundary_attack" in methods:
+            methods.remove("biased_boundary_attack")
         if "tangent_attack" in methods:
             methods.remove("tangent_attack")
-        if "ellipsoid_tangent_attack" in methods:
-            methods.remove("ellipsoid_tangent_attack")
+    if dataset == "CIFAR-10":
+        if "SQBA" in methods:
+            methods.remove("SQBA")
+
 
     dataset_path_dict= get_all_exists_folder(dataset, methods, norm, targeted)
     max_query = 10000
@@ -215,7 +230,7 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
         max_query = 20000
     query_budgets = np.arange(1000, max_query+1, 1000)
     data_info = read_all_data(dataset_path_dict, arch, query_budgets, fig_type)  # fig_type can be mean_distortion or median_distortion
-    plt.style.use('bmh')
+    plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
     colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
                    "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey", "indigo",
@@ -228,6 +243,7 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
         xtick = np.array([0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,11000,12000,13000,14000,15000,16000,17000,18000,19000,20000])
     max_y = 0
     min_y= 999
+    all_used_colors = set()
     for idx, ((dataset, norm, targeted, method, surrogate_archs), (x,y)) in enumerate(data_info.items()):
 
         x = np.asarray(x)
@@ -237,26 +253,36 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
         if np.min(y) < min_y:
             min_y = np.min(y)
         if surrogate_archs:
-            method = method + "$_{\mathregular{"+ surrogate_archs + "}}$"
+            if "PGD_init_theta" in method:
+                method = method.replace("_PGD_init_theta", "")
+                method = method + "$_{\\theta_0^{\\mathrm{PGD}} + \\mathrm{" + surrogate_archs + "}}$"
+            else:
+                method = method + "$_{\mathrm{" + surrogate_archs + "}}$"
+
         if method not in method_linestyle_mark_dict:
-            linestyle = linestyle_dict[linestyles[idx%len(linestyles)]]
+            linestyle = linestyle_dict[linestyles[idx % len(linestyles)]]
             mark = markers[idx]
             color = colors[idx]
+
+            # color = colors[idx]
 
             for_loop_count = 0
             all_use_color = False
             all_use_mark = False
             while color in [tuple_value[2] for tuple_value in
-                                    method_linestyle_mark_dict.values()]:
-                color = colors[random.randint(0, len(colors) - 1)]
+                            method_linestyle_mark_dict.values()]:
+                color = random.choice(colors)
+                while color in all_used_colors:
+                    color = random.choice(colors)
+
                 for_loop_count += 1
                 if for_loop_count > 1000:
                     all_use_color = True
                     break
             for_loop_count = 0
             while mark in [tuple_value[1] for tuple_value in
-                            method_linestyle_mark_dict.values()]:
-                mark = markers[random.randint(0, len(colors) - 1)]
+                           method_linestyle_mark_dict.values()]:
+                mark = random.choice(markers)
                 for_loop_count += 1
                 if for_loop_count > 1000:
                     all_use_mark = True
@@ -264,13 +290,21 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
             if all_use_color or all_use_mark:
                 while (mark, color) in [(tuple_value[1], tuple_value[2]) for tuple_value in
                                         method_linestyle_mark_dict.values()]:
-                    color = colors[random.randint(0, len(colors) - 1)]
-                    mark = markers[random.randint(0, len(markers) - 1)]
+                    color = random.choice(colors)
+                    while color in all_used_colors:
+                        color = random.choice(colors)
+                    mark = random.choice(markers)
 
             method_linestyle_mark_dict[method] = (linestyle, mark, color)
-        plt.plot(x, y, label=method, color=method_linestyle_mark_dict[method][2],
+        selected_color = method_linestyle_mark_dict[method][2]
+        while selected_color in all_used_colors:
+            selected_color = random.choice(colors)
+        method_linestyle_mark_dict[method] = (
+        method_linestyle_mark_dict[method][0], method_linestyle_mark_dict[method][1], selected_color)
+        all_used_colors.add(selected_color)
+        plt.plot(x, y, label=method, color=selected_color,
                          linestyle=method_linestyle_mark_dict[method][0], linewidth=1.5,
-                         marker=method_linestyle_mark_dict[method][1], markersize=6)
+                         marker=method_linestyle_mark_dict[method][1], markersize=6, alpha=0.8)
     if dataset!="ImageNet":
         plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
     else:
@@ -316,7 +350,7 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Drawing Figures of Attacking Normal Models')
-    parser.add_argument("--fig_type", type=str, choices=["mean_distortion",
+    parser.add_argument("--fig_type", type=str, default="mean_distortion", choices=["mean_distortion",
                                                          "median_distortion"])
     parser.add_argument("--dataset", type=str,  help="the dataset to train")
     parser.add_argument("--norm", type=str, default="l2", choices=["l2", "linf"])
@@ -329,9 +363,9 @@ if __name__ == "__main__":
 
 
     args = parse_args()
-    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/icml2024/figures/query_vs_distortion/"
+    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/NeurIPS 2024/figures/query_vs_distortion/"
     os.makedirs(dump_folder, exist_ok=True)
-    for dataset in [ "CIFAR-10"]:
+    for dataset in ["CIFAR-10"]:
         args.dataset = dataset
         if "CIFAR" in args.dataset:
             archs = ["pyramidnet272","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40","gdas"]
@@ -340,7 +374,9 @@ if __name__ == "__main__":
                      "jx_vit","gcvit_base","swin_base_patch4_window7_224"]
         targeted_list = [False,True]
         for targeted in targeted_list:
-            for norm in ["l2"]:
+            for norm in ["l2","linf"]:
+                if targeted and norm == "linf":
+                    continue
                 args.norm = norm
                 args.targeted = targeted
                 for model in archs:

@@ -27,7 +27,7 @@ from dataset.dataset_loader_maker import DataLoaderMaker
 from dataset.target_class_dataset import ImageNetDataset, CIFAR10Dataset, CIFAR100Dataset
 from models.standard_model import StandardModel
 from models.defensive_model import DefensiveModel
-from config import IN_CHANNELS, CLASS_NUM, IMAGE_DATA_ROOT
+from config import IN_CHANNELS, CLASS_NUM, IMAGE_DATA_ROOT, MODELS_TEST_STANDARD
 from utils.dataset_toolkit import select_random_image_of_target_class
 
 
@@ -883,7 +883,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     if args.all_archs:
-        archs = args.all_archs
+        archs = MODELS_TEST_STANDARD[args.dataset]
     else:
         assert args.arch is not None
         archs = [args.arch]

@@ -7,7 +7,7 @@ CLASS_NUM = {"MNIST":10,"FashionMNIST":10, "CIFAR-10":10, "CIFAR-100":100, "Imag
 # PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 # HOME_ROOT = os.path.dirname(PROJECT_PATH)
 
-PROJECT_PATH = "/public/machen/hard_label_attacks"
+PROJECT_PATH = "D:/work/hard_label_attacks"
 HOME_ROOT = os.path.dirname(PROJECT_PATH)
 
 IMAGE_DATA_ROOT = {"CIFAR-10":"{}/dataset/CIFAR-10".format(HOME_ROOT), "CIFAR-100":"{}/dataset/CIFAR-100".format(HOME_ROOT),
@@ -99,7 +99,7 @@ MODELS_TRAIN_STANDARD = {"CIFAR-10": ["alexnet", "densenet-bc-100-12", "densenet
 
 MODELS_TEST_STANDARD = {"CIFAR-10": ["pyramidnet272", "gdas","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40"],
                         "CIFAR-100":["pyramidnet272", "gdas","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40"],
-                        "ImageNet": ["resnext101_64x4d","inceptionv4","senet154","resnet101","inceptionv3","pnasnet5large"],
+                        "ImageNet": ["resnext101_64x4d","inceptionv4","senet154","resnet101","inceptionv3","pnasnet5large","jx_vit","gcvit_base","swin_base_patch4_window7_224"],
                         "TinyImageNet":["resnext64_4","densenet121","resnext32_4"]}
 
 
