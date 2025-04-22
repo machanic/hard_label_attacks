@@ -30,25 +30,19 @@ def new_round(_float, _len):
 method_name_to_paper = {"tangent_attack":"TA",  "HSJA":"HSJA",
                         "ellipsoid_tangent_attack":"G-TA",
                         "SignOPT":"Sign-OPT", "SVMOPT":"SVM-OPT",
-                        "biased_boundary_attack":"BBA",
+                        "BBA_prior1":"BBA-prior1", "BBA_prior2":"BBA-prior2",
                         "QEBA":"QEBA","Evolutionary":"Evolutionary",
-                        "SQBA":"SQBA","GeoDA":"GeoDA","TriangleAttack":"Triangle Attack",
+                        "SQBA_prior2":"SQBA-prior2",
+                        "SQBA_prior1":"SQBA-prior1",
+                        "GeoDA":"GeoDA","TriangleAttack":"Triangle Attack",
                         "SurFree":"SurFree",
-                        "PriorSignOPT_1prior": "Prior-Sign-OPT-1prior",
-                        "PriorSignOPT_2prior": "Prior-Sign-OPT-2prior",
+                        "CGBA_H":"CGBA_H",
+                         "PriorSignOPT_prior1": "Prior-Sign-OPT-prior1",
+                        "PriorOPT_prior1": "Prior-OPT-prior1",
                         "PriorSignOPT_PGD_init_theta":"Prior-Sign-OPT_PGD_init_theta",
-                        "PriorOPT_1prior": "Prior-OPT-1prior",
-                        "PriorOPT_2prior": "Prior-OPT-2prior",
+                        "PriorOPT_2priors": "Prior-OPT-2priors","PriorSignOPT_2priors": "Prior-Sign-OPT-2priors",
                         "PriorOPT_PGD_init_theta":"Prior-OPT_PGD_init_theta",
                         }
-
-
-# method_name_to_paper = {
-#                         "SignOPT":"Sign-OPT",
-#                         "PriorSignOPT": "Prior-Sign-OPT",
-#                         "PriorOPT": "Prior-OPT"
-#                         }
-
 
 def from_method_to_dir_path(dataset, method, norm, targeted):
     if method == "tangent_attack":
@@ -67,7 +61,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "biased_boundary_attack":
+    elif method == "BBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "boundary_attack":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
@@ -87,25 +81,34 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     elif method == "CGBA_H":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "SQBA":
-        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
+    elif method == "SQBA_prior1":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "SQBA_prior2":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "BBA_prior1":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
+                                                               target_str="untargeted" if not targeted else "targeted_increment")
+    elif method == "BBA_prior2":
+        path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "SurFree":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "PriorOPT_1prior":
+    elif method == "PriorOPT_prior1":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "PriorSignOPT_1prior":
+    elif method == "PriorSignOPT_prior1":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "PriorSignOPT_PGD_init_theta":
         path = "PriorSignOPT-{dataset}-{norm}-{target_str}_with_PGD_init_theta".format( dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "PriorOPT_2prior":
+    elif method == "PriorOPT_2priors":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "PriorSignOPT_2prior":
+    elif method == "PriorSignOPT_2priors":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method.split("_")[0], dataset=dataset, norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "PriorOPT_PGD_init_theta":
@@ -132,7 +135,7 @@ def read_json_and_extract(json_path):
 def get_file_name_list(dataset, method_name_to_paper, norm, targeted):
     folder_path_dict = {}
     for method, paper_method_name in method_name_to_paper.items():
-        file_path = "H:/logs/hard_label_attack_complete/" + from_method_to_dir_path(dataset, method, norm, targeted)
+        file_path = "G:/logs/hard_label_attacks/" + from_method_to_dir_path(dataset, method, norm, targeted)
         folder_path_dict[paper_method_name] = file_path
     return folder_path_dict
 
@@ -169,7 +172,7 @@ def get_mean_and_median_distortion_given_query_budgets(distortion_dict, query_bu
 
 
 def fetch_all_json_content_given_contraint(dataset, norm, targeted, arch, query_budgets,
-    wanted_one_prior_list, wanted_two_prior_list, want_key="mean_distortion"):
+                                           wanted_one_prior1_list, wanted_one_prior2_list, wanted_two_priors_list, want_key="mean_distortion"):
     folder_list = get_file_name_list(dataset, method_name_to_paper, norm, targeted)
     result = defaultdict(lambda : defaultdict(lambda : "-"))
     for method, folder in folder_list.items():
@@ -185,7 +188,7 @@ def fetch_all_json_content_given_contraint(dataset, norm, targeted, arch, query_
                 if not os.path.exists(file_path):
                     distortion_dict = {}
                 else:
-                    if method.endswith("1prior"):
+                    if method.endswith("prior1"):
                         json_surrogate_arch = []
                         with open(file_path, "r") as file_obj:
                             json_content = json.load(file_obj)
@@ -194,11 +197,24 @@ def fetch_all_json_content_given_contraint(dataset, norm, targeted, arch, query_
                             elif json_content["args"]["surrogate_archs"]:
                                 json_surrogate_arch.extend(json_content["args"]["surrogate_archs"])
                             distortion_dict = json_content["distortion"]
-                        if len(json_surrogate_arch) != 1 or json_surrogate_arch[0] not in wanted_one_prior_list:
+                        if len(json_surrogate_arch) != 1 or json_surrogate_arch[0] not in wanted_one_prior1_list:
                             distortion_dict.clear()
                             continue
-                        print("Read  : " + file_path)
-                    elif method.endswith("2prior"):
+                        print("Read prior1 : " + file_path)
+                    elif method.endswith("prior2"):
+                        json_surrogate_arch = []
+                        with open(file_path, "r") as file_obj:
+                            json_content = json.load(file_obj)
+                            if json_content["args"]["surrogate_arch"]:
+                                json_surrogate_arch.append(json_content["args"]["surrogate_arch"])
+                            elif json_content["args"]["surrogate_archs"]:
+                                json_surrogate_arch.extend(json_content["args"]["surrogate_archs"])
+                            distortion_dict = json_content["distortion"]
+                        if len(json_surrogate_arch) != 1 or json_surrogate_arch[0] not in wanted_one_prior2_list:
+                            distortion_dict.clear()
+                            continue
+                        print("Read prior2  : " + file_path)
+                    elif method.endswith("2priors"):
                         json_surrogate_arch = []
                         with open(file_path, "r") as file_obj:
                             json_content = json.load(file_obj)
@@ -209,13 +225,26 @@ def fetch_all_json_content_given_contraint(dataset, norm, targeted, arch, query_
                         if len(json_surrogate_arch) != 2:
                             distortion_dict.clear()
                             continue
-                        for two_prior in wanted_two_prior_list:
+                        for two_prior in wanted_two_priors_list:
                             if len(set(two_prior) & set(json_surrogate_arch)) == 2:
                                 two_prior_found = True
                         if not two_prior_found:
                             distortion_dict.clear()
                             continue
                         print("Read  : " + file_path)
+                    elif method.endswith("_PGD_init_theta"):
+                        json_surrogate_arch = []
+                        with open(file_path, "r") as file_obj:
+                            json_content = json.load(file_obj)
+                            if json_content["args"]["surrogate_arch"]:
+                                json_surrogate_arch.append(json_content["args"]["surrogate_arch"])
+                            elif json_content["args"]["surrogate_archs"]:
+                                json_surrogate_arch.extend(json_content["args"]["surrogate_archs"])
+                            distortion_dict = json_content["distortion"]
+                        if len(json_surrogate_arch) != 1 or json_surrogate_arch[0] not in wanted_one_prior1_list:
+                            distortion_dict.clear()
+                            continue
+                        print("Read PGD : " + file_path)
                     else:
                         with open(file_path, "r") as file_obj:
                             json_content = json.load(file_obj)
@@ -270,17 +299,17 @@ def fetch_json_content_for_multiple_priors(dataset, norm, targeted, arch, query_
 
 def draw_tables_for_multi_priors(result, surrogate_1, surrogate_2, surrogate_3, surrogate_4, surrogate_5):
     print("""
-                & Sign-OPT \\cite{{cheng2019sign}}& no prior & {SignOPT_1000_victim_model_1} & {SignOPT_2000_victim_model_1} & {SignOPT_5000_victim_model_1} & {SignOPT_8000_victim_model_1} & {SignOPT_10000_victim_model_1}  & {SignOPT_1000_victim_model_2} & {SignOPT_2000_victim_model_2} & {SignOPT_5000_victim_model_2} & {SignOPT_8000_victim_model_2} & {SignOPT_10000_victim_model_2} \\\\
-                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}}} & 1 prior & {PriorSignOPT_1prior_1000_victim_model_1} & {PriorSignOPT_1prior_2000_victim_model_1} & {PriorSignOPT_1prior_5000_victim_model_1} & {PriorSignOPT_1prior_8000_victim_model_1} & {PriorSignOPT_1prior_10000_victim_model_1}  & {PriorSignOPT_1prior_1000_victim_model_2} & {PriorSignOPT_1prior_2000_victim_model_2} & {PriorSignOPT_1prior_5000_victim_model_2} & {PriorSignOPT_1prior_8000_victim_model_2} & {PriorSignOPT_1prior_10000_victim_model_2} \\
-                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & 2 priors  & {PriorSignOPT_2prior_1000_victim_model_1} & {PriorSignOPT_2prior_2000_victim_model_1} & {PriorSignOPT_2prior_5000_victim_model_1} & {PriorSignOPT_2prior_8000_victim_model_1} & {PriorSignOPT_2prior_10000_victim_model_1}  & {PriorSignOPT_2prior_1000_victim_model_2} & {PriorSignOPT_2prior_2000_victim_model_2} & {PriorSignOPT_2prior_5000_victim_model_2} & {PriorSignOPT_2prior_8000_victim_model_2} & {PriorSignOPT_2prior_10000_victim_model_2} \\
-                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}}} & 3 priors & {PriorSignOPT_3prior_1000_victim_model_1} & {PriorSignOPT_3prior_2000_victim_model_1} & {PriorSignOPT_3prior_5000_victim_model_1} & {PriorSignOPT_3prior_8000_victim_model_1} & {PriorSignOPT_3prior_10000_victim_model_1}  & {PriorSignOPT_3prior_1000_victim_model_2} & {PriorSignOPT_3prior_2000_victim_model_2} & {PriorSignOPT_3prior_5000_victim_model_2} & {PriorSignOPT_3prior_8000_victim_model_2} & {PriorSignOPT_3prior_10000_victim_model_2} \\
-                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}}} & 4 priors & {PriorSignOPT_4prior_1000_victim_model_1} & {PriorSignOPT_4prior_2000_victim_model_1} & {PriorSignOPT_4prior_5000_victim_model_1} & {PriorSignOPT_4prior_8000_victim_model_1} & {PriorSignOPT_4prior_10000_victim_model_1}  & {PriorSignOPT_4prior_1000_victim_model_2} & {PriorSignOPT_4prior_2000_victim_model_2} & {PriorSignOPT_4prior_5000_victim_model_2} & {PriorSignOPT_4prior_8000_victim_model_2} & {PriorSignOPT_4prior_10000_victim_model_2} \\
-                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}\&{surrogate_5}}} & 5 priors & {PriorSignOPT_5prior_1000_victim_model_1} & {PriorSignOPT_5prior_2000_victim_model_1} & {PriorSignOPT_5prior_5000_victim_model_1} & {PriorSignOPT_5prior_8000_victim_model_1} & {PriorSignOPT_5prior_10000_victim_model_1}  & {PriorSignOPT_5prior_1000_victim_model_2} & {PriorSignOPT_5prior_2000_victim_model_2} & {PriorSignOPT_5prior_5000_victim_model_2} & {PriorSignOPT_5prior_8000_victim_model_2} & {PriorSignOPT_5prior_10000_victim_model_2} \\
-                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}}} & 1 prior & {PriorOPT_1prior_1000_victim_model_1} & {PriorOPT_1prior_2000_victim_model_1} & {PriorOPT_1prior_5000_victim_model_1} & {PriorOPT_1prior_8000_victim_model_1} & {PriorOPT_1prior_10000_victim_model_1}  & {PriorOPT_1prior_1000_victim_model_2} & {PriorOPT_1prior_2000_victim_model_2} & {PriorOPT_1prior_5000_victim_model_2} & {PriorOPT_1prior_8000_victim_model_2} & {PriorOPT_1prior_10000_victim_model_2}\\\\
-                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & 2 priors & {PriorOPT_2prior_1000_victim_model_1} & {PriorOPT_2prior_2000_victim_model_1} & {PriorOPT_2prior_5000_victim_model_1} & {PriorOPT_2prior_8000_victim_model_1} & {PriorOPT_2prior_10000_victim_model_1}  & {PriorOPT_2prior_1000_victim_model_2} & {PriorOPT_2prior_2000_victim_model_2} & {PriorOPT_2prior_5000_victim_model_2} & {PriorOPT_2prior_8000_victim_model_2} & {PriorOPT_2prior_10000_victim_model_2} \\\\
-                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}}} & 3 priors & {PriorOPT_3prior_1000_victim_model_1} & {PriorOPT_3prior_2000_victim_model_1} & {PriorOPT_3prior_5000_victim_model_1} & {PriorOPT_3prior_8000_victim_model_1} & {PriorOPT_3prior_10000_victim_model_1}  & {PriorOPT_3prior_1000_victim_model_2} & {PriorOPT_3prior_2000_victim_model_2} & {PriorOPT_3prior_5000_victim_model_2} & {PriorOPT_3prior_8000_victim_model_2} & {PriorOPT_3prior_10000_victim_model_2} \\\\
-                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}}} & 4 priors & {PriorOPT_4prior_1000_victim_model_1} & {PriorOPT_4prior_2000_victim_model_1} & {PriorOPT_4prior_5000_victim_model_1} & {PriorOPT_4prior_8000_victim_model_1} & {PriorOPT_4prior_10000_victim_model_1}  & {PriorOPT_4prior_1000_victim_model_2} & {PriorOPT_4prior_2000_victim_model_2} & {PriorOPT_4prior_5000_victim_model_2} & {PriorOPT_4prior_8000_victim_model_2} & {PriorOPT_4prior_10000_victim_model_2} \\\\
-                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}\&{surrogate_5}}} & 5 priors & {PriorOPT_5prior_1000_victim_model_1} & {PriorOPT_5prior_2000_victim_model_1} & {PriorOPT_5prior_5000_victim_model_1} & {PriorOPT_5prior_8000_victim_model_1} & {PriorOPT_5prior_10000_victim_model_1}  & {PriorOPT_5prior_1000_victim_model_2} & {PriorOPT_5prior_2000_victim_model_2} & {PriorOPT_5prior_5000_victim_model_2} & {PriorOPT_5prior_8000_victim_model_2} & {PriorOPT_5prior_10000_victim_model_2} \\\\
+                & Sign-OPT \\cite{{cheng2019sign}}& no prior & {SignOPT_1000_victim_model_1} & {SignOPT_2000_victim_model_1} & {SignOPT_5000_victim_model_1} & {SignOPT_8000_victim_model_1} & {SignOPT_10000_victim_model_1}  & {SignOPT_1000_victim_model_2} & {SignOPT_2000_victim_model_2} & {SignOPT_5000_victim_model_2} & {SignOPT_8000_victim_model_2} & {SignOPT_10000_victim_model_2}  & {SignOPT_1000_victim_model_3} & {SignOPT_2000_victim_model_3} & {SignOPT_5000_victim_model_3} & {SignOPT_8000_victim_model_3} & {SignOPT_10000_victim_model_3} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}}} & 1 prior & {PriorSignOPT_prior1_1000_victim_model_1} & {PriorSignOPT_prior1_2000_victim_model_1} & {PriorSignOPT_prior1_5000_victim_model_1} & {PriorSignOPT_prior1_8000_victim_model_1} & {PriorSignOPT_prior1_10000_victim_model_1}  & {PriorSignOPT_prior1_1000_victim_model_2} & {PriorSignOPT_prior1_2000_victim_model_2} & {PriorSignOPT_prior1_5000_victim_model_2} & {PriorSignOPT_prior1_8000_victim_model_2} & {PriorSignOPT_prior1_10000_victim_model_2}                   & {PriorSignOPT_prior1_1000_victim_model_3} & {PriorSignOPT_prior1_2000_victim_model_3} & {PriorSignOPT_prior1_5000_victim_model_3} & {PriorSignOPT_prior1_8000_victim_model_3} & {PriorSignOPT_prior1_10000_victim_model_3} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & 2 priors  & {PriorSignOPT_2priors_1000_victim_model_1} & {PriorSignOPT_2priors_2000_victim_model_1} & {PriorSignOPT_2priors_5000_victim_model_1} & {PriorSignOPT_2priors_8000_victim_model_1} & {PriorSignOPT_2priors_10000_victim_model_1}  & {PriorSignOPT_2priors_1000_victim_model_2} & {PriorSignOPT_2priors_2000_victim_model_2} & {PriorSignOPT_2priors_5000_victim_model_2} & {PriorSignOPT_2priors_8000_victim_model_2} & {PriorSignOPT_2priors_10000_victim_model_2}                & {PriorSignOPT_2priors_1000_victim_model_3} & {PriorSignOPT_2priors_2000_victim_model_3} & {PriorSignOPT_2priors_5000_victim_model_3} & {PriorSignOPT_2priors_8000_victim_model_3} & {PriorSignOPT_2priors_10000_victim_model_3} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}}} & 3 priors & {PriorSignOPT_3prior_1000_victim_model_1} & {PriorSignOPT_3prior_2000_victim_model_1} & {PriorSignOPT_3prior_5000_victim_model_1} & {PriorSignOPT_3prior_8000_victim_model_1} & {PriorSignOPT_3prior_10000_victim_model_1}  & {PriorSignOPT_3prior_1000_victim_model_2} & {PriorSignOPT_3prior_2000_victim_model_2} & {PriorSignOPT_3prior_5000_victim_model_2} & {PriorSignOPT_3prior_8000_victim_model_2} & {PriorSignOPT_3prior_10000_victim_model_2}                   & {PriorSignOPT_3prior_1000_victim_model_3} & {PriorSignOPT_3prior_2000_victim_model_3} & {PriorSignOPT_3prior_5000_victim_model_3} & {PriorSignOPT_3prior_8000_victim_model_3} & {PriorSignOPT_3prior_10000_victim_model_3} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}}} & 4 priors & {PriorSignOPT_4prior_1000_victim_model_1} & {PriorSignOPT_4prior_2000_victim_model_1} & {PriorSignOPT_4prior_5000_victim_model_1} & {PriorSignOPT_4prior_8000_victim_model_1} & {PriorSignOPT_4prior_10000_victim_model_1}  & {PriorSignOPT_4prior_1000_victim_model_2} & {PriorSignOPT_4prior_2000_victim_model_2} & {PriorSignOPT_4prior_5000_victim_model_2} & {PriorSignOPT_4prior_8000_victim_model_2} & {PriorSignOPT_4prior_10000_victim_model_2}          & {PriorSignOPT_4prior_1000_victim_model_3} & {PriorSignOPT_4prior_2000_victim_model_3} & {PriorSignOPT_4prior_5000_victim_model_3} & {PriorSignOPT_4prior_8000_victim_model_3} & {PriorSignOPT_4prior_10000_victim_model_3} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}\&{surrogate_5}}} & 5 priors & {PriorSignOPT_5prior_1000_victim_model_1} & {PriorSignOPT_5prior_2000_victim_model_1} & {PriorSignOPT_5prior_5000_victim_model_1} & {PriorSignOPT_5prior_8000_victim_model_1} & {PriorSignOPT_5prior_10000_victim_model_1}  & {PriorSignOPT_5prior_1000_victim_model_2} & {PriorSignOPT_5prior_2000_victim_model_2} & {PriorSignOPT_5prior_5000_victim_model_2} & {PriorSignOPT_5prior_8000_victim_model_2} & {PriorSignOPT_5prior_10000_victim_model_2}            & {PriorSignOPT_5prior_1000_victim_model_3} & {PriorSignOPT_5prior_2000_victim_model_3} & {PriorSignOPT_5prior_5000_victim_model_3} & {PriorSignOPT_5prior_8000_victim_model_3} & {PriorSignOPT_5prior_10000_victim_model_3} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}}} & 1 prior & {PriorOPT_prior1_1000_victim_model_1} & {PriorOPT_prior1_2000_victim_model_1} & {PriorOPT_prior1_5000_victim_model_1} & {PriorOPT_prior1_8000_victim_model_1} & {PriorOPT_prior1_10000_victim_model_1}  & {PriorOPT_prior1_1000_victim_model_2} & {PriorOPT_prior1_2000_victim_model_2} & {PriorOPT_prior1_5000_victim_model_2} & {PriorOPT_prior1_8000_victim_model_2} & {PriorOPT_prior1_10000_victim_model_2}           & {PriorOPT_prior1_1000_victim_model_3} & {PriorOPT_prior1_2000_victim_model_3} & {PriorOPT_prior1_5000_victim_model_3} & {PriorOPT_prior1_8000_victim_model_3} & {PriorOPT_prior1_10000_victim_model_3}        \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & 2 priors & {PriorOPT_2priors_1000_victim_model_1} & {PriorOPT_2priors_2000_victim_model_1} & {PriorOPT_2priors_5000_victim_model_1} & {PriorOPT_2priors_8000_victim_model_1} & {PriorOPT_2priors_10000_victim_model_1}  & {PriorOPT_2priors_1000_victim_model_2} & {PriorOPT_2priors_2000_victim_model_2} & {PriorOPT_2priors_5000_victim_model_2} & {PriorOPT_2priors_8000_victim_model_2} & {PriorOPT_2priors_10000_victim_model_2}      & {PriorOPT_2priors_1000_victim_model_3} & {PriorOPT_2priors_2000_victim_model_3} & {PriorOPT_2priors_5000_victim_model_3} & {PriorOPT_2priors_8000_victim_model_3} & {PriorOPT_2priors_10000_victim_model_3} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}}} & 3 priors & {PriorOPT_3prior_1000_victim_model_1} & {PriorOPT_3prior_2000_victim_model_1} & {PriorOPT_3prior_5000_victim_model_1} & {PriorOPT_3prior_8000_victim_model_1} & {PriorOPT_3prior_10000_victim_model_1}  & {PriorOPT_3prior_1000_victim_model_2} & {PriorOPT_3prior_2000_victim_model_2} & {PriorOPT_3prior_5000_victim_model_2} & {PriorOPT_3prior_8000_victim_model_2} & {PriorOPT_3prior_10000_victim_model_2}           & {PriorOPT_3prior_1000_victim_model_3} & {PriorOPT_3prior_2000_victim_model_3} & {PriorOPT_3prior_5000_victim_model_3} & {PriorOPT_3prior_8000_victim_model_3} & {PriorOPT_3prior_10000_victim_model_3} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}}} & 4 priors & {PriorOPT_4prior_1000_victim_model_1} & {PriorOPT_4prior_2000_victim_model_1} & {PriorOPT_4prior_5000_victim_model_1} & {PriorOPT_4prior_8000_victim_model_1} & {PriorOPT_4prior_10000_victim_model_1}  & {PriorOPT_4prior_1000_victim_model_2} & {PriorOPT_4prior_2000_victim_model_2} & {PriorOPT_4prior_5000_victim_model_2} & {PriorOPT_4prior_8000_victim_model_2} & {PriorOPT_4prior_10000_victim_model_2}      &  {PriorOPT_4prior_1000_victim_model_3} & {PriorOPT_4prior_2000_victim_model_3} & {PriorOPT_4prior_5000_victim_model_3} & {PriorOPT_4prior_8000_victim_model_3} & {PriorOPT_4prior_10000_victim_model_3}         \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}\&{surrogate_3}\&{surrogate_4}\&{surrogate_5}}} & 5 priors & {PriorOPT_5prior_1000_victim_model_1} & {PriorOPT_5prior_2000_victim_model_1} & {PriorOPT_5prior_5000_victim_model_1} & {PriorOPT_5prior_8000_victim_model_1} & {PriorOPT_5prior_10000_victim_model_1}  & {PriorOPT_5prior_1000_victim_model_2} & {PriorOPT_5prior_2000_victim_model_2} & {PriorOPT_5prior_5000_victim_model_2} & {PriorOPT_5prior_8000_victim_model_2} & {PriorOPT_5prior_10000_victim_model_2}          & {PriorOPT_5prior_1000_victim_model_3} & {PriorOPT_5prior_2000_victim_model_3} & {PriorOPT_5prior_5000_victim_model_3} & {PriorOPT_5prior_8000_victim_model_3} & {PriorOPT_5prior_10000_victim_model_3}  \\\\
                 """.format(
         surrogate_1=surrogate_1,
         surrogate_2=surrogate_2,
@@ -288,143 +317,213 @@ def draw_tables_for_multi_priors(result, surrogate_1, surrogate_2, surrogate_3, 
         surrogate_4=surrogate_4,
         surrogate_5=surrogate_5,
 
-        SignOPT_1000_victim_model_1=result[False]["Sign-OPT"][1000],
-        SignOPT_2000_victim_model_1=result[False]["Sign-OPT"][2000],
-        SignOPT_5000_victim_model_1=result[False]["Sign-OPT"][5000],
-        SignOPT_8000_victim_model_1=result[False]["Sign-OPT"][8000],
-        SignOPT_10000_victim_model_1=result[False]["Sign-OPT"][10000],
+        SignOPT_1000_victim_model_1=result["resnet101"]["Sign-OPT"][1000],
+        SignOPT_2000_victim_model_1=result["resnet101"]["Sign-OPT"][2000],
+        SignOPT_5000_victim_model_1=result["resnet101"]["Sign-OPT"][5000],
+        SignOPT_8000_victim_model_1=result["resnet101"]["Sign-OPT"][8000],
+        SignOPT_10000_victim_model_1=result["resnet101"]["Sign-OPT"][10000],
 
 
-        PriorSignOPT_1prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][1000],
-        PriorSignOPT_1prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][2000],
-        PriorSignOPT_1prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][5000],
-        PriorSignOPT_1prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][8000],
-        PriorSignOPT_1prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-1prior"][10000],
+        PriorSignOPT_prior1_1000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-1prior"][1000],
+        PriorSignOPT_prior1_2000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-1prior"][2000],
+        PriorSignOPT_prior1_5000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-1prior"][5000],
+        PriorSignOPT_prior1_8000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-1prior"][8000],
+        PriorSignOPT_prior1_10000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-1prior"][10000],
 
-        PriorSignOPT_2prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][1000],
-        PriorSignOPT_2prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][2000],
-        PriorSignOPT_2prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][5000],
-        PriorSignOPT_2prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][8000],
-        PriorSignOPT_2prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-2prior"][10000],
+        PriorSignOPT_2priors_1000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-2prior"][1000],
+        PriorSignOPT_2priors_2000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-2prior"][2000],
+        PriorSignOPT_2priors_5000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-2prior"][5000],
+        PriorSignOPT_2priors_8000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-2prior"][8000],
+        PriorSignOPT_2priors_10000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-2prior"][10000],
 
-        PriorSignOPT_3prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][1000],
-        PriorSignOPT_3prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][2000],
-        PriorSignOPT_3prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][5000],
-        PriorSignOPT_3prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][8000],
-        PriorSignOPT_3prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-3prior"][10000],
+        PriorSignOPT_3prior_1000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-3prior"][1000],
+        PriorSignOPT_3prior_2000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-3prior"][2000],
+        PriorSignOPT_3prior_5000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-3prior"][5000],
+        PriorSignOPT_3prior_8000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-3prior"][8000],
+        PriorSignOPT_3prior_10000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-3prior"][10000],
 
-        PriorSignOPT_4prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][1000],
-        PriorSignOPT_4prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][2000],
-        PriorSignOPT_4prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][5000],
-        PriorSignOPT_4prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][8000],
-        PriorSignOPT_4prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-4prior"][10000],
+        PriorSignOPT_4prior_1000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-4prior"][1000],
+        PriorSignOPT_4prior_2000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-4prior"][2000],
+        PriorSignOPT_4prior_5000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-4prior"][5000],
+        PriorSignOPT_4prior_8000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-4prior"][8000],
+        PriorSignOPT_4prior_10000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-4prior"][10000],
 
-        PriorSignOPT_5prior_1000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][1000],
-        PriorSignOPT_5prior_2000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][2000],
-        PriorSignOPT_5prior_5000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][5000],
-        PriorSignOPT_5prior_8000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][8000],
-        PriorSignOPT_5prior_10000_victim_model_1=result[False]["Prior-Sign-OPT-5prior"][10000],
+        PriorSignOPT_5prior_1000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-5prior"][1000],
+        PriorSignOPT_5prior_2000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-5prior"][2000],
+        PriorSignOPT_5prior_5000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-5prior"][5000],
+        PriorSignOPT_5prior_8000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-5prior"][8000],
+        PriorSignOPT_5prior_10000_victim_model_1=result["resnet101"]["Prior-Sign-OPT-5prior"][10000],
 
-        PriorOPT_1prior_1000_victim_model_1=result[False]["Prior-OPT-1prior"][1000],
-        PriorOPT_1prior_2000_victim_model_1=result[False]["Prior-OPT-1prior"][2000],
-        PriorOPT_1prior_5000_victim_model_1=result[False]["Prior-OPT-1prior"][5000],
-        PriorOPT_1prior_8000_victim_model_1=result[False]["Prior-OPT-1prior"][8000],
-        PriorOPT_1prior_10000_victim_model_1=result[False]["Prior-OPT-1prior"][10000],
+        PriorOPT_prior1_1000_victim_model_1=result["resnet101"]["Prior-OPT-1prior"][1000],
+        PriorOPT_prior1_2000_victim_model_1=result["resnet101"]["Prior-OPT-1prior"][2000],
+        PriorOPT_prior1_5000_victim_model_1=result["resnet101"]["Prior-OPT-1prior"][5000],
+        PriorOPT_prior1_8000_victim_model_1=result["resnet101"]["Prior-OPT-1prior"][8000],
+        PriorOPT_prior1_10000_victim_model_1=result["resnet101"]["Prior-OPT-1prior"][10000],
 
-        PriorOPT_2prior_1000_victim_model_1=result[False]["Prior-OPT-2prior"][1000],
-        PriorOPT_2prior_2000_victim_model_1=result[False]["Prior-OPT-2prior"][2000],
-        PriorOPT_2prior_5000_victim_model_1=result[False]["Prior-OPT-2prior"][5000],
-        PriorOPT_2prior_8000_victim_model_1=result[False]["Prior-OPT-2prior"][8000],
-        PriorOPT_2prior_10000_victim_model_1=result[False]["Prior-OPT-2prior"][10000],
+        PriorOPT_2priors_1000_victim_model_1=result["resnet101"]["Prior-OPT-2prior"][1000],
+        PriorOPT_2priors_2000_victim_model_1=result["resnet101"]["Prior-OPT-2prior"][2000],
+        PriorOPT_2priors_5000_victim_model_1=result["resnet101"]["Prior-OPT-2prior"][5000],
+        PriorOPT_2priors_8000_victim_model_1=result["resnet101"]["Prior-OPT-2prior"][8000],
+        PriorOPT_2priors_10000_victim_model_1=result["resnet101"]["Prior-OPT-2prior"][10000],
 
-        PriorOPT_3prior_1000_victim_model_1=result[False]["Prior-OPT-3prior"][1000],
-        PriorOPT_3prior_2000_victim_model_1=result[False]["Prior-OPT-3prior"][2000],
-        PriorOPT_3prior_5000_victim_model_1=result[False]["Prior-OPT-3prior"][5000],
-        PriorOPT_3prior_8000_victim_model_1=result[False]["Prior-OPT-3prior"][8000],
-        PriorOPT_3prior_10000_victim_model_1=result[False]["Prior-OPT-3prior"][10000],
+        PriorOPT_3prior_1000_victim_model_1=result["resnet101"]["Prior-OPT-3prior"][1000],
+        PriorOPT_3prior_2000_victim_model_1=result["resnet101"]["Prior-OPT-3prior"][2000],
+        PriorOPT_3prior_5000_victim_model_1=result["resnet101"]["Prior-OPT-3prior"][5000],
+        PriorOPT_3prior_8000_victim_model_1=result["resnet101"]["Prior-OPT-3prior"][8000],
+        PriorOPT_3prior_10000_victim_model_1=result["resnet101"]["Prior-OPT-3prior"][10000],
 
-        PriorOPT_4prior_1000_victim_model_1=result[False]["Prior-OPT-4prior"][1000],
-        PriorOPT_4prior_2000_victim_model_1=result[False]["Prior-OPT-4prior"][2000],
-        PriorOPT_4prior_5000_victim_model_1=result[False]["Prior-OPT-4prior"][5000],
-        PriorOPT_4prior_8000_victim_model_1=result[False]["Prior-OPT-4prior"][8000],
-        PriorOPT_4prior_10000_victim_model_1=result[False]["Prior-OPT-4prior"][10000],
+        PriorOPT_4prior_1000_victim_model_1=result["resnet101"]["Prior-OPT-4prior"][1000],
+        PriorOPT_4prior_2000_victim_model_1=result["resnet101"]["Prior-OPT-4prior"][2000],
+        PriorOPT_4prior_5000_victim_model_1=result["resnet101"]["Prior-OPT-4prior"][5000],
+        PriorOPT_4prior_8000_victim_model_1=result["resnet101"]["Prior-OPT-4prior"][8000],
+        PriorOPT_4prior_10000_victim_model_1=result["resnet101"]["Prior-OPT-4prior"][10000],
 
-        PriorOPT_5prior_1000_victim_model_1=result[False]["Prior-OPT-5prior"][1000],
-        PriorOPT_5prior_2000_victim_model_1=result[False]["Prior-OPT-5prior"][2000],
-        PriorOPT_5prior_5000_victim_model_1=result[False]["Prior-OPT-5prior"][5000],
-        PriorOPT_5prior_8000_victim_model_1=result[False]["Prior-OPT-5prior"][8000],
-        PriorOPT_5prior_10000_victim_model_1=result[False]["Prior-OPT-5prior"][10000],
-
-
-        SignOPT_1000_victim_model_2=result[True]["Sign-OPT"][1000],
-        SignOPT_2000_victim_model_2=result[True]["Sign-OPT"][2000],
-        SignOPT_5000_victim_model_2=result[True]["Sign-OPT"][5000],
-        SignOPT_8000_victim_model_2=result[True]["Sign-OPT"][8000],
-        SignOPT_10000_victim_model_2=result[True]["Sign-OPT"][10000],
+        PriorOPT_5prior_1000_victim_model_1=result["resnet101"]["Prior-OPT-5prior"][1000],
+        PriorOPT_5prior_2000_victim_model_1=result["resnet101"]["Prior-OPT-5prior"][2000],
+        PriorOPT_5prior_5000_victim_model_1=result["resnet101"]["Prior-OPT-5prior"][5000],
+        PriorOPT_5prior_8000_victim_model_1=result["resnet101"]["Prior-OPT-5prior"][8000],
+        PriorOPT_5prior_10000_victim_model_1=result["resnet101"]["Prior-OPT-5prior"][10000],
 
 
-        PriorSignOPT_1prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][1000],
-        PriorSignOPT_1prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][2000],
-        PriorSignOPT_1prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][5000],
-        PriorSignOPT_1prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][8000],
-        PriorSignOPT_1prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-1prior"][10000],
+        SignOPT_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Sign-OPT"][1000],
+        SignOPT_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Sign-OPT"][2000],
+        SignOPT_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Sign-OPT"][5000],
+        SignOPT_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Sign-OPT"][8000],
+        SignOPT_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Sign-OPT"][10000],
 
-        PriorSignOPT_2prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][1000],
-        PriorSignOPT_2prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][2000],
-        PriorSignOPT_2prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][5000],
-        PriorSignOPT_2prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][8000],
-        PriorSignOPT_2prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-2prior"][10000],
 
-        PriorSignOPT_3prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][1000],
-        PriorSignOPT_3prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][2000],
-        PriorSignOPT_3prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][5000],
-        PriorSignOPT_3prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][8000],
-        PriorSignOPT_3prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-3prior"][10000],
+        PriorSignOPT_prior1_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-1prior"][1000],
+        PriorSignOPT_prior1_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-1prior"][2000],
+        PriorSignOPT_prior1_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-1prior"][5000],
+        PriorSignOPT_prior1_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-1prior"][8000],
+        PriorSignOPT_prior1_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-1prior"][10000],
 
-        PriorSignOPT_4prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][1000],
-        PriorSignOPT_4prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][2000],
-        PriorSignOPT_4prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][5000],
-        PriorSignOPT_4prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][8000],
-        PriorSignOPT_4prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-4prior"][10000],
+        PriorSignOPT_2priors_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-2prior"][1000],
+        PriorSignOPT_2priors_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-2prior"][2000],
+        PriorSignOPT_2priors_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-2prior"][5000],
+        PriorSignOPT_2priors_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-2prior"][8000],
+        PriorSignOPT_2priors_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-2prior"][10000],
 
-        PriorSignOPT_5prior_1000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][1000],
-        PriorSignOPT_5prior_2000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][2000],
-        PriorSignOPT_5prior_5000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][5000],
-        PriorSignOPT_5prior_8000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][8000],
-        PriorSignOPT_5prior_10000_victim_model_2=result[True]["Prior-Sign-OPT-5prior"][10000],
+        PriorSignOPT_3prior_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-3prior"][1000],
+        PriorSignOPT_3prior_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-3prior"][2000],
+        PriorSignOPT_3prior_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-3prior"][5000],
+        PriorSignOPT_3prior_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-3prior"][8000],
+        PriorSignOPT_3prior_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-3prior"][10000],
 
-        PriorOPT_1prior_1000_victim_model_2=result[True]["Prior-OPT-1prior"][1000],
-        PriorOPT_1prior_2000_victim_model_2=result[True]["Prior-OPT-1prior"][2000],
-        PriorOPT_1prior_5000_victim_model_2=result[True]["Prior-OPT-1prior"][5000],
-        PriorOPT_1prior_8000_victim_model_2=result[True]["Prior-OPT-1prior"][8000],
-        PriorOPT_1prior_10000_victim_model_2=result[True]["Prior-OPT-1prior"][10000],
+        PriorSignOPT_4prior_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-4prior"][1000],
+        PriorSignOPT_4prior_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-4prior"][2000],
+        PriorSignOPT_4prior_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-4prior"][5000],
+        PriorSignOPT_4prior_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-4prior"][8000],
+        PriorSignOPT_4prior_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-4prior"][10000],
 
-        PriorOPT_2prior_1000_victim_model_2=result[True]["Prior-OPT-2prior"][1000],
-        PriorOPT_2prior_2000_victim_model_2=result[True]["Prior-OPT-2prior"][2000],
-        PriorOPT_2prior_5000_victim_model_2=result[True]["Prior-OPT-2prior"][5000],
-        PriorOPT_2prior_8000_victim_model_2=result[True]["Prior-OPT-2prior"][8000],
-        PriorOPT_2prior_10000_victim_model_2=result[True]["Prior-OPT-2prior"][10000],
+        PriorSignOPT_5prior_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-5prior"][1000],
+        PriorSignOPT_5prior_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-5prior"][2000],
+        PriorSignOPT_5prior_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-5prior"][5000],
+        PriorSignOPT_5prior_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-5prior"][8000],
+        PriorSignOPT_5prior_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-Sign-OPT-5prior"][10000],
 
-        PriorOPT_3prior_1000_victim_model_2=result[True]["Prior-OPT-3prior"][1000],
-        PriorOPT_3prior_2000_victim_model_2=result[True]["Prior-OPT-3prior"][2000],
-        PriorOPT_3prior_5000_victim_model_2=result[True]["Prior-OPT-3prior"][5000],
-        PriorOPT_3prior_8000_victim_model_2=result[True]["Prior-OPT-3prior"][8000],
-        PriorOPT_3prior_10000_victim_model_2=result[True]["Prior-OPT-3prior"][10000],
+        PriorOPT_prior1_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-1prior"][1000],
+        PriorOPT_prior1_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-1prior"][2000],
+        PriorOPT_prior1_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-1prior"][5000],
+        PriorOPT_prior1_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-1prior"][8000],
+        PriorOPT_prior1_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-1prior"][10000],
 
-        PriorOPT_4prior_1000_victim_model_2=result[True]["Prior-OPT-4prior"][1000],
-        PriorOPT_4prior_2000_victim_model_2=result[True]["Prior-OPT-4prior"][2000],
-        PriorOPT_4prior_5000_victim_model_2=result[True]["Prior-OPT-4prior"][5000],
-        PriorOPT_4prior_8000_victim_model_2=result[True]["Prior-OPT-4prior"][8000],
-        PriorOPT_4prior_10000_victim_model_2=result[True]["Prior-OPT-4prior"][10000],
+        PriorOPT_2priors_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-2prior"][1000],
+        PriorOPT_2priors_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-2prior"][2000],
+        PriorOPT_2priors_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-2prior"][5000],
+        PriorOPT_2priors_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-2prior"][8000],
+        PriorOPT_2priors_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-2prior"][10000],
 
-        PriorOPT_5prior_1000_victim_model_2=result[True]["Prior-OPT-5prior"][1000],
-        PriorOPT_5prior_2000_victim_model_2=result[True]["Prior-OPT-5prior"][2000],
-        PriorOPT_5prior_5000_victim_model_2=result[True]["Prior-OPT-5prior"][5000],
-        PriorOPT_5prior_8000_victim_model_2=result[True]["Prior-OPT-5prior"][8000],
-        PriorOPT_5prior_10000_victim_model_2=result[True]["Prior-OPT-5prior"][10000],
+        PriorOPT_3prior_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-3prior"][1000],
+        PriorOPT_3prior_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-3prior"][2000],
+        PriorOPT_3prior_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-3prior"][5000],
+        PriorOPT_3prior_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-3prior"][8000],
+        PriorOPT_3prior_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-3prior"][10000],
+
+        PriorOPT_4prior_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-4prior"][1000],
+        PriorOPT_4prior_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-4prior"][2000],
+        PriorOPT_4prior_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-4prior"][5000],
+        PriorOPT_4prior_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-4prior"][8000],
+        PriorOPT_4prior_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-4prior"][10000],
+
+        PriorOPT_5prior_1000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-5prior"][1000],
+        PriorOPT_5prior_2000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-5prior"][2000],
+        PriorOPT_5prior_5000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-5prior"][5000],
+        PriorOPT_5prior_8000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-5prior"][8000],
+        PriorOPT_5prior_10000_victim_model_2=result["swin_base_patch4_window7_224"]["Prior-OPT-5prior"][10000],
+
+
+
+
+
+        SignOPT_1000_victim_model_3=result["gcvit_base"]["Sign-OPT"][1000],
+        SignOPT_2000_victim_model_3=result["gcvit_base"]["Sign-OPT"][2000],
+        SignOPT_5000_victim_model_3=result["gcvit_base"]["Sign-OPT"][5000],
+        SignOPT_8000_victim_model_3=result["gcvit_base"]["Sign-OPT"][8000],
+        SignOPT_10000_victim_model_3=result["gcvit_base"]["Sign-OPT"][10000],
+
+
+        PriorSignOPT_prior1_1000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-1prior"][1000],
+        PriorSignOPT_prior1_2000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-1prior"][2000],
+        PriorSignOPT_prior1_5000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-1prior"][5000],
+        PriorSignOPT_prior1_8000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-1prior"][8000],
+        PriorSignOPT_prior1_10000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-1prior"][10000],
+
+        PriorSignOPT_2priors_1000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-2prior"][1000],
+        PriorSignOPT_2priors_2000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-2prior"][2000],
+        PriorSignOPT_2priors_5000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-2prior"][5000],
+        PriorSignOPT_2priors_8000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-2prior"][8000],
+        PriorSignOPT_2priors_10000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-2prior"][10000],
+
+        PriorSignOPT_3prior_1000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-3prior"][1000],
+        PriorSignOPT_3prior_2000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-3prior"][2000],
+        PriorSignOPT_3prior_5000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-3prior"][5000],
+        PriorSignOPT_3prior_8000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-3prior"][8000],
+        PriorSignOPT_3prior_10000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-3prior"][10000],
+
+        PriorSignOPT_4prior_1000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-4prior"][1000],
+        PriorSignOPT_4prior_2000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-4prior"][2000],
+        PriorSignOPT_4prior_5000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-4prior"][5000],
+        PriorSignOPT_4prior_8000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-4prior"][8000],
+        PriorSignOPT_4prior_10000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-4prior"][10000],
+
+        PriorSignOPT_5prior_1000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-5prior"][1000],
+        PriorSignOPT_5prior_2000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-5prior"][2000],
+        PriorSignOPT_5prior_5000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-5prior"][5000],
+        PriorSignOPT_5prior_8000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-5prior"][8000],
+        PriorSignOPT_5prior_10000_victim_model_3=result["gcvit_base"]["Prior-Sign-OPT-5prior"][10000],
+
+        PriorOPT_prior1_1000_victim_model_3=result["gcvit_base"]["Prior-OPT-1prior"][1000],
+        PriorOPT_prior1_2000_victim_model_3=result["gcvit_base"]["Prior-OPT-1prior"][2000],
+        PriorOPT_prior1_5000_victim_model_3=result["gcvit_base"]["Prior-OPT-1prior"][5000],
+        PriorOPT_prior1_8000_victim_model_3=result["gcvit_base"]["Prior-OPT-1prior"][8000],
+        PriorOPT_prior1_10000_victim_model_3=result["gcvit_base"]["Prior-OPT-1prior"][10000],
+
+        PriorOPT_2priors_1000_victim_model_3=result["gcvit_base"]["Prior-OPT-2prior"][1000],
+        PriorOPT_2priors_2000_victim_model_3=result["gcvit_base"]["Prior-OPT-2prior"][2000],
+        PriorOPT_2priors_5000_victim_model_3=result["gcvit_base"]["Prior-OPT-2prior"][5000],
+        PriorOPT_2priors_8000_victim_model_3=result["gcvit_base"]["Prior-OPT-2prior"][8000],
+        PriorOPT_2priors_10000_victim_model_3=result["gcvit_base"]["Prior-OPT-2prior"][10000],
+
+        PriorOPT_3prior_1000_victim_model_3=result["gcvit_base"]["Prior-OPT-3prior"][1000],
+        PriorOPT_3prior_2000_victim_model_3=result["gcvit_base"]["Prior-OPT-3prior"][2000],
+        PriorOPT_3prior_5000_victim_model_3=result["gcvit_base"]["Prior-OPT-3prior"][5000],
+        PriorOPT_3prior_8000_victim_model_3=result["gcvit_base"]["Prior-OPT-3prior"][8000],
+        PriorOPT_3prior_10000_victim_model_3=result["gcvit_base"]["Prior-OPT-3prior"][10000],
+
+        PriorOPT_4prior_1000_victim_model_3=result["gcvit_base"]["Prior-OPT-4prior"][1000],
+        PriorOPT_4prior_2000_victim_model_3=result["gcvit_base"]["Prior-OPT-4prior"][2000],
+        PriorOPT_4prior_5000_victim_model_3=result["gcvit_base"]["Prior-OPT-4prior"][5000],
+        PriorOPT_4prior_8000_victim_model_3=result["gcvit_base"]["Prior-OPT-4prior"][8000],
+        PriorOPT_4prior_10000_victim_model_3=result["gcvit_base"]["Prior-OPT-4prior"][10000],
+
+        PriorOPT_5prior_1000_victim_model_3=result["gcvit_base"]["Prior-OPT-5prior"][1000],
+        PriorOPT_5prior_2000_victim_model_3=result["gcvit_base"]["Prior-OPT-5prior"][2000],
+        PriorOPT_5prior_5000_victim_model_3=result["gcvit_base"]["Prior-OPT-5prior"][5000],
+        PriorOPT_5prior_8000_victim_model_3=result["gcvit_base"]["Prior-OPT-5prior"][8000],
+        PriorOPT_5prior_10000_victim_model_3=result["gcvit_base"]["Prior-OPT-5prior"][10000],
     )
     )
-
 
 
 def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
@@ -439,23 +538,32 @@ def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
                 & Evolutionary \\cite{{dong2019efficient}} & {Evolutionary_1000_untargeted} & {Evolutionary_2000_untargeted} & {Evolutionary_5000_untargeted} & {Evolutionary_8000_untargeted} & {Evolutionary_10000_untargeted}  & {Evolutionary_1000_targeted} & {Evolutionary_2000_targeted} & {Evolutionary_5000_targeted} & {Evolutionary_8000_targeted} & {Evolutionary_10000_targeted}  & {Evolutionary_15000_targeted} & {Evolutionary_20000_targeted}\\\\
                 & SurFree \\cite{{maho2021surfree}}  & {SurFree_1000_untargeted} & {SurFree_2000_untargeted} & {SurFree_5000_untargeted} & {SurFree_8000_untargeted} & {SurFree_10000_untargeted}  & {SurFree_1000_targeted} & {SurFree_2000_targeted} & {SurFree_5000_targeted} & {SurFree_8000_targeted} & {SurFree_10000_targeted}  & {SurFree_15000_targeted} & {SurFree_20000_targeted}\\\\
                 & Triangle Attack \\cite{{wang2022triangle}} & {TriangleAttack_1000_untargeted} & {TriangleAttack_2000_untargeted} & {TriangleAttack_5000_untargeted} & {TriangleAttack_8000_untargeted} & {TriangleAttack_10000_untargeted}  & {TriangleAttack_1000_targeted} & {TriangleAttack_2000_targeted} & {TriangleAttack_5000_targeted} & {TriangleAttack_8000_targeted} & {TriangleAttack_10000_targeted} & {TriangleAttack_15000_targeted} & {TriangleAttack_20000_targeted}\\\\
-                & SQBA \\cite{{Park_2024_sqba}} & {SQBA_1000_untargeted} & {SQBA_2000_untargeted} & {SQBA_5000_untargeted} & {SQBA_8000_untargeted} & {SQBA_10000_untargeted}  & {SQBA_1000_targeted} & {SQBA_2000_targeted} & {SQBA_5000_targeted} & {SQBA_8000_targeted} & {SQBA_10000_targeted}  & {SQBA_15000_targeted} & {SQBA_20000_targeted}\\\\
-                & BBA \\cite{{brunner2019guessing}}  & {BBA_1000_untargeted} & {BBA_2000_untargeted} & {BBA_5000_untargeted} & {BBA_8000_untargeted} & {BBA_10000_untargeted}  & {BBA_1000_targeted} & {BBA_2000_targeted} & {BBA_5000_targeted} & {BBA_8000_targeted} & {BBA_10000_targeted}  & {BBA_15000_targeted} & {BBA_20000_targeted}\\\\
-                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}}} & {PriorSignOPT_1prior_1000_untargeted} & {PriorSignOPT_1prior_2000_untargeted} & {PriorSignOPT_1prior_5000_untargeted} & {PriorSignOPT_1prior_8000_untargeted} & {PriorSignOPT_1prior_10000_untargeted}  & {PriorSignOPT_1prior_1000_targeted} & {PriorSignOPT_1prior_2000_targeted} & {PriorSignOPT_1prior_5000_targeted} & {PriorSignOPT_1prior_8000_targeted} & {PriorSignOPT_1prior_10000_targeted} & {PriorSignOPT_1prior_15000_targeted} & {PriorSignOPT_1prior_20000_targeted} \\\\
-                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}}   & {PriorSignOPT_2prior_1000_untargeted} & {PriorSignOPT_2prior_2000_untargeted} & {PriorSignOPT_2prior_5000_untargeted} & {PriorSignOPT_2prior_8000_untargeted} & {PriorSignOPT_2prior_10000_untargeted}  & {PriorSignOPT_2prior_1000_targeted} & {PriorSignOPT_2prior_2000_targeted} & {PriorSignOPT_2prior_5000_targeted} & {PriorSignOPT_2prior_8000_targeted} & {PriorSignOPT_2prior_10000_targeted} & {PriorSignOPT_2prior_15000_targeted} & {PriorSignOPT_2prior_20000_targeted} \\\\
+                & CGBA-H \\cite{{reza2023cgba}} & {CGBA_1000_untargeted} & {CGBA_2000_untargeted} & {CGBA_5000_untargeted} & {CGBA_8000_untargeted} & {CGBA_10000_untargeted}  & {CGBA_1000_targeted} & {CGBA_2000_targeted} & {CGBA_5000_targeted} & {CGBA_8000_targeted} & {CGBA_10000_targeted} & {CGBA_15000_targeted} & {CGBA_20000_targeted}\\\\
+                & SQBA\\textsubscript{{\\tiny {surrogate_1}}} \\cite{{park2024sqba}} & {SQBA_prior1_1000_untargeted} & {SQBA_prior1_2000_untargeted} & {SQBA_prior1_5000_untargeted} & {SQBA_prior1_8000_untargeted} & {SQBA_prior1_10000_untargeted}  & {SQBA_prior1_1000_targeted} & {SQBA_prior1_2000_targeted} & {SQBA_prior1_5000_targeted} & {SQBA_prior1_8000_targeted} & {SQBA_prior1_10000_targeted}  & {SQBA_prior1_15000_targeted} & {SQBA_prior1_20000_targeted}\\\\
+                & SQBA\\textsubscript{{\\tiny {surrogate_2}}} \\cite{{park2024sqba}} & {SQBA_prior2_1000_untargeted} & {SQBA_prior2_2000_untargeted} & {SQBA_prior2_5000_untargeted} & {SQBA_prior2_8000_untargeted} & {SQBA_prior2_10000_untargeted}  & {SQBA_prior2_1000_targeted} & {SQBA_prior2_2000_targeted} & {SQBA_prior2_5000_targeted} & {SQBA_prior2_8000_targeted} & {SQBA_prior2_10000_targeted}  & {SQBA_prior2_15000_targeted} & {SQBA_prior2_20000_targeted}\\\\
+                & BBA\\textsubscript{{\\tiny {surrogate_1}}} \\cite{{brunner2019guessing}}  & {BBA_prior1_1000_untargeted} & {BBA_prior1_2000_untargeted} & {BBA_prior1_5000_untargeted} & {BBA_prior1_8000_untargeted} & {BBA_prior1_10000_untargeted}  & {BBA_prior1_1000_targeted} & {BBA_prior1_2000_targeted} & {BBA_prior1_5000_targeted} & {BBA_prior1_8000_targeted} & {BBA_prior1_10000_targeted}  & {BBA_prior1_15000_targeted} & {BBA_prior1_20000_targeted}\\\\
+                & BBA\\textsubscript{{\\tiny {surrogate_2}}} \\cite{{brunner2019guessing}}  & {BBA_prior2_1000_untargeted} & {BBA_prior2_2000_untargeted} & {BBA_prior2_5000_untargeted} & {BBA_prior2_8000_untargeted} & {BBA_prior2_10000_untargeted}  & {BBA_prior2_1000_targeted} & {BBA_prior2_2000_targeted} & {BBA_prior2_5000_targeted} & {BBA_prior2_8000_targeted} & {BBA_prior2_10000_targeted}  & {BBA_prior2_15000_targeted} & {BBA_prior2_20000_targeted}\\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}}} & {PriorSignOPT_prior1_1000_untargeted} & {PriorSignOPT_prior1_2000_untargeted} & {PriorSignOPT_prior1_5000_untargeted} & {PriorSignOPT_prior1_8000_untargeted} & {PriorSignOPT_prior1_10000_untargeted}  & {PriorSignOPT_prior1_1000_targeted} & {PriorSignOPT_prior1_2000_targeted} & {PriorSignOPT_prior1_5000_targeted} & {PriorSignOPT_prior1_8000_targeted} & {PriorSignOPT_prior1_10000_targeted} & {PriorSignOPT_prior1_15000_targeted} & {PriorSignOPT_prior1_20000_targeted} \\\\
+                & Prior-Sign-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}}   & {PriorSignOPT_2priors_1000_untargeted} & {PriorSignOPT_2priors_2000_untargeted} & {PriorSignOPT_2priors_5000_untargeted} & {PriorSignOPT_2priors_8000_untargeted} & {PriorSignOPT_2priors_10000_untargeted}  & {PriorSignOPT_2priors_1000_targeted} & {PriorSignOPT_2priors_2000_targeted} & {PriorSignOPT_2priors_5000_targeted} & {PriorSignOPT_2priors_8000_targeted} & {PriorSignOPT_2priors_10000_targeted} & {PriorSignOPT_2priors_15000_targeted} & {PriorSignOPT_2priors_20000_targeted} \\\\
                 & Prior-Sign-OPT\\textsubscript{{\\tiny $\\theta_0^\\text{{PGD}}$ + {surrogate_1}}}  & {PriorSignOPT_PGD_init_theta_1000_untargeted} & {PriorSignOPT_PGD_init_theta_2000_untargeted} & {PriorSignOPT_PGD_init_theta_5000_untargeted} & {PriorSignOPT_PGD_init_theta_8000_untargeted} & {PriorSignOPT_PGD_init_theta_10000_untargeted}  & {PriorSignOPT_PGD_init_theta_1000_targeted} & {PriorSignOPT_PGD_init_theta_2000_targeted} & {PriorSignOPT_PGD_init_theta_5000_targeted} & {PriorSignOPT_PGD_init_theta_8000_targeted} & {PriorSignOPT_PGD_init_theta_10000_targeted}  & {PriorSignOPT_PGD_init_theta_15000_targeted} & {PriorSignOPT_PGD_init_theta_20000_targeted} \\\\
-                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}}} & {PriorOPT_1prior_1000_untargeted} & {PriorOPT_1prior_2000_untargeted} & {PriorOPT_1prior_5000_untargeted} & {PriorOPT_1prior_8000_untargeted} & {PriorOPT_1prior_10000_untargeted}  & {PriorOPT_1prior_1000_targeted} & {PriorOPT_1prior_2000_targeted} & {PriorOPT_1prior_5000_targeted} & {PriorOPT_1prior_8000_targeted} & {PriorOPT_1prior_10000_targeted} & {PriorOPT_1prior_15000_targeted} & {PriorOPT_1prior_20000_targeted}\\\\
-                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & {PriorOPT_2prior_1000_untargeted} & {PriorOPT_2prior_2000_untargeted} & {PriorOPT_2prior_5000_untargeted} & {PriorOPT_2prior_8000_untargeted} & {PriorOPT_2prior_10000_untargeted}  & {PriorOPT_2prior_1000_targeted} & {PriorOPT_2prior_2000_targeted} & {PriorOPT_2prior_5000_targeted} & {PriorOPT_2prior_8000_targeted} & {PriorOPT_2prior_10000_targeted} & {PriorOPT_2prior_15000_targeted} & {PriorOPT_2prior_20000_targeted} \\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}}} & {PriorOPT_prior1_1000_untargeted} & {PriorOPT_prior1_2000_untargeted} & {PriorOPT_prior1_5000_untargeted} & {PriorOPT_prior1_8000_untargeted} & {PriorOPT_prior1_10000_untargeted}  & {PriorOPT_prior1_1000_targeted} & {PriorOPT_prior1_2000_targeted} & {PriorOPT_prior1_5000_targeted} & {PriorOPT_prior1_8000_targeted} & {PriorOPT_prior1_10000_targeted} & {PriorOPT_prior1_15000_targeted} & {PriorOPT_prior1_20000_targeted}\\\\
+                & Prior-OPT\\textsubscript{{\\tiny {surrogate_1}\&{surrogate_2}}} & {PriorOPT_2priors_1000_untargeted} & {PriorOPT_2priors_2000_untargeted} & {PriorOPT_2priors_5000_untargeted} & {PriorOPT_2priors_8000_untargeted} & {PriorOPT_2priors_10000_untargeted}  & {PriorOPT_2priors_1000_targeted} & {PriorOPT_2priors_2000_targeted} & {PriorOPT_2priors_5000_targeted} & {PriorOPT_2priors_8000_targeted} & {PriorOPT_2priors_10000_targeted} & {PriorOPT_2priors_15000_targeted} & {PriorOPT_2priors_20000_targeted} \\\\
                 & Prior-OPT\\textsubscript{{\\tiny $\\theta_0^\\text{{PGD}}$ + {surrogate_1}}} & {PriorOPT_PGD_init_theta_1000_untargeted} & {PriorOPT_PGD_init_theta_2000_untargeted} & {PriorOPT_PGD_init_theta_5000_untargeted} & {PriorOPT_PGD_init_theta_8000_untargeted} & {PriorOPT_PGD_init_theta_10000_untargeted}  & {PriorOPT_PGD_init_theta_1000_targeted} & {PriorOPT_PGD_init_theta_2000_targeted} & {PriorOPT_PGD_init_theta_5000_targeted} & {PriorOPT_PGD_init_theta_8000_targeted} & {PriorOPT_PGD_init_theta_10000_targeted} & {PriorOPT_PGD_init_theta_15000_targeted} & {PriorOPT_PGD_init_theta_20000_targeted} \\\\ 
                 """.format(
         surrogate_1=surrogate_1,
         surrogate_2=surrogate_2,
 
-        BBA_1000_untargeted=result[False]["BBA"][1000],
-        BBA_2000_untargeted=result[False]["BBA"][2000],
-        BBA_5000_untargeted=result[False]["BBA"][5000],
-        BBA_8000_untargeted=result[False]["BBA"][8000],
-        BBA_10000_untargeted=result[False]["BBA"][10000],
+        BBA_prior1_1000_untargeted=result[False]["BBA-prior1"][1000],
+        BBA_prior1_2000_untargeted=result[False]["BBA-prior1"][2000],
+        BBA_prior1_5000_untargeted=result[False]["BBA-prior1"][5000],
+        BBA_prior1_8000_untargeted=result[False]["BBA-prior1"][8000],
+        BBA_prior1_10000_untargeted=result[False]["BBA-prior1"][10000],
+
+        BBA_prior2_1000_untargeted=result[False]["BBA-prior2"][1000],
+        BBA_prior2_2000_untargeted=result[False]["BBA-prior2"][2000],
+        BBA_prior2_5000_untargeted=result[False]["BBA-prior2"][5000],
+        BBA_prior2_8000_untargeted=result[False]["BBA-prior2"][8000],
+        BBA_prior2_10000_untargeted=result[False]["BBA-prior2"][10000],
 
         HSJA_1000_untargeted=result[False]["HSJA"][1000],
         HSJA_2000_untargeted=result[False]["HSJA"][2000],
@@ -517,23 +625,35 @@ def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
         TriangleAttack_8000_untargeted=result[False]["Triangle Attack"][8000],
         TriangleAttack_10000_untargeted=result[False]["Triangle Attack"][10000],
 
-        SQBA_1000_untargeted=result[False]["SQBA"][1000],
-        SQBA_2000_untargeted=result[False]["SQBA"][2000],
-        SQBA_5000_untargeted=result[False]["SQBA"][5000],
-        SQBA_8000_untargeted=result[False]["SQBA"][8000],
-        SQBA_10000_untargeted=result[False]["SQBA"][10000],
+        CGBA_1000_untargeted=result[False]["CGBA_H"][1000],
+        CGBA_2000_untargeted=result[False]["CGBA_H"][2000],
+        CGBA_5000_untargeted=result[False]["CGBA_H"][5000],
+        CGBA_8000_untargeted=result[False]["CGBA_H"][8000],
+        CGBA_10000_untargeted=result[False]["CGBA_H"][10000],
 
-        PriorSignOPT_1prior_1000_untargeted=result[False]["Prior-Sign-OPT-1prior"][1000],
-        PriorSignOPT_1prior_2000_untargeted=result[False]["Prior-Sign-OPT-1prior"][2000],
-        PriorSignOPT_1prior_5000_untargeted=result[False]["Prior-Sign-OPT-1prior"][5000],
-        PriorSignOPT_1prior_8000_untargeted=result[False]["Prior-Sign-OPT-1prior"][8000],
-        PriorSignOPT_1prior_10000_untargeted=result[False]["Prior-Sign-OPT-1prior"][10000],
+        SQBA_prior1_1000_untargeted=result[False]["SQBA-prior1"][1000],
+        SQBA_prior1_2000_untargeted=result[False]["SQBA-prior1"][2000],
+        SQBA_prior1_5000_untargeted=result[False]["SQBA-prior1"][5000],
+        SQBA_prior1_8000_untargeted=result[False]["SQBA-prior1"][8000],
+        SQBA_prior1_10000_untargeted=result[False]["SQBA-prior1"][10000],
 
-        PriorSignOPT_2prior_1000_untargeted=result[False]["Prior-Sign-OPT-2prior"][1000],
-        PriorSignOPT_2prior_2000_untargeted=result[False]["Prior-Sign-OPT-2prior"][2000],
-        PriorSignOPT_2prior_5000_untargeted=result[False]["Prior-Sign-OPT-2prior"][5000],
-        PriorSignOPT_2prior_8000_untargeted=result[False]["Prior-Sign-OPT-2prior"][8000],
-        PriorSignOPT_2prior_10000_untargeted=result[False]["Prior-Sign-OPT-2prior"][10000],
+        SQBA_prior2_1000_untargeted=result[False]["SQBA-prior2"][1000],
+        SQBA_prior2_2000_untargeted=result[False]["SQBA-prior2"][2000],
+        SQBA_prior2_5000_untargeted=result[False]["SQBA-prior2"][5000],
+        SQBA_prior2_8000_untargeted=result[False]["SQBA-prior2"][8000],
+        SQBA_prior2_10000_untargeted=result[False]["SQBA-prior2"][10000],
+
+        PriorSignOPT_prior1_1000_untargeted=result[False]["Prior-Sign-OPT-prior1"][1000],
+        PriorSignOPT_prior1_2000_untargeted=result[False]["Prior-Sign-OPT-prior1"][2000],
+        PriorSignOPT_prior1_5000_untargeted=result[False]["Prior-Sign-OPT-prior1"][5000],
+        PriorSignOPT_prior1_8000_untargeted=result[False]["Prior-Sign-OPT-prior1"][8000],
+        PriorSignOPT_prior1_10000_untargeted=result[False]["Prior-Sign-OPT-prior1"][10000],
+
+        PriorSignOPT_2priors_1000_untargeted=result[False]["Prior-Sign-OPT-2priors"][1000],
+        PriorSignOPT_2priors_2000_untargeted=result[False]["Prior-Sign-OPT-2priors"][2000],
+        PriorSignOPT_2priors_5000_untargeted=result[False]["Prior-Sign-OPT-2priors"][5000],
+        PriorSignOPT_2priors_8000_untargeted=result[False]["Prior-Sign-OPT-2priors"][8000],
+        PriorSignOPT_2priors_10000_untargeted=result[False]["Prior-Sign-OPT-2priors"][10000],
 
         PriorSignOPT_PGD_init_theta_1000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][1000],
         PriorSignOPT_PGD_init_theta_2000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][2000],
@@ -541,17 +661,17 @@ def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
         PriorSignOPT_PGD_init_theta_8000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][8000],
         PriorSignOPT_PGD_init_theta_10000_untargeted=result[False]["Prior-Sign-OPT_PGD_init_theta"][10000],
 
-        PriorOPT_1prior_1000_untargeted=result[False]["Prior-OPT-1prior"][1000],
-        PriorOPT_1prior_2000_untargeted=result[False]["Prior-OPT-1prior"][2000],
-        PriorOPT_1prior_5000_untargeted=result[False]["Prior-OPT-1prior"][5000],
-        PriorOPT_1prior_8000_untargeted=result[False]["Prior-OPT-1prior"][8000],
-        PriorOPT_1prior_10000_untargeted=result[False]["Prior-OPT-1prior"][10000],
+        PriorOPT_prior1_1000_untargeted=result[False]["Prior-OPT-prior1"][1000],
+        PriorOPT_prior1_2000_untargeted=result[False]["Prior-OPT-prior1"][2000],
+        PriorOPT_prior1_5000_untargeted=result[False]["Prior-OPT-prior1"][5000],
+        PriorOPT_prior1_8000_untargeted=result[False]["Prior-OPT-prior1"][8000],
+        PriorOPT_prior1_10000_untargeted=result[False]["Prior-OPT-prior1"][10000],
 
-        PriorOPT_2prior_1000_untargeted=result[False]["Prior-OPT-2prior"][1000],
-        PriorOPT_2prior_2000_untargeted=result[False]["Prior-OPT-2prior"][2000],
-        PriorOPT_2prior_5000_untargeted=result[False]["Prior-OPT-2prior"][5000],
-        PriorOPT_2prior_8000_untargeted=result[False]["Prior-OPT-2prior"][8000],
-        PriorOPT_2prior_10000_untargeted=result[False]["Prior-OPT-2prior"][10000],
+        PriorOPT_2priors_1000_untargeted=result[False]["Prior-OPT-2priors"][1000],
+        PriorOPT_2priors_2000_untargeted=result[False]["Prior-OPT-2priors"][2000],
+        PriorOPT_2priors_5000_untargeted=result[False]["Prior-OPT-2priors"][5000],
+        PriorOPT_2priors_8000_untargeted=result[False]["Prior-OPT-2priors"][8000],
+        PriorOPT_2priors_10000_untargeted=result[False]["Prior-OPT-2priors"][10000],
 
         PriorOPT_PGD_init_theta_1000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][1000],
         PriorOPT_PGD_init_theta_2000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][2000],
@@ -559,13 +679,21 @@ def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
         PriorOPT_PGD_init_theta_8000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][8000],
         PriorOPT_PGD_init_theta_10000_untargeted=result[False]["Prior-OPT_PGD_init_theta"][10000],
 
-        BBA_1000_targeted=result[True]["BBA"][1000],
-        BBA_2000_targeted=result[True]["BBA"][2000],
-        BBA_5000_targeted=result[True]["BBA"][5000],
-        BBA_8000_targeted=result[True]["BBA"][8000],
-        BBA_10000_targeted=result[True]["BBA"][10000],
-        BBA_15000_targeted=result[True]["BBA"][15000],
-        BBA_20000_targeted=result[True]["BBA"][20000],
+        BBA_prior1_1000_targeted=result[True]["BBA-prior1"][1000],
+        BBA_prior1_2000_targeted=result[True]["BBA-prior1"][2000],
+        BBA_prior1_5000_targeted=result[True]["BBA-prior1"][5000],
+        BBA_prior1_8000_targeted=result[True]["BBA-prior1"][8000],
+        BBA_prior1_10000_targeted=result[True]["BBA-prior1"][10000],
+        BBA_prior1_15000_targeted=result[True]["BBA-prior1"][15000],
+        BBA_prior1_20000_targeted=result[True]["BBA-prior1"][20000],
+
+        BBA_prior2_1000_targeted=result[True]["BBA-prior2"][1000],
+        BBA_prior2_2000_targeted=result[True]["BBA-prior2"][2000],
+        BBA_prior2_5000_targeted=result[True]["BBA-prior2"][5000],
+        BBA_prior2_8000_targeted=result[True]["BBA-prior2"][8000],
+        BBA_prior2_10000_targeted=result[True]["BBA-prior2"][10000],
+        BBA_prior2_15000_targeted=result[True]["BBA-prior2"][15000],
+        BBA_prior2_20000_targeted=result[True]["BBA-prior2"][20000],
 
         HSJA_1000_targeted=result[True]["HSJA"][1000],
         HSJA_2000_targeted=result[True]["HSJA"][2000],
@@ -647,35 +775,51 @@ def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
         TriangleAttack_15000_targeted=result[True]["Triangle Attack"][15000],
         TriangleAttack_20000_targeted=result[True]["Triangle Attack"][20000],
 
-        SQBA_1000_targeted=result[True]["SQBA"][1000],
-        SQBA_2000_targeted=result[True]["SQBA"][2000],
-        SQBA_5000_targeted=result[True]["SQBA"][5000],
-        SQBA_8000_targeted=result[True]["SQBA"][8000],
-        SQBA_10000_targeted=result[True]["SQBA"][10000],
-        SQBA_15000_targeted=result[True]["SQBA"][15000],
-        SQBA_20000_targeted=result[True]["SQBA"][20000],
+        CGBA_1000_targeted=result[True]["CGBA_H"][1000],
+        CGBA_2000_targeted=result[True]["CGBA_H"][2000],
+        CGBA_5000_targeted=result[True]["CGBA_H"][5000],
+        CGBA_8000_targeted=result[True]["CGBA_H"][8000],
+        CGBA_10000_targeted=result[True]["CGBA_H"][10000],
+        CGBA_15000_targeted=result[True]["CGBA_H"][15000],
+        CGBA_20000_targeted=result[True]["CGBA_H"][20000],
 
-        PriorSignOPT_1prior_1000_targeted=result[True]["Prior-Sign-OPT-1prior"][1000],
-        PriorSignOPT_1prior_2000_targeted=result[True]["Prior-Sign-OPT-1prior"][2000],
-        PriorSignOPT_1prior_5000_targeted=result[True]["Prior-Sign-OPT-1prior"][5000],
-        PriorSignOPT_1prior_8000_targeted=result[True]["Prior-Sign-OPT-1prior"][8000],
-        PriorSignOPT_1prior_10000_targeted=result[True]["Prior-Sign-OPT-1prior"][10000],
-        PriorSignOPT_1prior_15000_targeted=result[True]["Prior-Sign-OPT-1prior"][15000],
-        PriorSignOPT_1prior_20000_targeted=result[True]["Prior-Sign-OPT-1prior"][20000],
+        SQBA_prior1_1000_targeted=result[True]["SQBA-prior1"][1000],
+        SQBA_prior1_2000_targeted=result[True]["SQBA-prior1"][2000],
+        SQBA_prior1_5000_targeted=result[True]["SQBA-prior1"][5000],
+        SQBA_prior1_8000_targeted=result[True]["SQBA-prior1"][8000],
+        SQBA_prior1_10000_targeted=result[True]["SQBA-prior1"][10000],
+        SQBA_prior1_15000_targeted=result[True]["SQBA-prior1"][15000],
+        SQBA_prior1_20000_targeted=result[True]["SQBA-prior1"][20000],
 
-        PriorSignOPT_2prior_1000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+        SQBA_prior2_1000_targeted=result[True]["SQBA-prior2"][1000],
+        SQBA_prior2_2000_targeted=result[True]["SQBA-prior2"][2000],
+        SQBA_prior2_5000_targeted=result[True]["SQBA-prior2"][5000],
+        SQBA_prior2_8000_targeted=result[True]["SQBA-prior2"][8000],
+        SQBA_prior2_10000_targeted=result[True]["SQBA-prior2"][10000],
+        SQBA_prior2_15000_targeted=result[True]["SQBA-prior2"][15000],
+        SQBA_prior2_20000_targeted=result[True]["SQBA-prior2"][20000],
+
+        PriorSignOPT_prior1_1000_targeted=result[True]["Prior-Sign-OPT-prior1"][1000],
+        PriorSignOPT_prior1_2000_targeted=result[True]["Prior-Sign-OPT-prior1"][2000],
+        PriorSignOPT_prior1_5000_targeted=result[True]["Prior-Sign-OPT-prior1"][5000],
+        PriorSignOPT_prior1_8000_targeted=result[True]["Prior-Sign-OPT-prior1"][8000],
+        PriorSignOPT_prior1_10000_targeted=result[True]["Prior-Sign-OPT-prior1"][10000],
+        PriorSignOPT_prior1_15000_targeted=result[True]["Prior-Sign-OPT-prior1"][15000],
+        PriorSignOPT_prior1_20000_targeted=result[True]["Prior-Sign-OPT-prior1"][20000],
+
+        PriorSignOPT_2priors_1000_targeted=result[True]["Prior-Sign-OPT-2priors"][
             1000],
-        PriorSignOPT_2prior_2000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+        PriorSignOPT_2priors_2000_targeted=result[True]["Prior-Sign-OPT-2priors"][
             2000],
-        PriorSignOPT_2prior_5000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+        PriorSignOPT_2priors_5000_targeted=result[True]["Prior-Sign-OPT-2priors"][
             5000],
-        PriorSignOPT_2prior_8000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+        PriorSignOPT_2priors_8000_targeted=result[True]["Prior-Sign-OPT-2priors"][
             8000],
-        PriorSignOPT_2prior_10000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+        PriorSignOPT_2priors_10000_targeted=result[True]["Prior-Sign-OPT-2priors"][
             10000],
-        PriorSignOPT_2prior_15000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+        PriorSignOPT_2priors_15000_targeted=result[True]["Prior-Sign-OPT-2priors"][
             15000],
-        PriorSignOPT_2prior_20000_targeted=result[True]["Prior-Sign-OPT-2prior"][
+        PriorSignOPT_2priors_20000_targeted=result[True]["Prior-Sign-OPT-2priors"][
             20000],
 
         PriorSignOPT_PGD_init_theta_1000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
@@ -693,21 +837,21 @@ def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
         PriorSignOPT_PGD_init_theta_20000_targeted=result[True]["Prior-Sign-OPT_PGD_init_theta"][
             20000],
 
-        PriorOPT_1prior_1000_targeted=result[True]["Prior-OPT-1prior"][1000],
-        PriorOPT_1prior_2000_targeted=result[True]["Prior-OPT-1prior"][2000],
-        PriorOPT_1prior_5000_targeted=result[True]["Prior-OPT-1prior"][5000],
-        PriorOPT_1prior_8000_targeted=result[True]["Prior-OPT-1prior"][8000],
-        PriorOPT_1prior_10000_targeted=result[True]["Prior-OPT-1prior"][10000],
-        PriorOPT_1prior_15000_targeted=result[True]["Prior-OPT-1prior"][15000],
-        PriorOPT_1prior_20000_targeted=result[True]["Prior-OPT-1prior"][20000],
+        PriorOPT_prior1_1000_targeted=result[True]["Prior-OPT-prior1"][1000],
+        PriorOPT_prior1_2000_targeted=result[True]["Prior-OPT-prior1"][2000],
+        PriorOPT_prior1_5000_targeted=result[True]["Prior-OPT-prior1"][5000],
+        PriorOPT_prior1_8000_targeted=result[True]["Prior-OPT-prior1"][8000],
+        PriorOPT_prior1_10000_targeted=result[True]["Prior-OPT-prior1"][10000],
+        PriorOPT_prior1_15000_targeted=result[True]["Prior-OPT-prior1"][15000],
+        PriorOPT_prior1_20000_targeted=result[True]["Prior-OPT-prior1"][20000],
 
-        PriorOPT_2prior_1000_targeted=result[True]["Prior-OPT-2prior"][1000],
-        PriorOPT_2prior_2000_targeted=result[True]["Prior-OPT-2prior"][2000],
-        PriorOPT_2prior_5000_targeted=result[True]["Prior-OPT-2prior"][5000],
-        PriorOPT_2prior_8000_targeted=result[True]["Prior-OPT-2prior"][8000],
-        PriorOPT_2prior_10000_targeted=result[True]["Prior-OPT-2prior"][10000],
-        PriorOPT_2prior_15000_targeted=result[True]["Prior-OPT-2prior"][15000],
-        PriorOPT_2prior_20000_targeted=result[True]["Prior-OPT-2prior"][20000],
+        PriorOPT_2priors_1000_targeted=result[True]["Prior-OPT-2priors"][1000],
+        PriorOPT_2priors_2000_targeted=result[True]["Prior-OPT-2priors"][2000],
+        PriorOPT_2priors_5000_targeted=result[True]["Prior-OPT-2priors"][5000],
+        PriorOPT_2priors_8000_targeted=result[True]["Prior-OPT-2priors"][8000],
+        PriorOPT_2priors_10000_targeted=result[True]["Prior-OPT-2priors"][10000],
+        PriorOPT_2priors_15000_targeted=result[True]["Prior-OPT-2priors"][15000],
+        PriorOPT_2priors_20000_targeted=result[True]["Prior-OPT-2priors"][20000],
 
         PriorOPT_PGD_init_theta_1000_targeted=result[True]["Prior-OPT_PGD_init_theta"][1000],
         PriorOPT_PGD_init_theta_2000_targeted=result[True]["Prior-OPT_PGD_init_theta"][2000],
@@ -723,44 +867,53 @@ def draw_tables_for_ImageNet(result, surrogate_1, surrogate_2):
 if __name__ == "__main__":
     dataset = "ImageNet"
     norm = "l2"
-    if "CIFAR" in dataset:
-        archs = ['pyramidnet272',"gdas","WRN-28-10-drop", "WRN-40-10-drop"]
-    else:
-        wanted_one_prior_list = ["inceptionresnetv2", "resnet50"]
-        wanted_two_priors_list = [('xception', 'inceptionresnetv2'), ('resnet50', 'convit_base')]
+    # if "CIFAR" in dataset:
+    #     archs = ['pyramidnet272',"gdas","WRN-28-10-drop", "WRN-40-10-drop"]
+    # else:
+    wanted_one_prior1_list =  ["inceptionresnetv2", "resnet50"]
+    wanted_one_prior2_list = ["xception", "convit_base"]
+    wanted_two_priors_list = [('xception', 'inceptionresnetv2'), ('resnet50', 'convit_base')]
 
 
-    if "CIFAR" in dataset:
-        targeted_result = {}
-        for arch in archs:
-            result = fetch_all_json_content_given_contraint(dataset, norm, True, arch, query_budgets, "mean_distortion")
-            targeted_result[arch] = result
-        untargeted_result = {}
-        for arch in archs:
-            result = fetch_all_json_content_given_contraint(dataset, norm, False, arch, query_budgets, "mean_distortion")
-            untargeted_result[arch] = result
+    # if "CIFAR" in dataset:
+    #     targeted_result = {}
+    #     for arch in archs:
+    #         result = fetch_all_json_content_given_contraint(dataset, norm, True, arch, query_budgets, "mean_distortion")
+    #         targeted_result[arch] = result
+    #     untargeted_result = {}
+    #     for arch in archs:
+    #         result = fetch_all_json_content_given_contraint(dataset, norm, False, arch, query_budgets, "mean_distortion")
+    #         untargeted_result[arch] = result
+    #
+    # else:
 
-    else:
-        result_archs = defaultdict(dict)
-        # arch = "jx_vit"
-        # surrogate_1 = "ResNet50"
-        # surrogate_2 = "ConViT"
-        # query_budgets = [1000, 2000, 5000, 8000, 10000]
-        # result = fetch_all_json_content_given_contraint(dataset, norm, False, arch, query_budgets, wanted_one_prior_list,
-        #                                                 wanted_two_priors_list, "mean_distortion")
-        # result_archs[False] = result
-        # query_budgets = [1000, 2000, 5000, 8000, 10000, 15000, 20000]
-        # result = fetch_all_json_content_given_contraint(dataset, norm, True, arch, query_budgets,wanted_one_prior_list,
-        #                                                 wanted_two_priors_list, "mean_distortion")
-        # result_archs[True] = result
-        #
-        # draw_tables_for_ImageNet(result_archs, surrogate_1, surrogate_2)
 
-        arch = "resnet101"
-        query_budgets = [1000, 2000, 5000, 8000, 10000]
-        result = fetch_json_content_for_multiple_priors(dataset, norm, False, arch, query_budgets, "mean_distortion")
-        result_archs[False] = result
-        arch = "swin_base_patch4_window7_224"
-        result = fetch_json_content_for_multiple_priors(dataset, norm, False, arch, query_budgets, "mean_distortion")
-        result_archs[True] = result
-        draw_tables_for_multi_priors(result_archs, "ResNet50","ConViT","CrossViT","MaxViT","ViT")
+    # result_archs = defaultdict(dict)
+    # arch = "jx_vit"
+    # surrogate_1 = "ResNet50"
+    # surrogate_2 = "ConViT"
+    # query_budgets = [1000, 2000, 5000, 8000, 10000]
+    # result = fetch_all_json_content_given_contraint(dataset, norm, False, arch, query_budgets, wanted_one_prior1_list, wanted_one_prior2_list,
+    #                                                 wanted_two_priors_list, "mean_distortion")
+    # result_archs[False] = result
+    # query_budgets = [1000, 2000, 5000, 8000, 10000, 15000, 20000]
+    # result = fetch_all_json_content_given_contraint(dataset, norm, True, arch, query_budgets, wanted_one_prior1_list, wanted_one_prior2_list,
+    #                                                 wanted_two_priors_list, "mean_distortion")
+    # result_archs[True] = result
+    #
+    # draw_tables_for_ImageNet(result_archs, surrogate_1, surrogate_2)
+
+    result_archs = defaultdict(dict)
+    arch = "resnet101"
+    query_budgets = [1000, 2000, 5000, 8000, 10000]
+    result = fetch_json_content_for_multiple_priors(dataset, norm, False, arch, query_budgets, "mean_distortion")
+    result_archs[arch] = result
+    arch = "swin_base_patch4_window7_224"
+    result = fetch_json_content_for_multiple_priors(dataset, norm, False, arch, query_budgets, "mean_distortion")
+    result_archs[arch] = result
+
+    arch = "gcvit_base"
+    result = fetch_json_content_for_multiple_priors(dataset, norm, False, arch, query_budgets, "mean_distortion")
+    result_archs[arch] = result
+
+    draw_tables_for_multi_priors(result_archs, "ResNet50","ConViT","CrossViT","MaxViT","ViT")

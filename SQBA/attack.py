@@ -73,7 +73,7 @@ class SQBA_Attack(object):
         self.total_images = total_images
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.batch_size = batch_size
         # self.total_images = len(self.dataset_loader.dataset)
         self.query_all = torch.zeros(self.total_images) # query times
@@ -317,7 +317,7 @@ class SQBA_Attack(object):
                 break
         else:
             idx = indices[0, 0]
-            print("failed adversarial")
+            log.info("failed adversarial")
 
         return g_list[idx]
 
@@ -398,6 +398,7 @@ class SQBA_Attack(object):
 
         # Then run binary search
         x_adv = self._binary_search(x_adv, self.threshold)
+
         if self.query >= self.maximum_queries:
             return x_adv
         # Next compute the number of evaluations and compute the update
@@ -757,6 +758,6 @@ if __name__ == "__main__":
         model.eval()
         attacker = SQBA_Attack(model, args.dataset, 0, 1.0, model.input_size[-2], model.input_size[-1], IN_CHANNELS[args.dataset],
                                 args.norm, args.epsilon, args.load_random_class_image, surrogate_model, args.total_images,
-                                sqba_cfg=sqba_cfg,  maximum_queries=args.max_queries, batch_size=args.batch_size)
+                                sqba_cfg=sqba_cfg, maximum_queries=args.max_queries, batch_size=args.batch_size)
         attacker.attack_all_images(args, arch, save_result_path)
         model.cpu()

@@ -26,7 +26,7 @@ class SignOptL2Norm(object):
         self.targeted = targeted
         self.best_initial_target_sample = best_initial_target_sample
         self.dataset = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
 
@@ -169,7 +169,6 @@ class SignOptL2Norm(object):
         return lbd_hi, nquery
 
 
-
     def quad_solver(self, Q, b):
         """
         Solve min_a  0.5*aQa + b^T a s.t. a>=0
@@ -293,14 +292,14 @@ class SignOptL2Norm(object):
         assert u_batch.dim() == 4
         sign = torch.ones(K,device='cuda')
         if target_label is not None:
-            target_labels = torch.tensor([target_label for _ in range(K)],device='cuda').long()
+            target_labels = torch.tensor([target_label for _ in range(K)], device='cuda').long()
             predict_labels = self.model(images_batch).max(1)[1]
             sign[predict_labels == target_labels] = -1
         else:
-            true_labels = torch.tensor([true_label for _ in range(K)],device='cuda').long()
+            true_labels = torch.tensor([true_label for _ in range(K)], device='cuda').long()
             predict_labels = self.model(images_batch).max(1)[1]
             sign[predict_labels!=true_labels] = -1
-        sign_grad = torch.sum(u_batch * sign.view(K,1,1,1),dim=0,keepdim=True)
+        sign_grad = torch.sum(u_batch * sign.view(K,1,1,1), dim=0, keepdim=True)
 
         sign_grad = sign_grad / K
 

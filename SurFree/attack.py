@@ -33,7 +33,7 @@ class SurFree(object):
                  with_interpolation: bool = False):
         self.model = model
         self.batch_size = batch_size
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.total_images = len(self.dataset_loader.dataset)
         self.norm = norm
         self.ord = np.inf if self.norm == "linf" else 2
@@ -63,7 +63,7 @@ class SurFree(object):
 
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
         self.query_all = torch.zeros(self.total_images)

@@ -47,7 +47,8 @@ class DefensiveModel(nn.Module):
         self.num_classes = CLASS_NUM[dataset]
 
         if defense_model != "feature_denoise" and defense_model != "pcl_loss" and defense_model!="pcl_loss_adv_train" \
-                and defense_model != "guided_denoiser" and defense_model != "TRADES" and defense_model!="adv_train" and defense_model!="adv_train_on_ImageNet":
+                and defense_model != "guided_denoiser" and defense_model != "TRADES" and defense_model!="adv_train" \
+                and defense_model!="mart" and defense_model!="adv_train_on_ImageNet":
             if dataset.startswith("CIFAR"):
                 trained_model_path = "{root}/train_pytorch_model/real_image_model/{dataset}-pretrained/{arch}/checkpoint.pth.tar".format(root=PROJECT_PATH, dataset=dataset, arch=arch)
                 assert os.path.exists(trained_model_path), "{} does not exist!".format(trained_model_path)
@@ -118,6 +119,21 @@ class DefensiveModel(nn.Module):
             self.input_size = self.model.input_size
         elif defense_model == "adv_train":
             model_path = '{}/train_pytorch_model/adversarial_train/adv_train/{}@{}*.pth.tar'.format(
+                PROJECT_PATH, dataset, arch)
+            model_path = list(glob.glob(model_path))[0]
+            assert os.path.exists(model_path), "Model {} does not exist!".format(model_path)
+            self.model = self.make_model(dataset, arch, self.in_channels, CLASS_NUM[dataset],defense_model,
+                                         trained_model_path=model_path)
+            # init cnn model meta-information
+            self.mean = torch.FloatTensor(self.model.mean).view(1, self.in_channels, 1, 1).cuda()
+            self.mean.requires_grad = True
+            self.std = torch.FloatTensor(self.model.std).view(1, self.in_channels, 1, 1).cuda()
+            self.std.requires_grad = True
+            self.input_space = self.model.input_space  # 'RGB' or 'GBR'
+            self.input_range = self.model.input_range  # [0, 1] or [0, 255]
+            self.input_size = self.model.input_size
+        elif defense_model == "mart":
+            model_path = '{}/train_pytorch_model/adversarial_train/mart/{}@{}*.pth.tar'.format(
                 PROJECT_PATH, dataset, arch)
             model_path = list(glob.glob(model_path))[0]
             assert os.path.exists(model_path), "Model {} does not exist!".format(model_path)
@@ -408,7 +424,10 @@ class DefensiveModel(nn.Module):
         return x
 
     def load_weight_from_pth_checkpoint(self, model, fname):
-        raw_state_dict = torch.load(fname, map_location='cpu')['state_dict']
+        try:
+            raw_state_dict = torch.load(fname, map_location='cpu')['state_dict']
+        except Exception:
+            raw_state_dict = torch.load(fname, map_location='cpu')
         state_dict = dict()
         for key, val in raw_state_dict.items():
             new_key = key.replace('module.', '').replace('cnn.', "")  # FIXME why cnn?

@@ -5,7 +5,6 @@ source_root_folder_1 = "F:/logs/hard_label_attacks"
 source_root_folder_2 = "F:/logs/cluster_logs"
 target_root_folder = "F:/logs/hard_label_attack_complete"
 
-
 all_source_folders = defaultdict(int)
 for dir_name in os.listdir(source_root_folder_1):
     all_source_folders[dir_name] += 1
@@ -24,21 +23,22 @@ for dir_name, count in all_source_folders.items():
                 source_file_path = source_root_folder_1 + "/" + sub_file
                 target_file_path = target_root_folder + "/" + sub_file
                 os.makedirs(os.path.dirname(target_file_path), exist_ok=True)
-                os.symlink(source_file_path, target_file_path, False)
+                if not os.path.exists(target_file_path):
+                    os.symlink(source_file_path, target_file_path, False)
             for rest_file in rest_files:
                 target_file_path = target_root_folder + "/" + rest_file
-                if os.path.exists(source_root_folder_1 + "/" + rest_file):
+                if os.path.exists(source_root_folder_1 + "/" + rest_file) and not os.path.exists(target_file_path):
                     os.symlink(source_root_folder_1 + "/" + rest_file, target_file_path, False)
-                if os.path.exists(source_root_folder_2 + "/" + rest_file):
+                if os.path.exists(source_root_folder_2 + "/" + rest_file) and not os.path.exists(target_file_path):
                     os.symlink(source_root_folder_2 + "/" + rest_file, target_file_path, False)
         else:
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!")
             for rest_file in rest_files:
                 target_file_path = target_root_folder + "/" + rest_file
                 os.makedirs(os.path.dirname(target_file_path), exist_ok=True)
-                if os.path.exists(source_root_folder_1 + "/" + rest_file):
+                if os.path.exists(source_root_folder_1 + "/" + rest_file) and not os.path.exists(target_file_path):
                     os.symlink(source_root_folder_1 + "/" + rest_file, target_file_path, False)
-                if os.path.exists(source_root_folder_2 + "/" + rest_file):
+                if os.path.exists(source_root_folder_2 + "/" + rest_file) and not os.path.exists(target_file_path):
                     os.symlink(source_root_folder_2 + "/" + rest_file, target_file_path, False)
     else:
         if os.path.exists(source_root_folder_1 + "/" + dir_name) and not os.path.exists(target_root_folder + "/" + dir_name):

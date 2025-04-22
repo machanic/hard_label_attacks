@@ -3,6 +3,8 @@ import torch
 import numpy as np
 import argparse
 import os
+import glog as log
+import math
 
 
 def corr(a: torch.Tensor, b: torch.Tensor):
@@ -70,7 +72,7 @@ class GP(gpytorch.models.ExactGP):
             )
             if self.prior_f is not None:
                 msg += '   scale: %.3f' % (self.scale if isinstance(self.scale, float) else self.scale.item())
-            print(msg)
+            # log.info(msg)
             optimizer.step()
             if self.prior_f is not None and self.scale_type == 'adapt' and positivescale:
                 if setto1:
@@ -90,7 +92,9 @@ class Func:
     def __call__(self, tensor):
         y = self.func(tensor).detach()
         if self.prior_func:
-            prior_y = self.prior_func(tensor).detach()
+            prior_y = self.prior_func(tensor, self.func.epsilon).detach()
+        if y.mean() > -self.func.lamda:
+            self.func.epsilon *= 0.99
         if self.call_count == 0:
             self.history_x = tensor
             self.history_y = y
@@ -168,6 +172,7 @@ class BayesOpt:
         return (inp - self.mean) / self.std * self.model.scale + self.model.constant
 
     def gen_rand_init(self, n_rand_init=10):
+        # return torch.clamp(torch.rand([n_rand_init, self.dim]) * (self.upper - self.lower) + self.lower, -self.f.func.epsilon, self.f.func.epsilon)
         return torch.rand([n_rand_init, self.dim]) * (self.upper - self.lower) + self.lower
 
     def gen_past_best(self, n_past_best=10):
@@ -182,6 +187,15 @@ class BayesOpt:
         y_obs = standardize(self.f.history_y) if self.normalize_y else self.f.history_y
         y_prior = self.normalize_prior_f(self.f.prior_history_y) if self.prior_f else 0.
         self.model.set_train_data(self.f.history_x, y_obs - y_prior, strict=False)
+
+    # def adjust_lr(self, iter):
+    #     if iter == 300:
+    #         self.lower*=0.5
+    #         self.upper*=0.5
+    #     if iter>300:
+    #         return 0.025
+    #     else:
+    #         return 0.05
 
     def find_next(self):
         lr = 0.05
@@ -203,7 +217,7 @@ class BayesOpt:
             else:
                 ans = 0.
             if self.prior_f:
-                ans += self.normalize_prior_f(self.prior_f(x))
+                ans += self.normalize_prior_f(self.prior_f(x, self.f.func.epsilon))
             return ans
 
         for i in range(n_iter_opt_acq):
@@ -219,15 +233,15 @@ class BayesOpt:
     def fit_hyper(self, setto1=False):
         if self.prior_f:
             self.set_prior_normalizer()
-            print('Correlation between target and prior:', corr(self.f.prior_history_y, self.f.history_y))
+            log.info('Correlation between target and prior: {}'.format(corr(self.f.prior_history_y, self.f.history_y)))
         loss_now = self.model.fit_hyper(standardize(self.f.history_y), standardize(self.f.prior_history_y) if self.prior_f else None, setto1=setto1, positivescale=self.positivescale)
-        print('------------------------------')
+        # print('------------------------------')
         ini_model = self.initialize_model(self.model.train_inputs, self.model.train_targets)
         # whether to setto1 in ini_model.fit_hyper? answer: no need
         loss_ini = ini_model.fit_hyper(standardize(self.f.history_y), standardize(self.f.prior_history_y) if self.prior_f else None, setto1=setto1, positivescale=self.positivescale)
-        print(f'loss now: {loss_now}, loss ini: {loss_ini}')
+        log.info(f'loss now: {loss_now}, loss ini: {loss_ini}')
         if loss_ini < loss_now or np.isnan(loss_now):
-            print('Loss reinitializing is lower; changing model')
+            log.info('Loss reinitializing is lower; changing model')
             self.model = ini_model
         self.refresh_model()
 
@@ -239,42 +253,43 @@ class BayesOpt:
         with gpytorch.settings.fast_computations(covar_root_decomposition=False, log_prob=False, solves=False):
             with gpytorch.settings.cholesky_max_tries(6):
                 for i in range(n_iter):
-                    print('{:.2f}MB, {:.2f}MB'.format(torch.cuda.memory_allocated('cuda:0') / 1048576, torch.cuda.memory_reserved('cuda:0') / 1048576))
+                    # print('{:.2f}MB, {:.2f}MB'.format(torch.cuda.memory_allocated('cuda:0') / 1048576, torch.cuda.memory_reserved('cuda:0') / 1048576))
                     if i % freq_fit_hyper == 0 and self.scale != 'fixed_only':
                         setto1 = (i == 0) if self.positivescale else False
                         self.fit_hyper(setto1=setto1)
                     x = self.find_next().detach()
-                    print(x[:, :10])
+                    # print(x[:, :10])
                     self.update_model(x)
                     opt = self.f.get_opt()
                     newest = self.f.get_newest()
                     msg = f'{i} best_f={opt} f={newest}'
                     if self.prior_f:
                         msg += f" f'={self.f.get_prior_newest()}"
-                    print(msg)
+                    log.info(msg)
                     opts.append(opt)
                     newests.append(newest)
-                    if opt > 0:
-                        return x, opts, newests
+                    # if opt > 0:
+                    #     return x, opts, newests
                 return None, opts, newests
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-    parser.add_argument('--method', type=str, choices=['no', 'fix', 'adapt'],
+    parser.add_argument('--method', type=str, choices=['no', 'fix', 'adapt'], default='no',
                         help='no: BO without prior_f, fix: P-BO with c=1, adapt: P-BO adapting c')
-    parser.add_argument('--prior_func', type=int, choices=[1, 2, 3, 4, 5],
+    parser.add_argument('--prior_func', type=int, choices=[1, 2, 3, 4, 5], default=1,
                         help='choose the prior_f')
     parser.add_argument('--name', type=str,
                         help='name of the experiment (used in the filename of the saved npy)')
 
     dim = 768
-    def target_func(tensor: torch.Tensor):
-        return -torch.sum(torch.square(tensor), axis=-1)
+    def target_func(tensor: torch.Tensor, iter):      # 1000 iters -> -1.1
+        # return -torch.sum(torch.square(tensor), axis=-1)+1000*((torch.sum(torch.square(tensor), axis=-1)>700).float()-1)
+        return -torch.sum(torch.square(tensor), axis=-1)+1000*math.pow(0.8, iter//100)*((torch.sum(torch.square(tensor), axis=-1)>700).float()-1)
 
     prior_bias = ((torch.arange(dim) + 1.) / dim).cuda()
-    def prior_func1(tensor: torch.Tensor):
-        return -torch.sum(torch.square(tensor - prior_bias), axis=-1)
+    def prior_func1(tensor: torch.Tensor):      # 1000 iters -> -1.1
+        return -torch.sum(torch.square(tensor - prior_bias), axis=-1)+1000*((torch.sum(torch.square(tensor-prior_bias), axis=-1)>30).float()-1)
 
     def prior_func2(tensor: torch.Tensor):
         return torch.sum(tensor, axis=-1)
@@ -282,7 +297,7 @@ if __name__ == '__main__':
     def prior_func3(tensor: torch.Tensor):
         return -torch.sum((torch.arange(tensor.shape[-1]) + 1.) * torch.square(tensor - prior_bias), axis=-1)
 
-    def prior_func4(tensor: torch.Tensor):
+    def prior_func4(tensor: torch.Tensor):      # 330 iters -> -1
         return -target_func(tensor)
 
     def prior_func5(tensor: torch.Tensor):
@@ -311,6 +326,6 @@ if __name__ == '__main__':
                 normalize_y=True, exact_fval=True, prior_f=prior_f, scale=scale, positivescale=False)
     bo.initialize(bo.gen_rand_init())
     _, opts, newests = bo.run(n_iter=2000)
-    os.makedirs('results', exist_ok=True)
-    np.save(f'results/{args.method}_{args.prior_func}_{args.name}_opt.npy', np.array(opts))
-    np.save(f'results/{args.method}_{args.prior_func}_{args.name}_newest.npy', np.array(newests))
+    # os.makedirs('results', exist_ok=True)
+    # np.save(f'results/{args.method}_{args.prior_func}_{args.name}_opt.npy', np.array(opts))
+    # np.save(f'results/{args.method}_{args.prior_func}_{args.name}_newest.npy', np.array(newests))

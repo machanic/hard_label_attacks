@@ -28,7 +28,7 @@ class PriorOptL2Norm(object):
         self.targeted = targeted
         self.best_initial_target_sample = best_initial_target_sample
         self.dataset = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
         self.PGD_init_theta = PGD_init_theta
@@ -471,9 +471,7 @@ class PriorOptL2Norm(object):
             predict_labels = self.model(images_batch).max(1)[1]
             sign[predict_labels != true_labels] = -1
         sign_grad = torch.sum(u_batch * sign.view(orthos.size(0), 1, 1, 1), dim=0, keepdim=True)
-
         sign_grad = sign_grad / orthos.size(0)
-
         return sign_grad, query
 
 

@@ -7,7 +7,12 @@ from scipy.special import gammaln
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-
+from matplotlib import rcParams, rc
+rcParams['pdf.fonttype'] = 42
+rcParams['ps.fonttype'] = 42
+rcParams['xtick.direction'] = 'out'
+rcParams['ytick.direction'] = 'out'
+rc('pdf', fonttype=42)
 linestyle_dict = OrderedDict(
     [('solid',               (0, ())),
      ('loosely dotted',      (0, (1, 10))),
@@ -107,7 +112,7 @@ if __name__ == '__main__':
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
               "indigo",
               "olivedrab"]
-    markers = ['o', '.', '*', 's', "P", "p", "X", "h", "D", "H", "^", "<", "d", ".", "+", "x", "v", "1", "2", "3", "4"]
+    markers = ['o', '+', '*', 's', "P", "p", "X", "h", "D", "H", "^", "<", "d", ".", "+", "x", "v", "1", "2", "3", "4"]
     linestyles = [ "dashed", "densely dotted","solid", "dashdotdotted", "densely dashed", "densely dashdotdotted"]
 
     xtick = np.arange(1,prior_number+1,2)
@@ -115,17 +120,17 @@ if __name__ == '__main__':
     min_y = 999
     plt.plot(x, y_sign_opt, label="Sign-OPT", color=colors[0],
                  linestyle=linestyle_dict[linestyles[0]], linewidth=1.5,
-                 marker=markers[0], markersize=5)
+                 marker=markers[0], markersize=6)
     plt.plot(x, y_prior_sign_opt, label=r"Prior-Sign-OPT$_{\mathregular{Shuffle}\{\alpha_1,\alpha_2,\cdots,\alpha_s\}}$", color=colors[1],
              linestyle=linestyle_dict[linestyles[1]], linewidth=1.5,
-             marker=markers[1], markersize=5)
+             marker=markers[1], markersize=6)
     # plt.plot(x, y_prior_opt, label=r"Prior-OPT$_{\mathregular{Shuffle}\{\alpha_1,\alpha_2,\cdots,\alpha_s\}}$", color=colors[2],
     #          linestyle=linestyle_dict[linestyles[2]], linewidth=1.5,
     #          marker=markers[2], markersize=5)
 
     plt.plot(x, y_prior_sign_opt_sorted, label=r"Prior-Sign-OPT$_{\alpha_1\geq\alpha_2\geq\cdots\geq\alpha_s}$", color=colors[3],
              linestyle=linestyle_dict[linestyles[3]], linewidth=1.5,
-             marker=markers[3], markersize=5)
+             marker=markers[3], markersize=6)
     # plt.plot(x, y_prior_opt_sorted, label=r"Prior-OPT$_{\alpha_1\geq\alpha_2\cdots\geq\alpha_s}$", color=colors[4],
     #          linestyle=linestyle_dict[linestyles[4]], linewidth=1.5,
     #          marker=markers[4], markersize=5)
@@ -138,12 +143,13 @@ if __name__ == '__main__':
     plt.ylim(0, max_y+0.01)
     plt.gcf().subplots_adjust(bottom=0.15)
     print("max y is {}".format(max_y))
-    plt.xticks(xtick, xtick, fontsize=20)
-    plt.yticks(np.linspace(0, max_y,11), fontsize=20)
+    plt.xticks(xtick, xtick, fontsize=25)
+    plt.yticks(np.linspace(0, max_y,11), fontsize=25)
     plt.xlabel(r"Number of Priors", fontsize=25)
     plt.ylabel(r"$\mathbb{E}[\gamma]$", fontsize=25)
-    plt.legend(loc='lower right', prop={'size': 20}, framealpha=0.5, fancybox=True, frameon=True)
+    plt.legend(loc='lower right', prop={'size': 23}, handlelength=3, framealpha=0.7, fancybox=True, frameon=True)
     ax = plt.gca()
+    plt.tight_layout()
     # plt.show()
     #
     # # axins = inset_axes(ax, width="50%", height="40%", loc='upper left',
@@ -196,7 +202,7 @@ if __name__ == '__main__':
     # axins.set_xticklabels(axins.get_xticks(),color='steelblue')
     # axins.set_yticklabels(axins.get_yticks(), color='steelblue')
     # mark_inset(ax, axins, loc1=3, loc2=4, fc="none", ec='k', lw=1)
-    plt.savefig("./prior_num_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
+    plt.savefig("D:/黑盒攻击论文/hard-label attacks/Prior-OPT/ICLR 2025/figures/ablation_study/E_gamma/prior_num_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
     plt.close()
 
 

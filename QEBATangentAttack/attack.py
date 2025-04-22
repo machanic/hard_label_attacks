@@ -160,7 +160,7 @@ class QEBATangentAttack(object):
 
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, 1)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, 1, model.arch)
         self.total_images = len(self.dataset_loader.dataset)
         self.query_all = torch.zeros(self.total_images)
         self.distortion_all = defaultdict(OrderedDict)  # key is image index, value is {query: distortion}

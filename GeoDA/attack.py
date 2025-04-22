@@ -72,7 +72,7 @@ class GeoDA(object):
         self.sigma = sigma
         self.ord = np.inf if self.norm == "linf" else 2
         self.dataset = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
         self.eps = eps

@@ -13,12 +13,13 @@ import seaborn as sns
 from matplotlib.ticker import StrMethodFormatter
 from config import MODELS_TEST_STANDARD
 
+from matplotlib.ticker import StrMethodFormatter
 from matplotlib import rcParams, rc
-# rcParams['xtick.direction'] = 'out'
-# rcParams['ytick.direction'] = 'out'
-# rcParams['pdf.fonttype'] = 42
-# rcParams['ps.fonttype'] = 42
-# rc('pdf', fonttype=42)
+rcParams['pdf.fonttype'] = 42
+rcParams['ps.fonttype'] = 42
+rcParams['xtick.direction'] = 'out'
+rcParams['ytick.direction'] = 'out'
+rc('pdf', fonttype=42)
 
 linestyle_dict = OrderedDict(
     [('solid',               (0, ())),
@@ -178,7 +179,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     return path
 
 def get_all_exists_folder(dataset, methods, norm, targeted):
-    root_dir = "H:/logs/hard_label_attack_complete/"
+    root_dir = "G:/logs/hard_label_attacks/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     for method in methods:
         file_name = from_method_to_dir_path(dataset, method, norm, targeted)
@@ -358,15 +359,14 @@ arch_translation = {"resnet-50(TRADES_linf_8_div_255)":"resnet-50_TRADES", "resn
 
 if __name__ == "__main__":
     args = parse_args()
-    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/NeurIPS 2024/figures/query_vs_distortion/"
+    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/ICLR 2025/figures/query_vs_distortion/attack_defense/"
     os.makedirs(dump_folder, exist_ok=True)
     for norm in ["l2"]:
         for dataset in ["ImageNet","CIFAR-10"]:
             args.norm = norm
             for targeted in [False]:
                 if "CIFAR" in dataset:
-                    archs = ["resnet-50(AT_linf_8_div_255)", 'resnet-50(TRADES_linf_8_div_255)', "resnet-50(jpeg)", "resnet-50(feature_scatter_linf_16_div_255)",
-                             "resnet-50(feature_distillation)", "resnet-50(com_defend)"]
+                    archs = ["resnet-50(AT_linf_8_div_255)", 'resnet-50(TRADES_linf_8_div_255)']
                 else:
                     archs= ["resnet50(AT_linf_4_div_255)", "resnet50(AT_l2_3)",
                             "resnet50(AT_linf_8_div_255)"]

@@ -35,7 +35,7 @@ class AHA(object):
 
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
         self.query_all = torch.zeros(self.total_images)
@@ -107,17 +107,12 @@ class AHA(object):
         initialization = samples.clone()
         num_evals = torch.zeros_like(true_labels).float()
 
-        with torch.no_grad():
-            logit = self.model(samples)
-        pred = logit.argmax(dim=1)
-        correct = pred.eq(true_labels).float()
-        for i in range(len(correct)):
-            if correct[i]:
-                if target_images is None:
-                    initialization[i], num_evals[i] = self.initialize(samples[i], None, true_labels[i], None)
-                else:
-                    initialization[i], num_evals[i] = self.initialize(samples[i], target_images[i], true_labels[i],
-                                                                      target_labels[i])
+        for i in range(len(samples)):
+            if target_images is None:
+                initialization[i], num_evals[i] = self.initialize(samples[i], None, true_labels[i], None)
+            else:
+                initialization[i], num_evals[i] = self.initialize(samples[i], target_images[i], true_labels[i],
+                                                                  target_labels[i])
 
         return initialization, num_evals
 
@@ -129,14 +124,14 @@ class AHA(object):
             x = torch.from_numpy(idct(idct(x.cpu().numpy(), axis=3, norm='ortho'), axis=2, norm='ortho'))
         return x.squeeze().contiguous()
 
-    def attack(self, batch_index, images, target_images, true_labels, target_labels, image_size):
+    def attack(self, batch_index, images, target_images, true_labels, target_labels, image_size, correct):
         images = images.cuda()
         true_labels = true_labels.cuda()
 
         query = torch.zeros_like(true_labels).float()
         success_stop_queries = query.clone()  # stop query count once the distortion < epsilon
         batch_image_positions = np.arange(batch_index * self.batch_size,
-                                          min((batch_index + 1) * self.batch_size, self.total_images)).tolist()
+                                          min((batch_index + 1) * self.batch_size, self.total_images))[correct].tolist()
 
         batch_size = images.size(0)
         if target_images is not None:
@@ -146,16 +141,7 @@ class AHA(object):
         # Initialize. Note that if the original image is already classified incorrectly, the difference between the found initialization and sample is very very small, this case will lead to inifinity loop later.
         x_adv, num_eval = self.batch_initialize(images, target_images, true_labels, target_labels)
         x_adv = x_adv.cuda()
-        # if target_labels is None:
-        #     with torch.no_grad():
-        #         target_labels = self.model(x_adv.cuda()).max(1)[1].detach().cpu()
         query += num_eval
-        dist = torch.norm((x_adv - images).view(batch_size, -1), self.ord, 1)
-        working_ind = torch.nonzero(dist > self.epsilon).view(-1)
-        success_stop_queries[working_ind] = query[working_ind]
-        for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
-            self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[
-                inside_batch_index].item()
 
         alpha = 1e-2 * torch.ones(images.size(0)).cuda()
         beta = torch.tensor(1e-2).cuda()
@@ -203,7 +189,7 @@ class AHA(object):
         working_ind = torch.nonzero(dist > self.epsilon).view(-1)
         success_stop_queries[working_ind] = query[working_ind]
         for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
-            self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[
+            self.distortion_all[index_over_all_images][query[correct][inside_batch_index].item()] = dist[correct][
                 inside_batch_index].item()
         bias = torch.zeros(x_adv.shape[0], 3, DIM, DIM).cuda()
 
@@ -241,10 +227,10 @@ class AHA(object):
             # labels.append(new_label)
             # print(f"{batch_index}/{step}/{query.max()}: {dist.mean()}/{best_dist.mean()} {alpha.mean()}")
 
-            working_ind = torch.nonzero(dist > self.epsilon).view(-1)
+            working_ind = torch.nonzero(best_dist > self.epsilon).view(-1)
             success_stop_queries[working_ind] = query[working_ind]
             for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
-                self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = best_dist[
+                self.distortion_all[index_over_all_images][query[correct][inside_batch_index].item()] = best_dist[correct][
                     inside_batch_index].item()
 
             expect_dist = alpha * od_norm + beta / get_norm(eta_img) * (eta_img.view(eta_img.size(0), -1) * to_orig_direction.view(to_orig_direction.size(0), -1)).sum(1)
@@ -260,9 +246,9 @@ class AHA(object):
                 muls.clear()
                 alpha[alpha < 1e-9] = 1e-2
 
-            log.info('Attacking image {} - {} / {}, distortion {}, query {}'.format(
-                batch_index * args.batch_size, (batch_index + 1) * args.batch_size, self.total_images, best_dist, query[0]))
-            # if dist.item() < 1e-4:  #
+            log.info('Attacking image {} - {} / {}, distortion {:.4f}, query {}'.format(
+                batch_index * args.batch_size, (batch_index + 1) * args.batch_size, self.total_images, best_dist.mean(), query[0]))
+            # if dist.item() < 1e-4:
             #     break
 
         success_stop_queries = torch.clamp(success_stop_queries, 0, self.maximum_queries)
@@ -315,7 +301,7 @@ class AHA(object):
                 target_labels = None
                 target_images = None
 
-            adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, images, target_images, true_labels, target_labels, self.model.input_size[-1])
+            adv_images, query, success_query, distortion_with_max_queries, success_epsilon = self.attack(batch_index, images, target_images, true_labels, target_labels, self.model.input_size[-1], correct.bool().detach().cpu().numpy())
             distortion_with_max_queries = distortion_with_max_queries.detach().cpu()
             with torch.no_grad():
                 if adv_images.dim() == 3:
@@ -346,7 +332,7 @@ class AHA(object):
                           "max_query": self.success_query_all[self.success_all.bool()].max().item() if self.success_all.sum().item() > 0 else 0,
                           "correct_all": self.correct_all.detach().cpu().numpy().astype(np.int32).tolist(),
                           "not_done_all": self.not_done_all.detach().cpu().numpy().astype(np.int32).tolist(),
-                          "success_all":self.success_all.detach().cpu().numpy().astype(np.int32).tolist(),
+                          "success_all": self.success_all.detach().cpu().numpy().astype(np.int32).tolist(),
                           "query_all": self.query_all.detach().cpu().numpy().astype(np.int32).tolist(),
                           "success_query_all": self.success_query_all.detach().cpu().numpy().astype(np.int32).tolist(),
                           "distortion": self.distortion_all,
@@ -383,7 +369,7 @@ def set_log_file(fname):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu",type=int, required=True)
-    parser.add_argument('--json-config', type=str, default='../configures/AHA.json',
+    parser.add_argument('--json-config', type=str, default='./configures/AHA.json',
                         help='a configures file to be passed in instead of arguments')
     parser.add_argument('--epsilon', type=float, help='the lp perturbation bound')
     parser.add_argument("--norm", type=str, choices=["l2", "linf"], required=True)
@@ -450,12 +436,9 @@ if __name__ == "__main__":
         assert args.defense_model is not None
 
     torch.backends.cudnn.deterministic = True
-    torch.backends.cuda.matmul.allow_tf32 = False
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
     if args.all_archs:
         archs = MODELS_TEST_STANDARD[args.dataset]
         # if args.dataset == "CIFAR-10" or args.dataset == "CIFAR-100":

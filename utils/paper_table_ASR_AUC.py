@@ -6,68 +6,16 @@ import json
 import os
 from sklearn.metrics import auc
 
-from models.standard_model import StandardModel
-
 method_name_to_paper = {"tangent_attack":"TA",
                         "ellipsoid_tangent_attack":"G-TA", "GeoDA":"GeoDA",
                         "HSJA":"HSJA",  "SignOPT":"Sign-OPT", "SVMOPT":"SVM-OPT",
-                         "Evolutionary":"Evolutionary", "SurFree":"SurFree","SQBA":"SQBA","biased_boundary_attack":"BBA",
+                         "Evolutionary":"Evolutionary", "SurFree":"SurFree","SQBA":"SQBA","BBA":"BBA",
                         "TriangleAttack":"Triangle Attack", "PriorSignOPT":"Prior-Sign-OPT","PriorSignOPT_PGD_init_theta":"Prior-Sign-OPT_PGD_init_theta",
                         "PriorOPT":"Prior-OPT",
                         "PriorOPT_PGD_init_theta":"Prior-OPT_PGD_init_theta",
                         }
 surrogate_arch_name_to_paper = {"inceptionresnetv2":"IncResV2", "xception":"Xception", "resnet50":"ResNet50","convit_base":"ConViT",
                                 "jx_vit":"ViT", "resnet-110":"ResNet110"}
-def longest_common_subsequence(x: str, y: str):
-    """
-    Finds the longest common subsequence between two strings. Also returns the
-    The subsequence found
-
-    Parameters
-    ----------
-
-    x: str, one of the strings
-    y: str, the other string
-
-    Returns
-    -------
-    L[m][n]: int, the length of the longest subsequence. Also equal to len(seq)
-    Seq: str, the subsequence found
-
-    """
-    # find the length of strings
-
-    assert x is not None
-    assert y is not None
-
-    m = len(x)
-    n = len(y)
-
-    # declaring the array for storing the dp values
-    l = [[0] * (n + 1) for _ in range(m + 1)]  # noqa: E741
-
-    for i in range(1, m + 1):
-        for j in range(1, n + 1):
-            match = 1 if x[i - 1] == y[j - 1] else 0
-
-            l[i][j] = max(l[i - 1][j], l[i][j - 1], l[i - 1][j - 1] + match)
-
-    seq = ""
-    i, j = m, n
-    while i > 0 and j > 0:
-        match = 1 if x[i - 1] == y[j - 1] else 0
-
-        if l[i][j] == l[i - 1][j - 1] + match:
-            if match == 1:
-                seq = x[i - 1] + seq
-            i -= 1
-            j -= 1
-        elif l[i][j] == l[i - 1][j]:
-            i -= 1
-        else:
-            j -= 1
-
-    return l[m][n], seq
 
 def from_method_to_denfensive_dir_path(dataset, method, norm, targeted):
     if method == "tangent_attack" or method == "ellipsoid_tangent_attack":
@@ -79,7 +27,7 @@ def from_method_to_denfensive_dir_path(dataset, method, norm, targeted):
     elif method == "GeoDA" or method == "RayS" or method == "SurFree" or method == "Evolutionary" or method == "TriangleAttack" or method == "PriorOPT" or method == "PriorSignOPT":
         path = "{method}_on_defensive_model-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                 norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "biased_boundary_attack":
+    elif method == "BBA":
         path = "{method}_on_defensive_model-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "boundary_attack":
         path = "{method}_on_defensive_model-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
@@ -117,7 +65,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "biased_boundary_attack":
+    elif method == "BBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "boundary_attack":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
@@ -177,7 +125,7 @@ def read_json_data(json_path):
     return distortion_dict, surrogate_archs
 
 def get_all_exists_folder(dataset, methods, norm, targeted, is_defense_model):
-    root_dir = "H:/logs/hard_label_attack_complete/"
+    root_dir = "F:/logs/hard_label_attack_complete/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     for method in methods:
         if is_defense_model:
@@ -241,7 +189,6 @@ def read_query_distortion_data(dataset_path_dict, arch, query_budgets, success_d
                 x = np.array(x)
                 y_distortions = np.array(y_distortions)
                 y_success_rates = np.array(y_success_rates)
-                # print("final ASR:{}".format(y_sucess_rates[-1]))
                 surrogate_archs_new = [surrogate_arch_name_to_paper[surrogate_arch] for surrogate_arch in surrogate_archs]
                 data_info[(dataset, arch, norm, targeted, method, "\&".join(surrogate_archs_new))] = (x, y_distortions, y_success_rates)
     return data_info
@@ -256,13 +203,12 @@ def draw_wide_table(table_data):
         # print("{0} & {1:.3f} & {2:.1f} & {3:.1f}\% & {4:.3f} & {5:.1f} & {6:.1f}\% & {7:.3f} & {8:.1f} & {9:.1f}\% \\\\".format(method,
         #         arch_new_dict["resnet101"][0],arch_new_dict["resnet101"][1],arch_new_dict["resnet101"][2],
         #         arch_new_dict["resnext101_64x4d"][0],arch_new_dict["resnext101_64x4d"][1],arch_new_dict["resnext101_64x4d"][2],
-        #         arch_new_dict["senet154"][0],arch_new_dict["senet154"][1],arch_new_dict["senet154"][2])
+        #         arch_new_dict["senet154"][0],arch_new_dict["senet154"][1],arch_new_dict["senet154"][2]))
         print(
             "{0} & {1:.3f} & {2:.1f} & {3:.1f}\% & {4:.3f} & {5:.1f} & {6:.1f}\% \\\\".format(
                 method,
                 arch_new_dict["inceptionv3"][0], arch_new_dict["inceptionv3"][1], arch_new_dict["inceptionv3"][2],
-                arch_new_dict["inceptionv4"][0], arch_new_dict["inceptionv4"][1],
-                arch_new_dict["inceptionv4"][2]))
+                arch_new_dict["inceptionv4"][0], arch_new_dict["inceptionv4"][1], arch_new_dict["inceptionv4"][2]))
 def draw_narrow_table(table_data):
     for method, arch_data_info_dict in table_data.items():
         arch_new_dict = {}
@@ -330,7 +276,8 @@ if __name__ == "__main__":
             archs = ["pyramidnet272","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40","gdas"]
         else:
             archs = ["inceptionv3","inceptionv4"]
-                     # "jx_vit","gcvit_base","swin_base_patch4_window7_224"]
+            # archs = ["jx_vit","gcvit_base","swin_base_patch4_window7_224"]
+            # archs = ["resnet101", "resnext101_64x4d", "senet154"]
         if is_defense_model:
             archs = ['resnet-50_TRADES', "resnet-50_feature_scatter", "resnet-50_adv_train"]
         targeted_list = [False]

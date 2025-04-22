@@ -20,6 +20,7 @@ import torchvision.models as vision_models
 from tiny_imagenet_models.inception import inception_v3
 from tiny_imagenet_models.wrn import tiny_imagenet_wrn
 
+from models import clip
 import timm
 
 class StandardModel(nn.Module):
@@ -32,6 +33,7 @@ class StandardModel(nn.Module):
         # init cnn model
         self.in_channels = IN_CHANNELS[dataset]
         self.dataset = dataset
+        self.arch = arch
 
         if dataset.startswith("CIFAR"):
             trained_model_path = "{root}/train_pytorch_model/real_image_model/{dataset}-pretrained/{arch}/checkpoint.pth.tar".format(root=PROJECT_PATH, dataset=dataset, arch=arch)
@@ -42,15 +44,28 @@ class StandardModel(nn.Module):
             assert len(trained_model_path_list)>0, "{} does not exist!".format(trained_model_path)
             trained_model_path = trained_model_path_list[0]
         else:
-            trained_model_path = "{root}/train_pytorch_model/real_image_model/{dataset}-pretrained/hub/checkpoints/{arch}*.pth".format(
-                root=PROJECT_PATH, dataset=dataset, arch=arch)
-            trained_model_path_ls = list(glob.glob(trained_model_path))
-            assert trained_model_path_ls, "{} does not exist!".format(trained_model_path)
-            trained_model_path = trained_model_path_ls[0]
+            if arch.startswith('CLIP'):
+                imagenet_label_file_path = os.path.join(PROJECT_PATH, "train_pytorch_model", "CLIP", "imagenet-labels.txt")
+                trained_model_path = os.path.join(PROJECT_PATH, "train_pytorch_model", "CLIP",
+                                                                arch[arch.index("-")+1:] + ".pt")
+                assert os.path.exists(imagenet_label_file_path), "{} does not exist!".format(imagenet_label_file_path)
+                assert os.path.exists(trained_model_path), "{} does not exist!".format(trained_model_path)
+                with open(imagenet_label_file_path, 'r') as file:
+                    labels = [line.strip().strip('"').split(',')[0] for line in file]
+                self.text = clip.tokenize(labels).cuda()
+            else:
+                trained_model_path = "{root}/train_pytorch_model/real_image_model/{dataset}-pretrained/hub/checkpoints/{arch}*.pth".format(
+                    root=PROJECT_PATH, dataset=dataset, arch=arch)
+                trained_model_path_ls = list(glob.glob(trained_model_path))
+                assert trained_model_path_ls, "{} does not exist!".format(trained_model_path)
+                trained_model_path = trained_model_path_ls[0]
 
         self.num_classes = CLASS_NUM[dataset]
         self.cnn = self.make_model(dataset, arch, self.in_channels, self.num_classes,
                                    trained_model_path=trained_model_path, load_pretrained=load_pretrained)
+        if arch.startswith('CLIP'):
+            with torch.no_grad():
+                self.text_features = self.cnn.encode_text(self.text).detach()
 
         # init cnn model meta-information
         self.mean = torch.FloatTensor(self.cnn.mean).view(1, self.in_channels, 1, 1).cuda()
@@ -98,9 +113,15 @@ class StandardModel(nn.Module):
         x = (x - self.mean.type(x.dtype).to(x.device)) / self.std.type(x.dtype).to(x.device)
         if self.no_grad:
             with torch.no_grad():
-                x = self.cnn(x)
+                if self.arch.startswith('CLIP'):
+                    x, _ = self.cnn(x, self.text_features)
+                else:
+                    x = self.cnn(x)
         else:
-            x = self.cnn(x)
+            if self.arch.startswith('CLIP'):
+                x, _ = self.cnn(x, self.text_features)
+            else:
+                x = self.cnn(x)
         x = x.view(x.size(0), -1)
         return x
 
@@ -262,6 +283,14 @@ class StandardModel(nn.Module):
             model.input_space = 'RGB'
             model.input_range = [0, 1]
             model.input_size = [3, 224, 224]
+        elif arch_ == "clip":
+            assert load_pretrained
+            model, _ = clip.load(trained_model_path, device='cuda')
+            model.mean = [0.48145466, 0.4578275, 0.40821073]
+            model.std = [0.26862954, 0.26130258, 0.27577711]
+            model.input_space = 'RGB'
+            model.input_range = [0, 1]
+            model.input_size = [3, model.visual.input_resolution, model.visual.input_resolution]
         else:
             pretrained = "imagenet" if load_pretrained else None
             model = pretrainedmodels.__dict__[arch](num_classes=1000, pretrained=pretrained)

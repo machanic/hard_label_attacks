@@ -11,6 +11,7 @@ import os.path as osp
 import glog as log
 from config import MODELS_TEST_STANDARD
 from PriorOPT.prior_opt_l2_norm_attack import PriorOptL2Norm
+from PriorOPT.prior_opt_l2_norm_targeted_attack import PriorOptL2NormTargetedAttack
 from PriorOPT.prior_opt_linf_norm_attack import PriorOptLinfNorm
 from models.defensive_model import DefensiveModel
 from models.standard_model import StandardModel
@@ -234,7 +235,13 @@ if __name__ == "__main__":
         if args.tol is not None and args.tol != 0.0:
             tol = args.tol
         if args.norm == "l2":
-            attacker = PriorOptL2Norm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
+            if args.targeted:
+                attacker = PriorOptL2Norm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
+                                     args.batch_size, args.est_grad_samples,maximum_queries=args.max_queries, sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm,
+                                      tol=tol, prior_grad_binary_search_tol=args.prior_grad_bs_tol, best_initial_target_sample=args.best_initial_target_sample,
+                                      PGD_init_theta=args.PGD_init_theta)
+            else:
+                attacker = PriorOptL2Norm(model, surrogate_models, args.dataset, args.epsilon, args.targeted,
                                       args.batch_size, args.est_grad_samples,
                                       maximum_queries=args.max_queries, sign=args.sign, clip_grad_max_norm=args.clip_grad_max_norm,
                                       tol=tol, prior_grad_binary_search_tol=args.prior_grad_bs_tol, best_initial_target_sample=args.best_initial_target_sample,

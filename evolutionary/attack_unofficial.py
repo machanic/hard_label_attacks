@@ -53,7 +53,7 @@ class Evolutionary(object):
 
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
         self.query_all = torch.zeros(self.total_images) # query times

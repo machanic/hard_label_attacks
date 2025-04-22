@@ -50,7 +50,7 @@ class PDAttack(object):
         if args.save_grad:
             loader = DataLoaderMaker.get_imgid_img_label_data_loader(dataset, batch_size, True, True)
         else:
-            loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, True)
+            loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, victim_query.net.arch)
         self.dataset_loader = loader
         self.total_images = len(self.dataset_loader.dataset)
         self.load_random_class_image = args.load_random_class_image

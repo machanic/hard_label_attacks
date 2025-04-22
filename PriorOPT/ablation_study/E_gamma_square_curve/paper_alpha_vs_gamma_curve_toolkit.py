@@ -8,7 +8,12 @@ from matplotlib.ticker import StrMethodFormatter
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
+from matplotlib import rcParams, rc
+rcParams['pdf.fonttype'] = 42
+rcParams['ps.fonttype'] = 42
+rcParams['xtick.direction'] = 'out'
+rcParams['ytick.direction'] = 'out'
+rc('pdf', fonttype=42)
 
 linestyle_dict = OrderedDict(
     [('solid',               (0, ())),
@@ -76,31 +81,31 @@ if __name__ == '__main__':
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
               "indigo",
               "olivedrab"]
-    markers = ['o', '.', '*', 's', "P", "p", "X", "h", "D", "H", "^", "<", "d", ".", "+", "x", "v", "1", "2", "3", "4"]
+    markers = ['o', '+', '*', 's', "P", "p", "X", "h", "D", "H", "^", "<", "d", ".", "+", "x", "v", "1", "2", "3", "4"]
     linestyles = [ "dashed", "densely dotted","solid", "dashdotdotted", "densely dashed", "densely dashdotdotted"]
 
     xtick = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
     max_y = max(np.max(y_prior_sign_opt).item(), np.max(y_prior_opt).item())
     min_y = 999
     plt.plot(x, y_sign_opt, label="Sign-OPT", color=colors[0],
-                 linestyle=linestyle_dict[linestyles[0]], linewidth=1,
-                 marker=markers[0], markersize=3)
+                 linestyle=linestyle_dict[linestyles[0]], linewidth=1.5,
+                 marker=markers[0], markersize=6)
     plt.plot(x, y_prior_sign_opt, label="Prior-Sign-OPT", color=colors[1],
-             linestyle=linestyle_dict[linestyles[1]], linewidth=1,
-             marker=markers[1], markersize=3)
+             linestyle=linestyle_dict[linestyles[1]], linewidth=1.5,
+             marker=markers[1], markersize=6)
     plt.plot(x, y_prior_opt, label="Prior-OPT", color=colors[2],
-             linestyle=linestyle_dict[linestyles[2]], linewidth=1,
-             marker=markers[2], markersize=3)
+             linestyle=linestyle_dict[linestyles[2]], linewidth=1.5,
+             marker=markers[2], markersize=6)
 
     plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.2f}'))
     plt.ylim(0, max_y+0.01)
     plt.gcf().subplots_adjust(bottom=0.15)
     print("max y is {}".format(max_y))
-    plt.xticks(xtick, xtick, fontsize=20)
-    plt.yticks(np.linspace(0, max_y,11), fontsize=20)
+    plt.xticks(xtick, xtick, fontsize=25)
+    plt.yticks(np.linspace(0, max_y,11), fontsize=25)
     plt.xlabel(r"$\alpha$", fontsize=25)
     plt.ylabel(r"$\mathbb{E}[\gamma^2]$", fontsize=25)
-    plt.legend(loc='upper right', prop={'size': 20}, framealpha=0.5, fancybox=True, frameon=True)
+    plt.legend(loc='upper right', prop={'size': 25}, handlelength=3, framealpha=0.7, fancybox=True, frameon=True)
     ax = plt.gca()
 
     # axins = inset_axes(ax, width="50%", height="40%", loc='upper left',
@@ -117,8 +122,8 @@ if __name__ == '__main__':
         axins.plot(x, y_prior_opt, label="Prior-OPT", color=colors[2],
                  linestyle=linestyle_dict[linestyles[2]], linewidth=1,
                  marker=markers[2], markersize=3)
-        axins.set_xticks([0,0.05,0.10,0.15,0.20], [0,0.05,0.10,0.15,0.20], fontsize=13)
-        axins.set_yticks([0,0.02,0.04,0.06,0.08],[0,0.02,0.04,0.06,0.08],fontsize=13)
+        axins.set_xticks([0,0.05,0.10,0.15,0.20], [0,0.05,0.10,0.15,0.20], fontsize=18)
+        axins.set_yticks([0,0.02,0.04,0.06,0.08],[0,0.02,0.04,0.06,0.08],fontsize=18)
         axins.set_xlim(0, 0.2)
         axins.set_ylim(0, 0.08)
     elif d==224*224*3:
@@ -153,7 +158,8 @@ if __name__ == '__main__':
     axins.set_xticklabels(axins.get_xticks(),color='steelblue')
     axins.set_yticklabels(axins.get_yticks(), color='steelblue')
     mark_inset(ax, axins, loc1=3, loc2=4, fc="none", ec='k', lw=1)
-    plt.savefig("D:\\黑盒攻击论文\\hard-label attacks\\Prior-OPT\\NeurIPS 2024\\figures\\ablation_study\\E_gamma_square\\alpha_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
+    plt.tight_layout()
+    plt.savefig("D:\\黑盒攻击论文\\hard-label attacks\\Prior-OPT\\ICLR 2025\\figures\\ablation_study\\E_gamma_square\\alpha_vs_gamma_q={}_d={}.pdf".format(q,d), dpi=200)
     plt.close()
 
 

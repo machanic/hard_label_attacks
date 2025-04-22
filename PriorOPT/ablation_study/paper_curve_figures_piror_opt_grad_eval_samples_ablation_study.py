@@ -14,6 +14,15 @@ from matplotlib.ticker import StrMethodFormatter
 from config import MODELS_TEST_STANDARD
 from matplotlib import rcParams, rc
 
+from matplotlib.ticker import StrMethodFormatter
+from matplotlib import rcParams, rc
+rcParams['pdf.fonttype'] = 42
+rcParams['ps.fonttype'] = 42
+rcParams['xtick.direction'] = 'out'
+rcParams['ytick.direction'] = 'out'
+rc('pdf', fonttype=42)
+
+
 linestyle_dict = OrderedDict(
     [('solid',               (0, ())),
      ('loosely dotted',      (0, (1, 10))),
@@ -126,7 +135,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     return path
 
 def get_all_exists_folder(dataset, method, norm, targeted):
-    root_dir = "H:/logs/hard_label_attack_complete/"
+    root_dir = "G:/logs/hard_label_attacks/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     file_name = from_method_to_dir_path(dataset, method, norm, targeted)
     file_path = root_dir + file_name +"/ablation_study"
@@ -189,18 +198,19 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
         x_ticks = xtick[0::2]
         x_ticks = x_ticks.tolist()
         x_ticks_label = ["0"] + ["{}K".format(x_tick // 1000) for x_tick in x_ticks[1:]]
-        plt.xticks(x_ticks, x_ticks_label, fontsize=20)
+        plt.xticks(x_ticks, x_ticks_label, fontsize=25)
     else:
         x_ticks_label = ["0"] + ["{}K".format(x_tick // 1000) for x_tick in xtick[1:]]
-        plt.xticks(xtick, x_ticks_label, fontsize=20)
+        plt.xticks(xtick, x_ticks_label, fontsize=25)
     if dataset == "ImageNet":
         yticks = np.arange(0, max_y + 1, 5)
     else:
         yticks = np.arange(0, max_y + 0.1, 0.5)
-    plt.yticks(yticks, fontsize=20)
+    plt.yticks(yticks, fontsize=25)
     plt.xlabel(xlabel, fontsize=25)
     plt.ylabel(ylabel, fontsize=25)
-    plt.legend(loc='upper right', prop={'size': 20},handlelength=4,framealpha=0.4,fancybox=True,frameon=True)
+    plt.legend(loc='upper right', prop={'size': 25},handlelength=4,framealpha=0.4,fancybox=True,frameon=True,ncol=2)
+    plt.tight_layout()
     plt.savefig(dump_file_path, dpi=200)
     plt.close()
     print("save to {}".format(dump_file_path))
@@ -220,7 +230,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/NeurIPS 2024/figures/ablation_study/"
+    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/ICLR 2025/figures/ablation_study/"
     os.makedirs(dump_folder, exist_ok=True)
 
     if "CIFAR" in args.dataset:

@@ -18,9 +18,8 @@ import glog as log
 
 from biased_boundary_attack.bba_utils.sampling.sampling_provider import SamplingProvider
 from biased_boundary_attack.bba_utils.util import sample_hypersphere
-from config import CLASS_NUM, IMAGE_DATA_ROOT, MODELS_TEST_STANDARD, IN_CHANNELS
+from config import CLASS_NUM, MODELS_TEST_STANDARD, IN_CHANNELS
 from dataset.dataset_loader_maker import DataLoaderMaker
-from dataset.target_class_dataset import ImageNetDataset, TinyImageNetDataset, CIFAR10Dataset, CIFAR100Dataset
 from models.defensive_model import DefensiveModel
 from models.standard_model import StandardModel
 import os.path as osp
@@ -70,7 +69,7 @@ class BiasedBoundaryAttack(object):
         self.epsilon = epsilon
         self.maximum_queries = maximum_queries
         self.dataset_name = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.shape = (IN_CHANNELS[self.dataset_name], model.input_size[-2], model.input_size[-1])
         self.load_random_class_image = load_random_class_image
@@ -197,9 +196,9 @@ class BiasedBoundaryAttack(object):
 
         n_calls_left_fn = lambda q: self.maximum_queries - int(q[0].item())  # The attack terminates when n_calls_left_fn() returns 0
         if image.dim() == 4:
-            image = torch.squeeze(image,0)
+            image = torch.squeeze(image, 0)
         if image_start is not None and image_start.dim() == 4:
-            image_start = torch.squeeze(image_start,0)
+            image_start = torch.squeeze(image_start, 0)
         assert image.dim() == 3
         assert image_start.dim() == 3
         if mask is not None:
@@ -244,7 +243,6 @@ class BiasedBoundaryAttack(object):
                     "x_orig": image,
                     "label": label,
                     "is_targeted": self.targeted})
-
                 # Also do candidate generation with a ThreadPoolExecutor.
                 # Queue the first candidate.
                 candidate_future = self.candidate_thread_pool.submit(self.generate_candidate, **{
@@ -269,7 +267,6 @@ class BiasedBoundaryAttack(object):
                             "source_step": source_step,
                             "spherical_step": spherical_step,
                             "pg_future": pg_future})
-
                     candidate_label, dist = self._eval_sample(candidate, image)
                     if self.targeted:
                         if candidate_label == label:  # 只有攻击错误成功时，才更新dist_best和X_adv_best
@@ -444,11 +441,11 @@ class BiasedBoundaryAttack(object):
         # Round, then get label and distance.
         if x.dim() == 3:
             x = x.unsqueeze(0)
-        if x_orig.dim() ==3:
+        if x_orig.dim() == 3:
             x_orig = x_orig.unsqueeze(0)
 
         assert x.dim() == 4, "x dim={}".format(x.dim())
-        assert x_orig.dim() ==4,"x_orig dim={}".format(x_orig.dim())
+        assert x_orig.dim() ==4, "x_orig dim={}".format(x_orig.dim())
         preds = self.model(x)
         self.query += x.size(0)
         label = torch.argmax(preds,dim=1).item()

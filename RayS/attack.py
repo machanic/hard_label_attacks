@@ -35,7 +35,7 @@ class RayS(object):
         self.clip_min = clip_min
         self.clip_max = clip_max
         self.maximum_queries = maximum_queries
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.total_images = len(self.dataset_loader.dataset)
 
         self.query_all = torch.zeros(self.total_images)

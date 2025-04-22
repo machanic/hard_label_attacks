@@ -16,7 +16,7 @@ from torchvision.datasets.utils import download_url, check_integrity
 
 from config import IMAGE_DATA_ROOT, IMAGE_SIZE
 from dataset.tiny_imagenet import TinyImageNet
-from dataset.npz_dataset import NpzDataset, NpzExtraDataset
+from dataset.npz_dataset import NpzDataset, NpzExtraDataset, NpzClipDataset
 
 
 def pil_loader(path):
@@ -459,19 +459,23 @@ class DataLoaderMaker(object):
                                                  batch_size=batch_size, num_workers=0, shuffle=shuffle)
         elif datasetname == "MNIST":
             loader = torch.utils.data.DataLoader(MNISTIDDataset(IMAGE_DATA_ROOT[datasetname], phase),
-                                                 batch_size=batch_size, num_workers=0,shuffle=shuffle)
+                                                 batch_size=batch_size, num_workers=0, shuffle=shuffle)
         elif datasetname == "FashionMNIST":
             loader = torch.utils.data.DataLoader(FashionMNISTIDDataset(IMAGE_DATA_ROOT[datasetname], phase),
-                                                 batch_size=batch_size, num_workers=0,shuffle=shuffle)
+                                                 batch_size=batch_size, num_workers=0, shuffle=shuffle)
         elif datasetname == "TinyImageNet":
             loader = torch.utils.data.DataLoader(TinyImageNetIDDataset(IMAGE_DATA_ROOT[datasetname], phase),
-                                                 batch_size=batch_size, num_workers=0,shuffle=shuffle)
+                                                 batch_size=batch_size, num_workers=0, shuffle=shuffle)
         return loader
 
     @staticmethod
-    def get_test_attacked_data(datasetname, batch_size,use_image_id=False):
-        dataset = NpzDataset(datasetname,use_image_id)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
+    def get_test_attacked_data(datasetname, batch_size, arch=None):
+        if arch.startswith("CLIP"):
+            dataset = NpzClipDataset(datasetname)
+            loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
+        else:
+            dataset = NpzDataset(datasetname)
+            loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
         return loader
 
     @staticmethod

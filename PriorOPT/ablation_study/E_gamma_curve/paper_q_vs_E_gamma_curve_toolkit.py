@@ -9,7 +9,12 @@ from matplotlib.ticker import StrMethodFormatter
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
+from matplotlib import rcParams, rc
+rcParams['pdf.fonttype'] = 42
+rcParams['ps.fonttype'] = 42
+rcParams['xtick.direction'] = 'out'
+rcParams['ytick.direction'] = 'out'
+rc('pdf', fonttype=42)
 
 linestyle_dict = OrderedDict(
     [('solid',               (0, ())),
@@ -88,16 +93,16 @@ if __name__ == '__main__':
               "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
               "indigo",
               "olivedrab"]
-    markers = ['o', '.', '*', 's', "P", "p", "X", "h", "D", "H", "^", "<", "d", ".", "+", "x", "v", "1", "2", "3", "4"]
+    markers = ['o', '+', '*', 's', "P", "p", "X", "h", "D", "H", "^", "<", "d", ".",  "x", "v", "1", "2", "3", "4"]
     linestyles = [ "dashed", "densely dotted","solid", "dashdotdotted", "densely dashed", "densely dashdotdotted"]
 
     xtick = np.array([0,100,200,300,400,500,600,700,800,900,1000])
     max_y = max(np.max(y_prior_opt_2).item(), np.max(y_prior_opt_5).item())
     plt.plot(x, y_sign_opt, label="Sign-OPT", color=colors[0],
-                 linestyle=linestyle_dict[linestyles[0]], linewidth=1,
+                 linestyle=linestyle_dict[linestyles[0]], linewidth=1.5,
                  marker=markers[0], markersize=3)
     plt.plot(x, y_prior_sign_opt_2, label=r"Prior-Sign-OPT$_{\alpha=0.2}$", color=colors[1],
-             linestyle=linestyle_dict[linestyles[1]], linewidth=1,
+             linestyle=linestyle_dict[linestyles[1]], linewidth=1.5,
              marker=markers[1], markersize=3)
     # plt.plot(x, y_prior_opt_2, label=r"Prior-OPT$_{\alpha=0.2}$", color=colors[2],
     #          linestyle=linestyle_dict[linestyles[2]], linewidth=1,
@@ -105,7 +110,7 @@ if __name__ == '__main__':
     plt.fill_between(x, y_prior_opt_2[:, 0], y_prior_opt_2[:, 1], label=r"Prior-OPT$_{\alpha=0.2}$", color=colors[2])
 
     plt.plot(x, y_prior_sign_opt_5, label=r"Prior-Sign-OPT$_{\alpha=0.1}$", color=colors[3],
-             linestyle=linestyle_dict[linestyles[3]], linewidth=1,
+             linestyle=linestyle_dict[linestyles[3]], linewidth=1.5,
              marker=markers[3], markersize=3)
     # plt.plot(x, y_prior_opt_5, label=r"Prior-OPT$_{\alpha=0.1}$", color=colors[4],
     #          linestyle=linestyle_dict[linestyles[4]], linewidth=1,
@@ -123,12 +128,13 @@ if __name__ == '__main__':
     # plt.ylabel(r"$\mathbb{E}[\gamma]$", fontsize=25)
     # plt.legend(loc='lower right', prop={'size': 20},  framealpha=0.5, fancybox=True, frameon=True)
 
-    plt.xticks(xtick, xtick, fontsize=20)
-    plt.yticks(np.linspace(0, max_y, 11), fontsize=20)
+    plt.xticks(xtick, xtick, fontsize=25)
+    plt.yticks(np.linspace(0, max_y, 11), fontsize=25)
     plt.xlabel(r"$q$", fontsize=25)
     plt.ylabel(r"$\mathbb{E}[\gamma]$", fontsize=25)
-    plt.legend(loc='lower right', prop={'size': 20}, framealpha=0.5, fancybox=True, frameon=True)
-    plt.savefig("./query_vs_gamma_d={}.pdf".format(d), dpi=200)
+    plt.legend(loc='lower right', prop={'size': 23},handlelength=3, framealpha=0.7, fancybox=True, frameon=True)
+    plt.tight_layout()
+    plt.savefig("D:/黑盒攻击论文/hard-label attacks/Prior-OPT/ICLR 2025/figures/ablation_study/E_gamma//query_vs_gamma_d={}.pdf".format(d), dpi=200)
     plt.close()
 
 

@@ -26,7 +26,7 @@ class SignOptLinfNorm(object):
         self.targeted = targeted
         self.best_initial_target_sample = best_initial_target_sample
         self.dataset = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
 

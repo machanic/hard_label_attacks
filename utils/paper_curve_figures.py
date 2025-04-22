@@ -8,9 +8,14 @@ from collections import OrderedDict
 import matplotlib.pyplot as plt
 import numpy as np
 import json
-from scipy.interpolate import make_interp_spline
-import seaborn as sns
+
 from matplotlib.ticker import StrMethodFormatter
+from matplotlib import rcParams, rc
+rcParams['pdf.fonttype'] = 42
+rcParams['ps.fonttype'] = 42
+rcParams['xtick.direction'] = 'out'
+rcParams['ytick.direction'] = 'out'
+rc('pdf', fonttype=42)
 
 linestyle_dict = OrderedDict(
     [('solid',               (0, ())),
@@ -50,6 +55,9 @@ def read_json_data(json_path):
 
 surrogate_arch_name_to_paper = {"inceptionresnetv2":"IncResV2", "xception":"Xception", "resnet50":"ResNet50","convit_base":"ConViT",
                                 "jx_vit":"ViT", "resnet-110":"ResNet110"}
+# surrogate_arch_name_to_paper = {"inceptionresnetv2":"IncResV2", "xception":"Xception", "resnet50":"ResNet50","convit_base":"ConViT",
+#                                 "jx_vit":"ViT", "resnet-110":"ResNet110","resnet-50":"ResNet50", "senet154":"SENet154", "densenet-bc-100-12":"DenseNetBC100",
+#                                 "densenet-bc-L190-k40":"DenseNetBC190", "vgg13_bn":"VGG13", "WRN-28-10":"WRN28"}
 
 def read_all_data(dataset_path_dict, arch, query_budgets, stats="mean_distortion"):
     # dataset_path_dict {("CIFAR-10","l2","untargeted"): "/.../"， }
@@ -104,7 +112,7 @@ method_name_to_paper = OrderedDict([("HSJA","HSJA"),
                                     ("tangent_attack","TA"),
                                     ("ellipsoid_tangent_attack","G-TA"), ("GeoDA","GeoDA"),
                                     ("Evolutionary","Evolutionary"), ("SurFree","SurFree"),
-                                    ("TriangleAttack","Triangle Attack"),  ("biased_boundary_attack","BBA"), ("SQBA","SQBA"),
+                                    ("TriangleAttack","Triangle Attack"),  ("BBA","BBA"), ("SQBA","SQBA"),
                                     ("SignOPT","Sign-OPT"), ("SVMOPT","SVM-OPT"),
                                     ("PriorSignOPT","Prior-Sign-OPT"), ("PriorSignOPT_PGD_init_theta","Prior-Sign-OPT_PGD_init_theta"),
                                     ("PriorOPT","Prior-OPT"),("PriorOPT_PGD_init_theta","Prior-OPT_PGD_init_theta"),
@@ -130,7 +138,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method, dataset=dataset,
                                                                norm=norm,
                                                                target_str="untargeted" if not targeted else "targeted_increment")
-    elif method == "biased_boundary_attack":
+    elif method == "BBA":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
     elif method == "boundary_attack":
         path = "{method}-{dataset}-{norm}-{target_str}".format(method=method,dataset=dataset,norm=norm, target_str="untargeted" if not targeted else "targeted_increment")
@@ -173,7 +181,7 @@ def from_method_to_dir_path(dataset, method, norm, targeted):
     return path
 
 def get_all_exists_folder(dataset, methods, norm, targeted):
-    root_dir = "H:/logs/hard_label_attack_complete/"
+    root_dir = "G:/logs/hard_label_attacks/"
     dataset_path_dict = {}  # dataset_path_dict {("CIFAR-10","l2","untargeted", "NES"): "/.../"， }
     for method in methods:
         file_name = from_method_to_dir_path(dataset, method, norm, targeted)
@@ -186,7 +194,7 @@ def get_all_exists_folder(dataset, methods, norm, targeted):
 
 
 
-method_linestyle_mark_dict = {}
+
 
 def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_file_path, xlabel, ylabel):
 
@@ -199,8 +207,6 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
             methods.remove("RayS")
         if "GeoDA" in methods:
             methods.remove("GeoDA")
-        if "biased_boundary_attack" in methods:
-            methods.remove("biased_boundary_attack")
     if norm == "l2":
         if "RayS" in methods:
             methods.remove("RayS")
@@ -215,15 +221,9 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
             methods.remove("GeoDA")
         if "RayS" in methods:
             methods.remove("RayS")
-        if "biased_boundary_attack" in methods:
-            methods.remove("biased_boundary_attack")
-        if "tangent_attack" in methods:
-            methods.remove("tangent_attack")
-    if dataset == "CIFAR-10":
-        if "SQBA" in methods:
-            methods.remove("SQBA")
 
 
+    method_linestyle_mark_dict = {}
     dataset_path_dict= get_all_exists_folder(dataset, methods, norm, targeted)
     max_query = 10000
     if dataset=="ImageNet" and targeted:
@@ -232,10 +232,14 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
     data_info = read_all_data(dataset_path_dict, arch, query_budgets, fig_type)  # fig_type can be mean_distortion or median_distortion
     plt.style.use('seaborn-v0_8-whitegrid')
     plt.figure(figsize=(10, 8))
-    colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', "pink", "brown", "slategrey", "cornflowerblue",
-                   "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey", "indigo",
-                   "olivedrab"]
-    markers = ['o', '>', '*', 's',"P","p", "X", "h","D", "H","^","<","d",".","+","x","v","1","2","3","4"]
+    # colors = ['b', 'g', 'c', 'm', 'y', 'k', 'orange', "pink", "slateblue", "tomato", "cornflowerblue",
+    #           "greenyellow", "darkgoldenrod", "r", "goldenrod", "firebrick", "forestgreen", "grey",
+    #           "indigo", "darkcyan","darkkhaki"]
+    colors = ['b', 'g', 'darkcyan', 'm', 'cyan', 'k', 'orange', "pink", "brown", "#654321", "cornflowerblue",
+              "greenyellow", "darkgoldenrod", "r", "slategrey", "navy", "darkseagreen", "xkcd:blueberry", "grey",
+              "indigo", "olivedrab"]
+
+    markers = ['o', '>', '*', 's',"P","p", "X", "h","D", "H","^","<","d",".","+","x","v","1","2","3","4","|"]
     linestyles = ["solid", "dashed", "densely dotted", "dashdotdotted", "densely dashed", "densely dashdotdotted"]
 
     xtick = np.array([0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000])
@@ -264,45 +268,33 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
             mark = markers[idx]
             color = colors[idx]
 
-            # color = colors[idx]
-
-            for_loop_count = 0
-            all_use_color = False
-            all_use_mark = False
             while color in [tuple_value[2] for tuple_value in
                             method_linestyle_mark_dict.values()]:
                 color = random.choice(colors)
-                while color in all_used_colors:
-                    color = random.choice(colors)
 
-                for_loop_count += 1
-                if for_loop_count > 1000:
-                    all_use_color = True
-                    break
+            while color in all_used_colors:
+                color = random.choice(colors)
+
             for_loop_count = 0
             while mark in [tuple_value[1] for tuple_value in
                            method_linestyle_mark_dict.values()]:
                 mark = random.choice(markers)
                 for_loop_count += 1
                 if for_loop_count > 1000:
-                    all_use_mark = True
                     break
-            if all_use_color or all_use_mark:
-                while (mark, color) in [(tuple_value[1], tuple_value[2]) for tuple_value in
-                                        method_linestyle_mark_dict.values()]:
-                    color = random.choice(colors)
-                    while color in all_used_colors:
-                        color = random.choice(colors)
-                    mark = random.choice(markers)
+            # if all_use_color or all_use_mark:
+            #     while (mark, color) in [(tuple_value[1], tuple_value[2]) for tuple_value in
+            #                             method_linestyle_mark_dict.values()]:
+            #         color = random.choice(colors)
+            #         while color in all_used_colors:
+            #             color = random.choice(colors)
+            #         mark = random.choice(markers)
 
             method_linestyle_mark_dict[method] = (linestyle, mark, color)
-        selected_color = method_linestyle_mark_dict[method][2]
-        while selected_color in all_used_colors:
-            selected_color = random.choice(colors)
-        method_linestyle_mark_dict[method] = (
-        method_linestyle_mark_dict[method][0], method_linestyle_mark_dict[method][1], selected_color)
-        all_used_colors.add(selected_color)
-        plt.plot(x, y, label=method, color=selected_color,
+        assert method_linestyle_mark_dict[method][2] not in all_used_colors
+        all_used_colors.add(method_linestyle_mark_dict[method][2])
+
+        plt.plot(x, y, label=method, color=method_linestyle_mark_dict[method][2],
                          linestyle=method_linestyle_mark_dict[method][0], linewidth=1.5,
                          marker=method_linestyle_mark_dict[method][1], markersize=6, alpha=0.8)
     if dataset!="ImageNet":
@@ -319,15 +311,14 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
     plt.ylim(0, max_y+0.1)
     plt.gcf().subplots_adjust(bottom=0.15)
     print("max y is {}".format(max_y))
-    # xtick = [0, 5000, 10000]
     if dataset == "ImageNet" and targeted:
         x_ticks = xtick[0::2]
         x_ticks = x_ticks.tolist()
         x_ticks_label = ["0"]  + ["{}K".format(x_tick // 1000) for x_tick in x_ticks[1:]]
-        plt.xticks(x_ticks, x_ticks_label, fontsize=20)
+        plt.xticks(x_ticks, x_ticks_label, fontsize=25)
     else:
         x_ticks_label =["0"] + ["{}K".format(x_tick // 1000) for x_tick in xtick[1:]]
-        plt.xticks(xtick, x_ticks_label, fontsize=20)
+        plt.xticks(xtick, x_ticks_label, fontsize=25)
     if dataset=="ImageNet":
         if norm == "l2":
             yticks = np.arange(0, max_y+1, 5)
@@ -338,11 +329,14 @@ def draw_query_distortion_figure(dataset, norm, targeted, arch, fig_type, dump_f
             yticks = np.arange(0, max_y+0.1, 0.5)
         else:
             yticks = np.linspace(0, max_y + 0.1, 11)
-    plt.yticks(yticks, fontsize=20)
+    plt.yticks(yticks, fontsize=25)
     plt.xlabel(xlabel, fontsize=25)
     plt.ylabel(ylabel, fontsize=25)
-    plt.legend(loc='upper right', prop={'size': 15},handlelength=4,framealpha=0.5,fancybox=True,frameon=True)
+    plt.legend(loc='upper right', prop={'size': 16}, handlelength=4, handletextpad=0.5, borderpad=0.2,
+               framealpha=0.6, fancybox=True, frameon=True, ncol=2, columnspacing=0.3)
+    plt.tight_layout()
     plt.savefig(dump_file_path, dpi=200)
+
     plt.close()
     print("save to {}".format(dump_file_path))
 
@@ -361,20 +355,19 @@ def parse_args():
 
 if __name__ == "__main__":
 
-
     args = parse_args()
-    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/NeurIPS 2024/figures/query_vs_distortion/"
+    dump_folder = "D:/黑盒攻击论文/hard-label attacks/Prior-OPT/ICLR 2025/figures/query_vs_distortion/"
     os.makedirs(dump_folder, exist_ok=True)
-    for dataset in ["CIFAR-10"]:
+    for dataset in ["ImageNet","CIFAR-10"]:
         args.dataset = dataset
         if "CIFAR" in args.dataset:
-            archs = ["pyramidnet272","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40","gdas"]
+            archs = ["pyramidnet272","WRN-28-10-drop","WRN-40-10-drop","densenet-bc-L190-k40"]
         else:
-            archs = ["senet154","resnet101","inceptionv3","resnext101_64x4d","inceptionv4",
-                     "jx_vit","gcvit_base","swin_base_patch4_window7_224"]
+            archs = ["jx_vit","gcvit_base","swin_base_patch4_window7_224","inceptionv4","inceptionv3","senet154","resnet101","resnext101_64x4d",
+                     ]
         targeted_list = [False,True]
         for targeted in targeted_list:
-            for norm in ["l2","linf"]:
+            for norm in ["l2"]:
                 if targeted and norm == "linf":
                     continue
                 args.norm = norm
@@ -387,5 +380,4 @@ if __name__ == "__main__":
                         y_label = "Mean $\ell_{}$ Distortion".format("2" if args.norm == "l2" else "\infty")
                     elif args.fig_type == "median_distortion":
                         y_label = "Median $\ell_{}$ Distortion".format("2" if args.norm == "l2" else "\infty")
-
                     draw_query_distortion_figure(args.dataset, args.norm, args.targeted, model, args.fig_type, file_path,x_label,y_label)
