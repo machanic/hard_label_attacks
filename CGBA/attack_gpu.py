@@ -384,7 +384,7 @@ class CGBA(object):
             q_opt = int(self.N0 * np.sqrt(j+1))
             # search step size.
             if self.dim_reduce_factor < 1.0:
-                raise Exception("The dimension reduction factor should be greater than 1 for reduced dimension, and should be 1 for Full dimensional image space.")
+                raise Exception("The dimension reduction factor should be greater than 1 for reduced dimension, and should be 1 for full dimensional image space.")
             if self.dim_reduce_factor > 1.0:
                 random_vec_o = self.find_random(images, q_opt).to(images.device)
             else:

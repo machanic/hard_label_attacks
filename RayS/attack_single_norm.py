@@ -91,7 +91,7 @@ class RayS(object):
                 block_level += 1
                 block_ind = 0
 
-            dist =  torch.norm((self.x_final - images).view(shape[0], -1), self.ord, 1)
+            dist = torch.norm((self.x_final - images).view(shape[0], -1), self.ord, 1)
             success_stop_queries[working_ind] = query[working_ind]
             working_ind = (dist > self.epsilon).nonzero().flatten()
 

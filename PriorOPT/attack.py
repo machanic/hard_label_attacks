@@ -11,7 +11,6 @@ import os.path as osp
 import glog as log
 from config import MODELS_TEST_STANDARD
 from PriorOPT.prior_opt_l2_norm_attack import PriorOptL2Norm
-from PriorOPT.prior_opt_l2_norm_targeted_attack import PriorOptL2NormTargetedAttack
 from PriorOPT.prior_opt_linf_norm_attack import PriorOptLinfNorm
 from models.defensive_model import DefensiveModel
 from models.standard_model import StandardModel

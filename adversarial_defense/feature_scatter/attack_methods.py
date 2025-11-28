@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.autograd.gradcheck import zero_gradients
 from torch.autograd import Variable
 import adversarial_defense.feature_scatter.utils as utils
 
@@ -88,7 +87,8 @@ class Attack_PGD(nn.Module):
 
         for i in range(self.num_steps):
             x.requires_grad_()
-            zero_gradients(x)
+            if x.grad is not None:
+                x.grad.zero_()
             if x.grad is not None:
                 x.grad.data.fill_(0)
             aux_net.eval()
@@ -176,7 +176,8 @@ class Attack_FeaScatter(nn.Module):
 
         for i in range(iter_num):
             x.requires_grad_()
-            zero_gradients(x)
+            if x.grad is not None:
+                x.grad.zero_()
             if x.grad is not None:
                 x.grad.data.fill_(0)
 

@@ -1,6 +1,6 @@
 # Introduction
 This repository includes the source code for "Boosting Ray Search Procedure of Hard-label Attacks with Transfer-based Priors".
-To further support reproducibility, we provide the complete attack code for our method and all the baseline methods in [https://github.com/machanic/hard_label_attacks](https://github.com/machanic/hard_label_attacks).
+To further support reproducibility, we provide the complete attack code for our method and all the baseline methods.
 
 # Repository Structure
 ```
@@ -90,4 +90,4 @@ You can install the required packages by running:
 `pip install -r requirements.txt`
 
 # Download Files of Pre-trained Models and Running Results
-In summary, there are three additional folders that you can download or train by yourself: `attacked_images`, `train_pytorch_model`, and optionally `logs`.
+In summary, there are three additional folders that you can download or train by yourself: `attacked_images`, `train_pytorch_model`, and optionally `logs`, which will be uploaded to google cloud drive and baidu cloud drive.

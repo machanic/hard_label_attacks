@@ -1,3 +1,4 @@
+import random
 from collections import OrderedDict, defaultdict
 
 import json
@@ -7,13 +8,13 @@ import numpy as np
 import glog as log
 from config import CLASS_NUM, IMAGE_DATA_ROOT
 from dataset.dataset_loader_maker import DataLoaderMaker
-from dataset.target_class_dataset import ImageNetDataset, CIFAR10Dataset, CIFAR100Dataset, TinyImageNetDataset
+from dataset.target_class_dataset import ImageNetDataset, CIFAR10Dataset, CIFAR100Dataset
 from utils.dataset_toolkit import select_random_image_of_target_class
 
 class PriorOptLinfNorm(object):
-    def __init__(self, model, surrogate_models, dataset, epsilon, targeted, batch_size=1, k=100, alpha=0.2, beta=0.001, iterations=1000,
-                 maximum_queries=10000, sign=False, momentum=0.0, clip_grad_max_norm=1.0, tol=None, prior_grad_binary_search_tol=0.01,
-                 best_initial_target_sample=False):
+    def __init__(self, model, surrogate_models, dataset, epsilon, targeted, batch_size=1, k=100, alpha=0.01,
+                 beta=0.01, iterations=1000, maximum_queries=10000, sign=False, momentum=0.0, clip_grad_max_norm=1.0, tol=None,
+                 prior_grad_binary_search_tol=0.01, best_initial_target_sample=False, PGD_init_theta=False):
         self.model = model
         self.surrogate_models = surrogate_models
         self.k = k
@@ -27,9 +28,10 @@ class PriorOptLinfNorm(object):
         self.targeted = targeted
         self.best_initial_target_sample = best_initial_target_sample
         self.dataset = dataset
-        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size, model.arch)
+        self.dataset_loader = DataLoaderMaker.get_test_attacked_data(dataset, batch_size)
         self.batch_size = batch_size
         self.total_images = len(self.dataset_loader.dataset)
+        self.PGD_init_theta = PGD_init_theta
 
         self.query_all = torch.zeros(self.total_images)
         self.distortion_all = defaultdict(OrderedDict)  # key is image index, value is {query: distortion}
@@ -40,36 +42,30 @@ class PriorOptLinfNorm(object):
         self.distortion_with_max_queries_all = torch.zeros_like(self.query_all)
         self.clip_grad_max_norm = clip_grad_max_norm
         self.tol = tol
+
+        self.use_save_query_trick = False
         self.prior_grad_binary_search_tol = prior_grad_binary_search_tol
 
-    def convert_linf_to_l2_distance(self, theta, distance_linf):
-        return distance_linf / torch.norm(theta.view(-1), p=float('inf')) * torch.norm(theta.view(-1), p=2)
-
-    def convert_l2_to_linf_distance(self, theta, distance_l2):
-        return torch.norm(distance_l2 / torch.norm(theta.view(-1), p=2) * theta.view(-1), p=float('inf'))
-
-    def norm_l2(self, t):
+    def norm(self, t):
         assert len(t.shape) == 4
-        norm_vec = torch.sqrt(t.pow(2).sum(dim=[1, 2, 3])).view(-1, 1, 1, 1)
+        norm_vec = t.view(t.size(0), -1).abs().max(dim=1)[0].view(-1, 1, 1, 1)
         norm_vec += (norm_vec == 0).float() * 1e-8
         return norm_vec
 
-    def clip_grad_norm(self, grad:torch.tensor, max_norm: float, norm_type: float = 2.0) -> torch.Tensor:
-        r"""Clips gradient norm.
+    def linf_proj(self, image, new_x, eps):
+        delta = new_x - image
+        delta = torch.clamp(delta, -eps, eps)
+        return image + delta
 
-        The norm is computed over all gradients together, as if they were
-        concatenated into a single vector. Gradients are modified in-place.
+    def l2_proj(self, image, new_x, eps):
+        orig = image.clone()
+        delta = new_x - orig
+        out_of_bounds_mask = (self.norm(delta) > eps).float()
+        x = (orig + eps * delta / self.norm(delta)) * out_of_bounds_mask
+        x += new_x * (1 - out_of_bounds_mask)
+        return x
 
-        Arguments:
-            parameters (Iterable[Tensor] or Tensor): an iterable of Tensors or a
-                single Tensor that will have gradients normalized
-            max_norm (float or int): max norm of the gradients
-            norm_type (float or int): type of the used p-norm. Can be ``'inf'`` for
-                infinity norm.
-
-        Returns:
-            Total norm of the parameters (viewed as a single vector).
-        """
+    def clip_grad_norm(self, grad:torch.tensor, max_norm: float, norm_type: float = float('inf')) -> torch.Tensor:
         max_norm = float(max_norm)
         norm_type = float(norm_type)
         device = grad.device
@@ -82,9 +78,9 @@ class PriorOptLinfNorm(object):
             grad.mul_(clip_coef.to(device))
         return grad
 
-    def fine_grained_binary_search_local(self, model, x0, y0, theta, initial_lbd=1.0, max_high_bound=20, tol=1e-5):
+    def fine_grained_binary_search_local(self, model, x0, y0, theta, initial_lbd=1.0, max_high_bound=100, tol=1e-5):
         nquery = 1
-        lbd = self.convert_linf_to_l2_distance(theta, initial_lbd)  # 传入就是个无穷范数距离,转为2范数
+        lbd = initial_lbd
 
         # still inside boundary
         if model(x0 + lbd * theta).max(1)[1].item() == y0:
@@ -122,12 +118,11 @@ class PriorOptLinfNorm(object):
                         tol, tot_count))
                 break
             old_lbd_mid = lbd_mid
-        lbd_hi = self.convert_l2_to_linf_distance(theta, lbd_hi) # 转为无穷范数距离
         return lbd_hi, nquery
 
     def fine_grained_binary_search_local_targeted(self, model, x0, t, theta, initial_lbd=1.0, max_high_bound=100, tol=1e-5):
         nquery = 1
-        lbd = self.convert_linf_to_l2_distance(theta, initial_lbd)
+        lbd = initial_lbd
 
         if model(x0 + lbd * theta).max(1)[1].item() != t:
             if lbd > max_high_bound:
@@ -164,13 +159,10 @@ class PriorOptLinfNorm(object):
                         tol, tot_count))
                 break
             old_lbd_mid = lbd_mid
-        lbd_hi = self.convert_l2_to_linf_distance(theta, lbd_hi) # 转为无穷范数距离
         return lbd_hi, nquery
 
     def fine_grained_binary_search(self,  x0, y0, theta, initial_lbd, current_best):
         nquery = 0
-        initial_lbd = self.convert_linf_to_l2_distance(theta, initial_lbd)
-        current_best = self.convert_linf_to_l2_distance(theta, current_best)
         if initial_lbd > current_best:
             nquery += 1
             if self.model(x0 + current_best * theta).max(1)[1].item() == y0:
@@ -193,13 +185,10 @@ class PriorOptLinfNorm(object):
             if count >= 200:
                 log.info("Break in the first fine_grained_binary_search!")
                 break
-        lbd_hi = self.convert_l2_to_linf_distance(theta, lbd_hi) # 转为无穷范数距离
         return lbd_hi, nquery
 
     def fine_grained_binary_search_targeted(self, x0, t, theta, initial_lbd, current_best):
         nquery = 0
-        initial_lbd = self.convert_linf_to_l2_distance(theta, initial_lbd)
-        current_best = self.convert_linf_to_l2_distance(theta, current_best)
         if initial_lbd > current_best:
             nquery += 1
             if self.model(x0 + current_best * theta).max(1)[1].item() != t:
@@ -222,7 +211,6 @@ class PriorOptLinfNorm(object):
             if count >= 200:
                 log.info("Break in the first fine_grained_binary_search!")
                 break
-        lbd_hi = self.convert_l2_to_linf_distance(theta, lbd_hi)  # 转为无穷范数距离
         return lbd_hi, nquery
 
     def cw_loss(self, logit, label, target=None):
@@ -236,7 +224,6 @@ class PriorOptLinfNorm(object):
             return target_logit - second_max_logit
         else:
             _, argsort = logit.sort(dim=1, descending=True)
-            # print('True label:{}, The max label:{}, Second max label:{}'.format(label.item(), argsort[:, 0].item(), argsort[:, 1].item()))
             gt_is_max = argsort[:, 0].eq(label).long()
             second_max_index = gt_is_max.long() * argsort[:, 1] + (1 - gt_is_max).long() * argsort[:, 0]
             gt_logit = logit[torch.arange(logit.shape[0]), label]
@@ -245,7 +232,6 @@ class PriorOptLinfNorm(object):
 
     def g_function_bin_search(self, model, image, theta, initial_lbd, true_labels, target_labels, tol=1e-3):
 
-        initial_lbd = self.convert_linf_to_l2_distance(theta, initial_lbd)
         if target_labels is not None:
             start = initial_lbd.item() + 1.0
             # assert start <= 100.0, "initial_lbd > 100 error! It is {}".format(start)
@@ -277,7 +263,6 @@ class PriorOptLinfNorm(object):
                     initial_lbd = lmdb_list[index_of_last_true].item()
 
         max_high_bound = initial_lbd + 100
-        initial_lbd = self.convert_l2_to_linf_distance(theta, initial_lbd)
         if target_labels is None:
             lmdb_result, nquery = self.fine_grained_binary_search_local(model, image, true_labels, theta, initial_lbd,
                                                                         max_high_bound=max_high_bound, tol=tol)
@@ -291,10 +276,11 @@ class PriorOptLinfNorm(object):
         return lmdb_result, target_labels,  nquery
 
     def get_g_grad(self, model, images, theta, initial_lbd, true_labels, target_labels):
+        theta = theta.clone().detach()
         if images.size(-1) != model.input_size[-1]:
             images = F.interpolate(images, size=model.input_size[-1], mode='bilinear', align_corners=False)
             theta = F.interpolate(theta, size=model.input_size[-1], mode='bilinear', align_corners=False)
-            theta /= self.norm_l2(theta)
+            theta /= self.norm(theta)
         with torch.no_grad():
             min_lmdb, target_labels, _ = self.g_function_bin_search(model, images, theta.detach(), initial_lbd, true_labels, target_labels)
         if target_labels is not None:
@@ -302,30 +288,49 @@ class PriorOptLinfNorm(object):
 
         with torch.enable_grad():
             theta.requires_grad_()
-            loss = self.cw_loss(model(images + self.convert_linf_to_l2_distance(theta, min_lmdb).item()
-                                 * theta / torch.norm(theta, p=2, dim=(1, 2, 3), keepdim=True)),
-                                true_labels, target_labels)
+            loss = self.cw_loss(model(images + min_lmdb * theta / torch.norm(theta, p=float('inf'), dim=(1, 2, 3), keepdim=True)), true_labels, target_labels)
             grad_theta = torch.autograd.grad(-loss, theta, create_graph=False)[0]
-        return grad_theta
+        return grad_theta.detach()
 
-    def prior_grad(self, images, theta, initial_lbd, true_label, target_label=None, sigma=0.001):
+    def prior_grad(self, images, theta, initial_lbd, true_label, target_label=None, grad_est_norm=None, sigma=0.001):
         assert images.dim() == 4
         assert theta.dim() == 4
         query = 0
         prior_grads = []
-        initial_lbd_l2_norm = self.convert_linf_to_l2_distance(theta, initial_lbd)
+
         for surrogate_model in self.surrogate_models:
             prior_grad = self.get_g_grad(surrogate_model, images, theta, initial_lbd, true_label, target_label)
             assert not torch.isnan(prior_grad.sum()), "prior grad is nan"
-            prior_grad = prior_grad / torch.norm(prior_grad, p=2, dim=(1, 2, 3), keepdim=True)
+            prior_grad = prior_grad / torch.norm(prior_grad, p=float('inf'), dim=(1, 2, 3), keepdim=True)
             prior_grads.append(prior_grad)
 
+        # trick: accelerate and save query
+        if grad_est_norm is not None and self.use_save_query_trick:
+            for prior_grad in prior_grads:
+                new_theta = (theta + sigma * prior_grad) / self.norm(theta + sigma * prior_grad)
+                max_high_bound = 100
+                if initial_lbd > max_high_bound:
+                    max_high_bound = initial_lbd + 100
+                if true_label is not None:
+                    perturb_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
+                                                                                  initial_lbd, max_high_bound=max_high_bound,tol=0.01)
+                else:
+                    perturb_bound, bs_count = self.fine_grained_binary_search_local_targeted(self.model, images, target_label,
+                                                                                           new_theta, initial_lbd, max_high_bound=max_high_bound,
+                                                                                           tol=0.01)
+                query += bs_count
+                prior_deriv = (perturb_bound - initial_lbd) / sigma
+                if prior_deriv < 0:
+                    prior_deriv, prior_grad = -prior_deriv, -prior_grad
+                if prior_deriv ** 2 >= grad_est_norm:
+                    log.info("use prior gradient directly! gradient estimation's query cost: {}".format(query))
+                    return prior_grad, query, grad_est_norm
         us = []
         for prior_grad in prior_grads:
             us.append(prior_grad.squeeze())
         for i in range(self.k - len(prior_grads)):
             rv = torch.randn_like(theta.squeeze())
-            rv = rv / torch.norm(rv.view(-1), p=2, dim=0)
+            rv = rv / torch.norm(rv.view(-1), p=float('inf'), dim=0)
             us.append(rv)
         # Gram-Schmidt. You can also call torch.linalg.qr to perform orthogonalization
         orthos = []
@@ -340,23 +345,24 @@ class PriorOptLinfNorm(object):
         for rv in orthos[len(prior_grads):]:
             u = rv.unsqueeze(0)
             new_theta = theta + sigma * u
-            new_theta /= torch.norm(new_theta.view(-1), p=2, dim=0)
+            new_theta /= torch.norm(new_theta.view(-1), p=float('inf'), dim=0)
             u_batch.append(u)
-            images_batch.append(images + initial_lbd_l2_norm * new_theta)  # No matter which the new_theta is, we need the same L2 norm radius!
+            images_batch.append(images + initial_lbd * new_theta)
             query += 1
         images_batch = torch.cat(images_batch, 0)
         u_batch = torch.cat(u_batch, 0)  # B,C,H,W
         assert u_batch.dim() == 4
         assert u_batch.size(0) == self.k - len(prior_grads)
         sign = torch.ones(self.k - len(prior_grads), device='cuda')
-        if target_label is not None:
-            target_labels = torch.tensor([target_label for _ in range(self.k - len(prior_grads))], device='cuda').long()
-            predict_labels = self.model(images_batch).max(1)[1]
-            sign[predict_labels == target_labels] = -1
-        else:
-            true_labels = torch.tensor([true_label for _ in range(self.k - len(prior_grads))], device='cuda').long()
-            predict_labels = self.model(images_batch).max(1)[1]
-            sign[predict_labels != true_labels] = -1
+        with torch.no_grad():
+            if target_label is not None:
+                target_labels = torch.tensor([target_label for _ in range(self.k - len(prior_grads))], device='cuda').long()
+                predict_labels = self.model(images_batch).max(1)[1]
+                sign[predict_labels == target_labels] = -1
+            else:
+                true_labels = torch.tensor([true_label for _ in range(self.k - len(prior_grads))], device='cuda').long()
+                predict_labels = self.model(images_batch).max(1)[1]
+                sign[predict_labels != true_labels] = -1
         sign_grad = torch.sum(u_batch * sign.view(self.k - len(prior_grads), 1, 1, 1), dim=0, keepdim=True)
         sign_grad /= (self.k - len(prior_grads))
         # perform score-based RGF gradient estimation, and we need to perform Gram-Schmidt orthogonalization again.
@@ -367,11 +373,10 @@ class PriorOptLinfNorm(object):
         derivatives = []
         for grad_theta_orth in new_orthos:
             new_theta = theta + sigma * grad_theta_orth
-            new_theta /= self.norm_l2(new_theta)
-            initial_lbd_l2_norm = self.convert_linf_to_l2_distance(new_theta, initial_lbd)
+            new_theta /= self.norm(new_theta)
             max_high_bound = 100
-            if initial_lbd_l2_norm > max_high_bound:
-                max_high_bound = initial_lbd_l2_norm + 100
+            if initial_lbd > max_high_bound:
+                max_high_bound = initial_lbd + 100
             if true_label is not None:
                 perturb_bound, bs_count = self.fine_grained_binary_search_local(self.model, images, true_label, new_theta,
                                                                               initial_lbd, max_high_bound, tol=self.prior_grad_binary_search_tol)
@@ -383,13 +388,13 @@ class PriorOptLinfNorm(object):
             if perturb_bound == float("inf"):
                 log.warn("warn: the returned boundary distance is float('inf') after the binary search for calculating the loss derivative.")
                 continue
-                # assert prior_bound!=float('inf'), "Error! returned float('inf') in binary search for calculating the loss derivative."
             weight = (perturb_bound - initial_lbd) / sigma  # 梯度指的是朝着lmdb边界距离上升的方向
             derivatives.append(weight)
             est_grad += weight * grad_theta_orth
         if len(derivatives) > 0:
             est_grad = est_grad / len(derivatives)
-        return est_grad, query
+            grad_est_norm = sum([deriv ** 2 for deriv in derivatives[len(prior_grads):]]) # 后面k - 迁移方向个数为随机向量
+        return est_grad, query, grad_est_norm
 
 
     def prior_sign_grad(self, images, theta, initial_lbd, true_label, target_label=None, sigma=0.001):
@@ -397,10 +402,9 @@ class PriorOptLinfNorm(object):
         assert theta.dim()==4
         query = 0
         prior_grads = []
-        initial_lbd_l2_norm = self.convert_linf_to_l2_distance(theta, initial_lbd)
         for surrogate_model in self.surrogate_models:
             prior_grad = self.get_g_grad(surrogate_model, images, theta, initial_lbd, true_label, target_label)
-            prior_grad = prior_grad / torch.norm(prior_grad, p=2, dim=(1, 2, 3), keepdim=True)
+            prior_grad = prior_grad / torch.norm(prior_grad, p=float('inf'), dim=(1, 2, 3), keepdim=True)
             prior_grads.append(prior_grad)
 
         us = []
@@ -408,7 +412,7 @@ class PriorOptLinfNorm(object):
             us.append(prior_grad.squeeze())
         for i in range(self.k - len(prior_grads)):
             rv = torch.randn_like(theta.squeeze())
-            rv = rv / torch.norm(rv.view(-1), p=2, dim=0)
+            rv = rv / torch.norm(rv.view(-1), p=float('inf'), dim=0)
             us.append(rv)
         # Gram-Schmidt. You can also call torch.linalg.qr to perform orthogonalization
         orthos = []
@@ -424,9 +428,9 @@ class PriorOptLinfNorm(object):
         for orth in orthos:
             u = orth.unsqueeze(0)
             new_theta = theta + sigma * u
-            new_theta /= torch.norm(new_theta.view(-1), p=2, dim=0)
+            new_theta /= torch.norm(new_theta.view(-1), p=float('inf'), dim=0)
             u_batch.append(u)
-            images_batch.append(images + initial_lbd_l2_norm * new_theta)  # No matter which the new_theta is, we need the same L2 norm radius!
+            images_batch.append(images + initial_lbd * new_theta)
             query += 1
         images_batch = torch.cat(images_batch, 0)
         u_batch = torch.cat(u_batch, 0)  # B,C,H,W
@@ -446,6 +450,27 @@ class PriorOptLinfNorm(object):
 
         return sign_grad, query
 
+    # 修改4: 在PGD攻击中使用L∞约束
+    def PGD_attack(self, model, x_natural, y, step_size=0.003, start_random_coeff=0.001, epsilon=0.031, perturb_steps=10, distance='linf'):
+        criterion = torch.nn.CrossEntropyLoss()
+        model.eval()
+        # generate adversarial example
+        x_adv = x_natural.detach() + start_random_coeff * torch.randn(x_natural.shape).cuda().detach()
+        y = y.cuda()
+        for _ in range(perturb_steps):
+            x_adv.requires_grad_()
+            with torch.enable_grad():
+                loss = criterion(model(x_adv), y)
+            grad = torch.autograd.grad(loss, [x_adv])[0]
+            # 修改5: 使用L∞更新规则
+            if distance == 'linf':
+                x_adv = x_adv.detach() + step_size * torch.sign(grad.detach())
+                x_adv = torch.min(torch.max(x_adv, x_natural - epsilon), x_natural + epsilon)
+            elif distance == "l2":
+                x_adv = x_adv.detach() + step_size * grad.detach() / self.norm(grad.detach())
+                x_adv = self.l2_proj(x_natural, x_adv, epsilon)
+            x_adv = torch.clamp(x_adv, 0.0, 1.0)
+        return x_adv.clone()
 
     def untargeted_attack(self, image_index, images, true_labels):
         assert images.size(0) == 1
@@ -463,18 +488,73 @@ class PriorOptLinfNorm(object):
         best_theta, g_theta = None, float('inf')
         log.info("Searching for the initial direction on {} random directions.".format(num_directions))
         for i in range(num_directions):
-            query += 1
-            theta = torch.randn_like(images)
-            if self.model(images + self.convert_linf_to_l2_distance(theta, 1.0) * theta).max(1)[1].item() != true_label:
-                initial_lbd = torch.norm(theta.view(-1),p=float('inf'))
-                theta /= self.norm_l2(theta)
-                lbd, count = self.fine_grained_binary_search(images, true_label, theta, initial_lbd, g_theta)
-                query += count
-                if lbd < g_theta:
-                    best_theta, g_theta = theta, lbd
-                    log.info("{}-th image, {}-th iteration distortion: {:.4f}".format(image_index + 1, i, g_theta))
-                    self.count_stop_query_and_distortion(images, images + best_theta * self.convert_linf_to_l2_distance(best_theta, g_theta), query, success_stop_queries,
-                                                         batch_image_positions)
+            if self.PGD_init_theta:
+                # 修改6: 使用L∞约束的PGD攻击
+                PGD_transfer_x_adv = self.PGD_attack(
+                    self.surrogate_models[0], images, true_labels,
+                    epsilon=self.epsilon, distance='linf'  # 明确指定使用L∞
+                )
+                theta = PGD_transfer_x_adv - images
+            else:
+                # 生成随机方向
+                theta = torch.randn_like(images)
+                # 修改7: 使用L∞归一化
+                theta = theta / self.norm(theta)
+            temp_query = 0
+            while True:
+                query += 1
+                temp_query += 1
+                if self.model(images + theta).max(1)[1].item() != true_label:
+                    initial_lbd = self.norm(theta).item()
+                    theta /= initial_lbd
+                    lbd, count = self.fine_grained_binary_search(images, true_label, theta, initial_lbd, g_theta)
+                    query += count
+                    if lbd < g_theta:
+                        best_theta, g_theta = theta, lbd
+                        log.info("{}-th image, {}-th iteration distortion: {:.4f}".format(image_index + 1, i, g_theta))
+                        self.count_stop_query_and_distortion(images, images + best_theta * g_theta, query, success_stop_queries,
+                                                             batch_image_positions)
+                    break
+                else:
+                    theta *= 2
+                if self.PGD_init_theta and self.norm(theta).item() >= 10 * self.norm(images).item():
+                    query -= temp_query
+                    log.info(
+                        "PGD θ initialization failed! Original image prediction is {}, image+θ prediction is {}, true label is {}, θ norm is {:.4f}, image norm is {:.4f}.".format(
+                            self.model(images).max(1)[1].item(), self.model(images + theta).max(1)[1].item(),
+                            true_label,
+                            self.norm(theta).item(), self.norm(images).item()))
+                    PGD_transfer_x_adv = self.PGD_attack(self.surrogate_models[0], images, true_labels,epsilon=self.epsilon, perturb_steps=10, distance="linf")
+                    theta = PGD_transfer_x_adv - images
+                    temp_query = 0
+                    L2_PGD_fail = False
+                    while self.model(images + theta).max(1)[1].item() == true_label:
+                        query += 1
+                        temp_query += 1
+                        theta *= 2
+                        if temp_query >= 100:
+                            L2_PGD_fail = True
+                            query -= temp_query
+                            temp_query = 0
+                            break
+                    if L2_PGD_fail:
+                        log.info("Switch to L2 PGD θ initialization failed! Switch to random θ now.")
+                        theta = torch.randn_like(images)
+                        while self.model(images + theta).max(1)[1].item() == true_label:
+                            query += 1
+                            temp_query += 1
+                            theta = torch.randn_like(images)
+                            if temp_query >= 100:
+                                query -= temp_query
+                                break
+                    initial_lbd = self.norm(theta).item()
+                    theta /= initial_lbd
+                    lbd, count = self.fine_grained_binary_search(images, true_label, theta, initial_lbd, g_theta)
+                    query += count
+                    if lbd < g_theta:
+                        best_theta, g_theta = theta, lbd
+                    break
+
         ## fail if cannot find an adversarial direction within 200 Gaussian
         if g_theta == float('inf'):
             log.info("{}-th image couldn't find valid initial, failed!".format(image_index + 1))
@@ -483,12 +563,14 @@ class PriorOptLinfNorm(object):
         #### Begin Gradient Descent.
         xg, gg = best_theta, g_theta
         vg = torch.zeros_like(xg)
+        grad_est_norm = None
         for i in range(self.iterations):
             ## gradient estimation at x0 + theta (init)
             if self.sign:
                 grad, grad_queries = self.prior_sign_grad(images, xg, gg, true_label, None, beta)
             else:
-                grad, grad_queries = self.prior_grad(images, xg, gg, true_label, None, beta)
+                grad, grad_queries, grad_est_norm = self.prior_grad(images, xg, gg, true_label, None, grad_est_norm, beta)
+            grad = torch.sign(grad)
             grad = self.clip_grad_norm(grad, max_norm=self.clip_grad_max_norm)
             ## Line search of the step size of gradient descent
             query += grad_queries
@@ -503,7 +585,8 @@ class PriorOptLinfNorm(object):
                     new_theta = xg + new_vg
                 else:
                     new_theta = xg - alpha * grad
-                new_theta /= torch.norm(new_theta.view(-1),p=2)
+                # 修改9: 使用L∞投影归一化
+                new_theta = self.linf_proj(torch.zeros_like(new_theta), new_theta, 1.0)
                 tol = beta/500
                 if self.tol is not None:
                     tol = self.tol
@@ -515,7 +598,7 @@ class PriorOptLinfNorm(object):
                 if new_g2 < min_g2:
                     min_theta = new_theta
                     min_g2 = new_g2
-                    self.count_stop_query_and_distortion(images, images + min_theta * self.convert_linf_to_l2_distance(min_theta, min_g2), query,
+                    self.count_stop_query_and_distortion(images, images + min_theta * min_g2, query,
                                                          success_stop_queries, batch_image_positions)
                     if momentum > 0:
                         min_vg = new_vg
@@ -529,7 +612,7 @@ class PriorOptLinfNorm(object):
                         new_theta = xg + new_vg
                     else:
                         new_theta = xg - alpha * grad
-                    new_theta /= torch.norm(new_theta)
+                    new_theta = self.linf_proj(torch.zeros_like(new_theta), new_theta, 1.0)
                     tol = beta / 500
                     if self.tol is not None:
                         tol = self.tol
@@ -540,7 +623,7 @@ class PriorOptLinfNorm(object):
                     if new_g2 < gg:
                         min_theta = new_theta
                         min_g2 = new_g2
-                        self.count_stop_query_and_distortion(images, images + min_theta * self.convert_linf_to_l2_distance(min_theta, min_g2), query,
+                        self.count_stop_query_and_distortion(images, images + min_theta * min_g2, query,
                                                              success_stop_queries, batch_image_positions)
                         if momentum > 0:
                             min_vg = new_vg
@@ -549,9 +632,8 @@ class PriorOptLinfNorm(object):
                 alpha = 1.0
                 log.info("{}-th image warns: not moving".format(image_index+1))
                 beta = beta * 0.1
-                # if beta < 1e-8 and self.tol is None:
-                #     break
                 beta = max(beta, 1e-8)
+
             ## if all attemps failed, min_theta, min_g2 will be the current theta (i.e. not moving)
             xg, gg = min_theta, min_g2
             vg = min_vg
@@ -562,13 +644,13 @@ class PriorOptLinfNorm(object):
             if query.min().item() >= self.maximum_queries:
                 break
         if self.epsilon is None or gg <= self.epsilon:
-            target = self.model(images + self.convert_linf_to_l2_distance(xg, gg) * xg).max(1)[1].item()
+            target = self.model(images + gg * xg).max(1)[1].item()
             log.info("{}-th image success distortion {:.4f} target {} queries {} LS queries {}".format(image_index+1,
                                                                                                        gg, target, query[0].item(), ls_total))
         # gg 是distortion
-        distortion = torch.norm(self.convert_linf_to_l2_distance(xg,gg) * xg, p=float('inf'))
+        distortion = self.norm(gg * xg)
         assert distortion.item() - gg < 1e-4, "gg:{:.4f}  dist:{:.4f}".format(gg, distortion.item())
-        return images + self.convert_linf_to_l2_distance(xg, gg) * xg, query,success_stop_queries, torch.tensor([gg]).float(), torch.tensor([gg]).float() <= self.epsilon, xg
+        return images + gg * xg, query,success_stop_queries, torch.tensor([gg]).float(), torch.tensor([gg]).float() <= self.epsilon, xg
 
     def targeted_attack(self, image_index, images, target_labels, target_class_image):
         """ Attack the original image and return adversarial example
@@ -613,14 +695,14 @@ class PriorOptLinfNorm(object):
                     continue
 
                 theta = xi - images
-                theta /= self.norm_l2(theta)
-                initial_lbd = torch.norm(theta.view(-1), p=float('inf'))
+                initial_lbd = self.norm(theta).item()
+                theta /= initial_lbd
                 lbd, count = self.fine_grained_binary_search_targeted(images, target_label, theta, initial_lbd,
                                                                       g_theta)
                 query += count
                 if lbd < g_theta:
                     best_theta, g_theta = theta, lbd
-                    self.count_stop_query_and_distortion(images, images + best_theta * self.convert_linf_to_l2_distance(best_theta, g_theta), query,
+                    self.count_stop_query_and_distortion(images, images + best_theta * g_theta, query,
                                                          success_stop_queries, batch_image_positions)
                     log.info("{}-th image. Found initial target image with the distortion {:.4f}".format(image_index+1, g_theta))
 
@@ -630,13 +712,13 @@ class PriorOptLinfNorm(object):
             # xi = self.get_image_of_target_class(self.dataset, target_labels, self.model)
             xi = target_class_image
             theta = xi - images
-            initial_lbd = torch.norm(theta.view(-1), p=float('inf'))
-            theta /= self.norm_l2(theta)
+            initial_lbd = self.norm(theta).item()
+            theta /= initial_lbd
             lbd, count = self.fine_grained_binary_search_targeted(images, target_label, theta, initial_lbd,
                                                                   g_theta)
             query += count
             best_theta, g_theta = theta, lbd
-            self.count_stop_query_and_distortion(images, images + best_theta * self.convert_linf_to_l2_distance(best_theta, g_theta), query,
+            self.count_stop_query_and_distortion(images, images + best_theta * g_theta, query,
                                                  success_stop_queries, batch_image_positions)
         if g_theta == np.inf:
             log.info("{}-th image couldn't find valid initial, failed!".format(image_index + 1))
@@ -645,11 +727,14 @@ class PriorOptLinfNorm(object):
                                                                                     query[0].item()))
         # Begin Gradient Descent.
         xg, gg = best_theta, g_theta
+        grad_est_norm = None
         for i in range(self.iterations):
             if self.sign:
                 grad, grad_queries = self.prior_sign_grad(images, xg, gg, None, target_label, beta)
             else:
-                grad, grad_queries = self.prior_grad(images, xg, gg, None, target_label, beta)
+                grad, grad_queries, grad_est_norm = self.prior_grad(images, xg, gg, None, target_label, grad_est_norm,  beta)
+            # 修改11: 使用符号梯度
+            grad = torch.sign(grad)
             grad = self.clip_grad_norm(grad, max_norm=self.clip_grad_max_norm)
             query += grad_queries
             # Line search
@@ -658,7 +743,7 @@ class PriorOptLinfNorm(object):
             min_g2 = gg
             for _ in range(15):
                 new_theta = xg - alpha * grad
-                new_theta /= torch.norm(new_theta.view(-1), p=2)
+                new_theta = self.linf_proj(torch.zeros_like(new_theta), new_theta, 1.0)
                 tol = beta / 500
                 if self.tol is not None:
                     tol = self.tol
@@ -669,7 +754,7 @@ class PriorOptLinfNorm(object):
                 if new_g2 < min_g2:
                     min_theta = new_theta
                     min_g2 = new_g2
-                    self.count_stop_query_and_distortion(images, images + min_theta * self.convert_linf_to_l2_distance(min_theta, min_g2), query,
+                    self.count_stop_query_and_distortion(images, images + min_theta * min_g2, query,
                                                          success_stop_queries, batch_image_positions)
                 else:
                     break
@@ -678,7 +763,8 @@ class PriorOptLinfNorm(object):
                 for _ in range(15):
                     alpha = alpha * 0.25
                     new_theta = xg - alpha * grad
-                    new_theta /= torch.norm(new_theta.view(-1), p=2)
+                    # 修改13: 使用L∞投影归一化
+                    new_theta = self.linf_proj(torch.zeros_like(new_theta), new_theta, 1.0)
                     tol = beta / 500
                     if self.tol is not None:
                         tol = self.tol
@@ -689,7 +775,7 @@ class PriorOptLinfNorm(object):
                     if new_g2 < gg:
                         min_theta = new_theta
                         min_g2 = new_g2
-                        self.count_stop_query_and_distortion(images, images + min_theta * self.convert_linf_to_l2_distance(min_theta, min_g2), query,
+                        self.count_stop_query_and_distortion(images, images + min_theta * min_g2, query,
                                                              success_stop_queries, batch_image_positions)
                         break
 
@@ -697,8 +783,6 @@ class PriorOptLinfNorm(object):
                 alpha = 1.0
                 log.info("{}-th image, warning: not moving".format(image_index+1))
                 beta = beta * 0.1
-                # if beta < 1e-8 and self.tol is None:
-                #     break
                 beta = max(beta, 1e-8)
             xg, gg = min_theta, min_g2
 
@@ -714,7 +798,7 @@ class PriorOptLinfNorm(object):
                                                                                               query[0].item(),
                                                                                               success_stop_queries[0].item()))
 
-        adv_target = self.model(images + self.convert_linf_to_l2_distance(xg, gg) * xg).max(1)[1].item()
+        adv_target = self.model(images + gg * xg).max(1)[1].item()
         if adv_target == target_label:
             log.info("{}-th image attack successfully! Distortion {:.4f} target {} queries:{} success stop queries:{} LS queries:{}".format(image_index + 1,
                                                                                                        gg, adv_target,
@@ -723,18 +807,18 @@ class PriorOptLinfNorm(object):
         else:
             log.info("{}-th image is failed to find targeted adversarial example.".format(image_index+1))
 
-        distortion = torch.norm(self.convert_linf_to_l2_distance(xg,gg) * xg, p=float('inf'))
+        distortion = self.norm(gg * xg)
         assert distortion.item() - gg < 1e-4, "gg:{:.4f}  dist:{:.4f}".format(gg, distortion.item())
-        return images + self.convert_linf_to_l2_distance(xg, gg) * xg, query, success_stop_queries, torch.tensor([gg]).float(), torch.tensor(
+        return images + gg * xg, query, success_stop_queries, torch.tensor([gg]).float(), torch.tensor(
             [gg]).float() <= self.epsilon, xg
 
-
-
+    # 修改14: 在计数函数中使用L∞范数
     def count_stop_query_and_distortion(self, images, perturbed, query, success_stop_queries,
                                         batch_image_positions):
-        dist = torch.norm((perturbed - images).view(images.size(0), -1), p=float('inf'), dim=1)
+        # 计算L∞范数
+        dist = (perturbed - images).view(images.size(0), -1).abs().max(dim=1)[0]
         if torch.sum(dist > self.epsilon).item() > 0:
-            working_ind = torch.nonzero(dist > self.epsilon).view(-1)
+            working_ind = torch.nonzero(dist > self.epsilon).view(-1).cpu()
             success_stop_queries[working_ind] = query[working_ind]
         for inside_batch_index, index_over_all_images in enumerate(batch_image_positions):
             self.distortion_all[index_over_all_images][query[inside_batch_index].item()] = dist[inside_batch_index].item()
@@ -762,8 +846,8 @@ class PriorOptLinfNorm(object):
                 with torch.no_grad():
                     logit_surrogate = surrogate_model(images)
                 pred_surrogate = logit_surrogate.argmax(dim=1)
-                correct_surrogate = pred_surrogate.eq(true_labels.cuda()).float()  # shape = (batch_size,)
-                if correct_surrogate.int().item() == 0:  # we must skip any image that is classified incorrectly before attacking, otherwise this will cause infinity loop in later procedure
+                correct_surrogate = pred_surrogate.eq(true_labels.cuda()).int()  # shape = (batch_size,)
+                if correct_surrogate.item() == 0:  # we must skip any image that is classified incorrectly before attacking, otherwise this will cause infinity loop in later procedure
                     log.info("{}-th original image is classified incorrectly by surrogate model, skip!".format(batch_index + 1))
                     all_surrogate_correct = False
                     break
